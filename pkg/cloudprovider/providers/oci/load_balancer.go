@@ -330,7 +330,7 @@ func (cp *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName str
 		}
 		secretListenerString := service.Annotations[ServiceAnnotationLoadBalancerTLSSecret]
 		secretBackendSetString := service.Annotations[ServiceAnnotationLoadBalancerTLSBackendSetSecret]
-		sslConfig = NewSSLConfig(secretListenerString, secretBackendSetString, ports, cp)
+		sslConfig = NewSSLConfig(secretListenerString, secretBackendSetString, service, ports, cp)
 	}
 	subnets := getDefaultLBSubnets(cp.config.LoadBalancer.Subnet1, cp.config.LoadBalancer.Subnet2)
 	spec, err := NewLBSpec(logger, service, nodes, subnets, sslConfig, cp.securityListManagerFactory)
