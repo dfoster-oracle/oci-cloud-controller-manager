@@ -1,4 +1,4 @@
-// Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
 // Code generated. DO NOT EDIT.
 
 // Identity and Access Management Service API
@@ -29,6 +29,9 @@ type UserCapabilities struct {
 
 	// Indicates if the user can use SigV4 symmetric keys.
 	CanUseCustomerSecretKeys *bool `mandatory:"false" json:"canUseCustomerSecretKeys"`
+
+	// Indicates if the user can use OAuth2 credentials and tokens.
+	CanUseOAuth2ClientCredentials *bool `mandatory:"false" json:"canUseOAuth2ClientCredentials"`
 }
 
 func (m UserCapabilities) String() string {
