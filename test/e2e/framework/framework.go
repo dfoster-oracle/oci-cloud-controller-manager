@@ -15,6 +15,7 @@
 package framework
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -44,7 +45,7 @@ func AquireRunLock(client clientset.Interface, lockName string) error {
 
 	readyCh := make(chan struct{})
 	lec.Callbacks = leaderelection.LeaderCallbacks{
-		OnStartedLeading: func(stop <-chan struct{}) {
+		OnStartedLeading: func(ctx context.Context) {
 			Logf("Test run lock aquired")
 			readyCh <- struct{}{}
 		},
@@ -58,7 +59,7 @@ func AquireRunLock(client clientset.Interface, lockName string) error {
 		return err
 	}
 
-	go le.Run()
+	go le.Run(context.Background())
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -92,6 +93,7 @@ func makeLeaderElectionConfig(client clientset.Interface, lockName string) (*lea
 		"kube-system",
 		lockName,
 		client.CoreV1(),
+		client.CoordinationV1(),
 		resourcelock.ResourceLockConfig{
 			Identity:      id,
 			EventRecorder: recorder,
@@ -103,9 +105,9 @@ func makeLeaderElectionConfig(client clientset.Interface, lockName string) (*lea
 
 	return &leaderelection.LeaderElectionConfig{
 		Lock:          rl,
-		LeaseDuration: 10 * time.Second,
-		RenewDeadline: 5 * time.Second,
-		RetryPeriod:   1 * time.Second,
+		LeaseDuration: 60 * time.Second,
+		RenewDeadline: 15 * time.Second,
+		RetryPeriod:   2 * time.Second,
 	}, nil
 }
 
