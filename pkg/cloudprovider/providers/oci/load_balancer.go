@@ -49,6 +49,10 @@ const (
 	// specifying the second subnet of a load balancer.
 	ServiceAnnotationLoadBalancerSubnet2 = "service.beta.kubernetes.io/oci-load-balancer-subnet2"
 
+	// ServiceAnnotationLoadBalancerSubnets is a Service annotation for
+	// specifying the list of subnet of a load balancer.
+	ServiceAnnotationLoadBalancerSubnets = "service.beta.kubernetes.io/oci-load-balancer-subnets"
+
 	// ServiceAnnotationLoadBalancerSSLPorts is a Service annotation for
 	// specifying the ports to enable SSL termination on the corresponding load
 	// balancer listener.
