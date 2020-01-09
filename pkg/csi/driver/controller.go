@@ -161,7 +161,7 @@ func (d *ControllerDriver) CreateVolume(ctx context.Context, req *csi.CreateVolu
 // DeleteVolume deletes the given volume. The function is idempotent.
 func (d *ControllerDriver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
 
-	log := d.logger.With("voulumeID", req.VolumeId)
+	log := d.logger.With("volumeID", req.VolumeId)
 
 	if req.VolumeId == "" {
 		return nil, status.Error(codes.InvalidArgument, "DeleteVolume Volume ID must be provided")
@@ -183,7 +183,7 @@ func (d *ControllerDriver) DeleteVolume(ctx context.Context, req *csi.DeleteVolu
 // ControllerPublishVolume attaches the given volume to the node
 func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
 
-	log := d.logger.With("voulumeID", req.VolumeId)
+	log := d.logger.With("volumeID", req.VolumeId)
 
 	if req.VolumeId == "" {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID must be provided")
@@ -246,7 +246,7 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 // ControllerUnpublishVolume deattaches the given volume from the node
 func (d *ControllerDriver) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
 
-	log := d.logger.With("voulumeID", req.VolumeId)
+	log := d.logger.With("volumeID", req.VolumeId)
 
 	if req.VolumeId == "" {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID must be provided")
@@ -276,7 +276,7 @@ func (d *ControllerDriver) ControllerUnpublishVolume(ctx context.Context, req *c
 // are supported.
 func (d *ControllerDriver) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
 
-	log := d.logger.With("voulumeID", req.VolumeId)
+	log := d.logger.With("volumeID", req.VolumeId)
 
 	if req.VolumeId == "" {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID must be provided")

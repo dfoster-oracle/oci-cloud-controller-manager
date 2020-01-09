@@ -130,7 +130,7 @@ func (d *Driver) Run() error {
 		return fmt.Errorf("currently only unix domain sockets are supported, have: %s", u.Scheme)
 	}
 
-	// remove the socket if it's already there. This can happen if weeibcccjdlnhkvjrviutie
+	// remove the socket if it's already there. This can happen if we
 	// deploy a new version and the socket was created from the old running plugin.
 	d.logger.With("address", addr).Info("Removing socket.")
 	if err := os.Remove(addr); err != nil && !os.IsNotExist(err) {
