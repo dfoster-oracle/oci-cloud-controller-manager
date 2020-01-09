@@ -270,7 +270,7 @@ func TestNewLBSpecSuccess(t *testing.T) {
 				Name:     "test-uid",
 				Shape:    "100Mbps",
 				Internal: false,
-				Subnets:  []string{"annotation-one","annotation-two"},
+				Subnets:  []string{"annotation-one", "annotation-two"},
 				Listeners: map[string]loadbalancer.ListenerDetails{
 					"TCP-80": loadbalancer.ListenerDetails{
 						DefaultBackendSetName: common.String("TCP-80"),
@@ -325,7 +325,7 @@ func TestNewLBSpecSuccess(t *testing.T) {
 				Name:     "test-uid",
 				Shape:    "100Mbps",
 				Internal: false,
-				Subnets:  []string{"annotation-one","annotation-two"},
+				Subnets:  []string{"annotation-one", "annotation-two"},
 				Listeners: map[string]loadbalancer.ListenerDetails{
 					"TCP-80": loadbalancer.ListenerDetails{
 						DefaultBackendSetName: common.String("TCP-80"),
@@ -381,7 +381,7 @@ func TestNewLBSpecSuccess(t *testing.T) {
 				Name:     "test-uid",
 				Shape:    "100Mbps",
 				Internal: false,
-				Subnets:  []string{"annotation-one","annotation-two"},
+				Subnets:  []string{"annotation-one", "annotation-two"},
 				Listeners: map[string]loadbalancer.ListenerDetails{
 					"TCP-80": loadbalancer.ListenerDetails{
 						DefaultBackendSetName: common.String("TCP-80"),
@@ -437,7 +437,7 @@ func TestNewLBSpecSuccess(t *testing.T) {
 				Name:     "test-uid",
 				Shape:    "100Mbps",
 				Internal: false,
-				Subnets:  []string{"annotation-one","annotation-two"},
+				Subnets:  []string{"annotation-one", "annotation-two"},
 				Listeners: map[string]loadbalancer.ListenerDetails{
 					"TCP-80": loadbalancer.ListenerDetails{
 						DefaultBackendSetName: common.String("TCP-80"),
