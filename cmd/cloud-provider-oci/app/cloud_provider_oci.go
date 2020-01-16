@@ -18,23 +18,26 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
-	"k8s.io/apiserver/pkg/util/term"
-	"k8s.io/component-base/cli/globalflag"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	_ "github.com/oracle/oci-cloud-controller-manager/pkg/oci/client" // for oci client metric registration
 	provisioner "github.com/oracle/oci-cloud-controller-manager/pkg/volume/provisioner/core"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"k8s.io/apiserver/pkg/util/term"
 	cliflag "k8s.io/component-base/cli/flag"
 	utilflag "k8s.io/component-base/cli/flag"
+	"k8s.io/component-base/cli/globalflag"
 	cloudControllerManager "k8s.io/kubernetes/cmd/cloud-controller-manager/app"
 	cloudControllerManagerConfig "k8s.io/kubernetes/cmd/cloud-controller-manager/app/config"
 	"k8s.io/kubernetes/cmd/cloud-controller-manager/app/options"
@@ -42,7 +45,7 @@ import (
 )
 
 var (
-	minVolumeSize, resourcePrincipalFile                                             string
+	minVolumeSize, resourcePrincipalFile, metricsEndpoint                            string
 	enableCSI, enableVolumeProvisioning, volumeRoundingEnabled, useResourcePrincipal bool
 	resourcePrincipalInitialTimeout                                                  time.Duration
 )
@@ -82,6 +85,10 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	// cloud controller manager flag set
 	//ccmFlagSet := namedFlagSets.flagSet("cloud controller manager")
 	//s.AddFlags(ccmFlagSet)
+
+	// prometheus metrics endpoint flagset
+	metricsFlagSet := namedFlagSets.FlagSet("metrics endpoint")
+	metricsFlagSet.StringVar(&metricsEndpoint, "metrics-endpoint", "0.0.0.0:8080", "The endpoint where to expose metrics")
 
 	// volume provisioner flag set
 	vpFlagSet := namedFlagSets.FlagSet("volume provisioner")
@@ -156,6 +163,16 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 		cancelFunc()
 		<-sigs
 		os.Exit(1)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		http.Handle("/metrics", promhttp.Handler())
+		if err := http.ListenAndServe(metricsEndpoint, nil); err != nil {
+			logger.With(zap.Error(err)).Errorf("Error exposing metrics at %s/metrics", metricsEndpoint)
+		}
+		cancelFunc()
 	}()
 
 	wg.Add(1)
