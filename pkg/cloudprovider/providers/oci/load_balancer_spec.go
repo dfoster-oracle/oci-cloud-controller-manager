@@ -140,6 +140,10 @@ func NewLBSpec(svc *v1.Service, nodes []*v1.Node, defaultSubnets []string, sslCo
 		subnets = strings.Split(s, ",")
 	}
 
+	for i, s := range subnets {
+		subnets[i] = strings.TrimSpace(s)
+	}
+
 	if internal {
 		// Only public load balancers need two subnets.  Internal load
 		// balancers will always use the first subnet.

@@ -299,6 +299,59 @@ func TestNewLBSpecSuccess(t *testing.T) {
 				securityListManager: newSecurityListManagerNOOP(),
 			},
 		},
+		"no default subnets, provide subnet via subnet list annotation - trailing spaces test": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					UID:       "test-uid",
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerSubnets: "annotation-one , annotation-two",
+					},
+				},
+				Spec: v1.ServiceSpec{
+					SessionAffinity: v1.ServiceAffinityNone,
+					Ports: []v1.ServicePort{
+						v1.ServicePort{
+							Protocol: v1.ProtocolTCP,
+							Port:     int32(80),
+						},
+					},
+				},
+			},
+			expected: &LBSpec{
+				Name:     "test-uid",
+				Shape:    "100Mbps",
+				Internal: false,
+				Subnets:  []string{"annotation-one", "annotation-two"},
+				Listeners: map[string]loadbalancer.ListenerDetails{
+					"TCP-80": loadbalancer.ListenerDetails{
+						DefaultBackendSetName: common.String("TCP-80"),
+						Port:                  common.Int(80),
+						Protocol:              common.String("TCP"),
+					},
+				},
+				BackendSets: map[string]loadbalancer.BackendSetDetails{
+					"TCP-80": loadbalancer.BackendSetDetails{
+						Backends: []loadbalancer.BackendDetails{},
+						HealthChecker: &loadbalancer.HealthCheckerDetails{
+							Protocol: common.String("HTTP"),
+							Port:     common.Int(10256),
+							UrlPath:  common.String("/healthz"),
+						},
+						Policy: common.String("ROUND_ROBIN"),
+					},
+				},
+				SourceCIDRs: []string{"0.0.0.0/0"},
+				Ports: map[string]portSpec{
+					"TCP-80": portSpec{
+						ListenerPort:      80,
+						HealthCheckerPort: 10256,
+					},
+				},
+				securityListManager: newSecurityListManagerNOOP(),
+			},
+		},
 		"override default subnet via subnet1 annotation": {
 			defaultSubnetOne: "one",
 			defaultSubnetTwo: "two",
