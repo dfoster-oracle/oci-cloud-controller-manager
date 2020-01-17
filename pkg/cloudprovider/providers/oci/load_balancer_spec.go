@@ -122,6 +122,8 @@ func NewLBSpec(svc *v1.Service, nodes []*v1.Node, defaultSubnets []string, sslCo
 	// NOTE: These will be overridden for existing load balancers as load
 	// balancer subnets cannot be modified.
 	subnets := defaultSubnets
+
+	//Below annotations will be deprecated in future releases.
 	if s, ok := svc.Annotations[ServiceAnnotationLoadBalancerSubnet1]; ok {
 		subnets[0] = s
 	}
@@ -131,6 +133,15 @@ func NewLBSpec(svc *v1.Service, nodes []*v1.Node, defaultSubnets []string, sslCo
 		} else {
 			subnets = append(subnets, s)
 		}
+	}
+
+	//ServiceAnnotationLoadBalancerSubnets annotation overrides old annotations
+	if s, ok := svc.Annotations[ServiceAnnotationLoadBalancerSubnets]; ok {
+		subnets = strings.Split(s, ",")
+	}
+
+	for i, s := range subnets {
+		subnets[i] = strings.TrimSpace(s)
 	}
 
 	if internal {
