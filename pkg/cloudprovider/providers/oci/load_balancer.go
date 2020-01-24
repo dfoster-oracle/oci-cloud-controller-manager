@@ -333,7 +333,7 @@ func (cp *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName str
 		sslConfig = NewSSLConfig(secretListenerString, secretBackendSetString, ports, cp)
 	}
 	subnets := getDefaultLBSubnets(cp.config.LoadBalancer.Subnet1, cp.config.LoadBalancer.Subnet2)
-	spec, err := NewLBSpec(service, nodes, subnets, sslConfig, cp.securityListManagerFactory)
+	spec, err := NewLBSpec(logger, service, nodes, subnets, sslConfig, cp.securityListManagerFactory)
 	if err != nil {
 		logger.With(zap.Error(err)).Error("Failed to derive LBSpec")
 		return nil, err
