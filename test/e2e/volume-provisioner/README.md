@@ -25,6 +25,15 @@ ginkgo \
   --image="${IMAGE}:${VERSION}"
 ```
 
+## Running volume-provisioner test
+
+```bash
+export INSTALL_DISABLED=1
+export KUBECONFIG=<your cluster kubeconfig file>
+ginkgo -v -progress test/e2e/volume-provisioner -- --kubeconfig=$KUBECONFIG
+```
+
+
 ## Additional options
 
 | Flag                            | Usage                                                                                                                              | Value  |
