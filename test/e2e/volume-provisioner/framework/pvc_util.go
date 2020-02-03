@@ -16,6 +16,7 @@ package framework
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -122,6 +123,119 @@ func (j *PVCTestJig) CreateAndAwaitPVCOrFail(namespace string, volumeSize string
 	return pvc
 }
 
+// newPVCTemplateCSI returns the default template for this jig, but
+// does not actually create the PVC.  The default PVC has the same name
+// as the jig
+func (j *PVCTestJig) newPVCTemplateCSI(namespace string, volumeSize string, scName string, adLabel string) *v1.PersistentVolumeClaim {
+	return &v1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    namespace,
+			GenerateName: j.Name,
+			Labels:       j.Labels,
+		},
+		Spec: v1.PersistentVolumeClaimSpec{
+			AccessModes: []v1.PersistentVolumeAccessMode{
+				v1.ReadWriteOnce,
+			},
+				Resources: v1.ResourceRequirements{
+				Requests: v1.ResourceList{
+					v1.ResourceName(v1.ResourceStorage): resource.MustParse(volumeSize),
+				},
+			},
+			StorageClassName: &scName,
+		},
+	}
+}
+
+// CreatePVCorFail creates a new claim based on the jig's
+// defaults. Callers can provide a function to tweak the claim object
+// before it is created.
+func (j *PVCTestJig) CreatePVCorFailCSI(namespace string, volumeSize string, scName string, adLabel string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
+	pvc := j.newPVCTemplateCSI(namespace, volumeSize, scName, adLabel)
+	if tweak != nil {
+		tweak(pvc)
+	}
+
+	name := types.NamespacedName{Namespace: namespace, Name: j.Name}
+	By(fmt.Sprintf("Creating a PVC %q of volume size %q", name, volumeSize))
+
+	result, err := j.KubeClient.CoreV1().PersistentVolumeClaims(namespace).Create(pvc)
+	if err != nil {
+		Failf("Failed to create persistent volume claim %q: %v", name, err)
+	}
+	return result
+}
+
+// CreateAndAwaitPVCOrFail creates a new PVC based on the
+// jig's defaults, waits for it to become ready, and then sanity checks it and
+// its dependant resources. Callers can provide a function to tweak the
+// PVC object before it is created.
+func (j *PVCTestJig) CreateAndAwaitPVCOrFailCSI(namespace string, volumeSize string, scName string, adLabel string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
+	pvc := j.CreatePVCorFailCSI(namespace, volumeSize, scName, adLabel, tweak)
+	pvc = j.waitForConditionOrFail(namespace, pvc.Name, DefaultTimeout, "to be dynamically provisioned", func(pvc *v1.PersistentVolumeClaim) bool {
+		err := j.WaitForPVCPhase(v1.ClaimPending, namespace, pvc.Name)
+		if err != nil {
+			Failf("PVC %q did not become Bound: %v", pvc.Name, err)
+			return false
+		}
+		return true
+	})
+	zap.S().With(pvc.Namespace).With(pvc.Name).Info("PVC is created.")
+	return pvc
+}
+
+// newPODTemplate returns the default template for this jig,
+// creates the Pod. Attaches PVC to the Pod which is created by CSI
+func (j *PVCTestJig) NewPODForCSI(name string, namespace string, claimName string) {
+	By("Creating a pod with the claiming PVC created by CSI")
+	pod, err := j.KubeClient.CoreV1().Pods(namespace).Create(&v1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: j.Name,
+			Namespace:    namespace,
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:  name,
+					Image: "centos",
+					Command: []string{"/bin/sh"},
+					Args:    []string{"-c", "while true; do echo $(date -u) >> /data/out.txt; sleep 5; done"},
+					VolumeMounts: []v1.VolumeMount{
+						{
+							Name:      "persistent-storage",
+							MountPath: "/data",
+						},
+					},
+				},
+			},
+			Volumes: []v1.Volume{
+				{
+					Name: "persistent-storage",
+					VolumeSource: v1.VolumeSource{
+						PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+							ClaimName: claimName,
+						},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		Failf("Pod %q Create API error: %v", pod.Name, err)
+	}
+
+	// Waiting for pod to be running
+	err = j.waitTimeoutForPodRunningInNamespace(pod.Name, namespace, slowPodStartTimeout)
+	if err != nil {
+		Failf("Pod %q is not Running: %v", pod.Name, err)
+	}
+	zap.S().With(pod.Namespace).With(pod.Name).Info("CSI POD is created.")
+}
+
 // WaitForPVCPhase waits for a PersistentVolumeClaim to be in a specific phase or until timeout occurs, whichever comes first.
 func (j *PVCTestJig) WaitForPVCPhase(phase v1.PersistentVolumeClaimPhase, ns string, pvcName string) error {
 	Logf("Waiting up to %v for PersistentVolumeClaim %s to have phase %s", DefaultTimeout, pvcName, phase)
@@ -209,4 +323,24 @@ func (j *PVCTestJig) DeletePersistentVolumeClaim(ns string, pvcName string) erro
 		}
 	}
 	return nil
+}
+
+// CheckVolumeCapacity verifies the Capacity of Volume provisioned.
+func (j *PVCTestJig) CheckVolumeCapacity(expected string, name string, namespace string) {
+
+	pvc, err := j.KubeClient.CoreV1().PersistentVolumeClaims(namespace).Get(name, metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+
+	// Get the bound PV
+	pv, err := j.KubeClient.CoreV1().PersistentVolumes().Get(pvc.Spec.VolumeName, metav1.GetOptions{})
+	if err != nil {
+		Failf("Failed to get persistent volume %q: %v", pvc.Spec.VolumeName, err)
+	}
+
+	// Check sizes
+	actual := pv.Spec.Capacity[v1.ResourceName(v1.ResourceStorage)]
+
+	if actual.String() != expected {
+		Failf("Expected volume to be %s but got %s", expected, actual)
+	}
 }
