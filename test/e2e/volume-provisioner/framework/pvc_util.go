@@ -149,8 +149,8 @@ func (j *PVCTestJig) newPVCTemplateCSI(namespace string, volumeSize string, scNa
 	}
 }
 
-// newPVCTemplateCSI returns the default template for this jig, but
-// does not actually create the PVC.  The default PVC has the same name
+// newPVTemplateCSI returns the default template for this jig, but
+// does not actually create the PV.  The default PV has the same name
 // as the jig
 func (j *PVCTestJig) newPVTemplateCSI(namespace string, scName string, ocid string) *v1.PersistentVolume {
 	return &v1.PersistentVolume{
