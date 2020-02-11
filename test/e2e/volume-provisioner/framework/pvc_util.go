@@ -238,7 +238,7 @@ func (j *PVCTestJig) CreateAndAwaitPVCOrFailCSI(namespace string, volumeSize str
 // PVC object before it is created.
 func (j *PVCTestJig) CreateAndAwaitStaticPVCOrFailCSI(namespace string, volumeSize string, scName string, adLabel string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
 
-	volumeOcid := j.CreateVolume("zkJl:US-ASHBURN-AD-1","test-volume")
+	volumeOcid := j.CreateVolume(adLocation,"test-volume")
 
 	pv := j.CreatePVorFailCSI(namespace,scName, *volumeOcid)
 	pv = j.waitForConditionOrFailForPV(pv.Name, DefaultTimeout, "to be dynamically provisioned", func(pvc *v1.PersistentVolume) bool {
