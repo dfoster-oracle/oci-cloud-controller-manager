@@ -56,4 +56,18 @@ var _ = Describe("CSI Volume Creation", func() {
 
 		pvcJig.CheckVolumeCapacity("100Gi",pvc.Name,f.Namespace.Name)
 	})
+
+	It("Static Provisioning CSI", func() {
+		pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-provisioner-e2e-tests-pvc-with-static")
+
+		scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels)
+
+		pvc := pvcJig.CreateAndAwaitStaticPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, framework.TestContext.AD, nil)
+
+		pvcJig.NewPODForCSI("app4",f.Namespace.Name,pvc.Name)
+
+		time.Sleep(60 * time.Second) //waiting for pod to up and running
+
+		pvcJig.CheckVolumeCapacity("50Gi",pvc.Name,f.Namespace.Name)
+	})
 })

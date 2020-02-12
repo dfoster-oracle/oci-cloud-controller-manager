@@ -33,6 +33,8 @@ const (
 	DefaultTimeout = 10 * time.Minute
 	// Some pods can take much longer to get ready due to volume attach/detach latency.
 	slowPodStartTimeout = 15 * time.Minute
+	// Default AD Location
+	adLocation = "zkJl:US-ASHBURN-AD-1"
 )
 
 type podCondition func(pod *v1.Pod) (bool, error)
