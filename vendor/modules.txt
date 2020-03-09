@@ -258,10 +258,10 @@ go.uber.org/multierr
 go.uber.org/zap
 go.uber.org/zap/zapcore
 go.uber.org/zap/internal/bufferpool
-go.uber.org/zap/zaptest
 go.uber.org/zap/buffer
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
+go.uber.org/zap/zaptest
 go.uber.org/zap/internal/ztest
 # golang.org/x/crypto v0.0.0-20190829043050-9756ffdc2472
 golang.org/x/crypto/ssh/terminal
@@ -768,7 +768,7 @@ k8s.io/component-base/config/v1alpha1
 # k8s.io/csi-translation-lib v0.0.0 => k8s.io/csi-translation-lib v0.0.0-20190620090116-299a7b270edc
 k8s.io/csi-translation-lib
 k8s.io/csi-translation-lib/plugins
-# k8s.io/klog v1.0.0
+# k8s.io/klog v1.0.0 => github.com/mrunalpagnis/klog v0.0.0-00000000000000-ec66c0a95a3fe542357d0366ad25f152cce66b8b
 k8s.io/klog
 # k8s.io/kube-controller-manager v0.0.0 => k8s.io/kube-controller-manager v0.0.0-20190620085942-b7f18460b210
 k8s.io/kube-controller-manager/config/v1alpha1
