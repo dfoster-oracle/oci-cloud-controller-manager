@@ -39,6 +39,7 @@ const (
 	diskIDByPathTemplate = "/dev/disk/by-path/ip-%s:%d-iscsi-%s-lun-1"
 	volumeOCIDTemplate   = "ocid1.volume.oc1.%s.%s"
 	ocidPrefix           = "ocid1."
+	iscsiError           = "Only ISCSI volume attachments are currently supported"
 )
 
 // OCIFlexvolumeDriver implements the flexvolume.Driver interface for OCI.
@@ -172,6 +173,14 @@ func lookupNodeID(k kubernetes.Interface, nodeName string) (string, error) {
 	return n.Spec.ProviderID, nil
 }
 
+func getISCSIAttachment(attachment core.VolumeAttachment) (*core.IScsiVolumeAttachment, error) {
+	iscsiAttachment, ok := attachment.(core.IScsiVolumeAttachment)
+	if !ok {
+		return nil, errors.New(iscsiError)
+	}
+	return &iscsiAttachment, nil
+}
+
 // Attach initiates the attachment of the given OCI volume to the k8s worker
 // node.
 func (d OCIFlexvolumeDriver) Attach(logger *zap.SugaredLogger, opts flexvolume.Options, nodeName string) flexvolume.DriverStatus {
@@ -205,34 +214,41 @@ func (d OCIFlexvolumeDriver) Attach(logger *zap.SugaredLogger, opts flexvolume.O
 
 	volumeOCID := deriveVolumeOCID(cfg.RegionKey, opts["kubernetes.io/pvOrVolumeName"])
 
-	logger.With("volumeID", volumeOCID, "instanceID", *instance.Id).Info("Attaching volume to instance")
-
-	attachment, err := c.Compute().AttachVolume(ctx, *instance.Id, volumeOCID)
-	if err != nil {
-		if !client.IsConflict(err) {
-			return flexvolume.Fail(logger, "Failed to attach volume: ", err)
-		}
-		// If we get a 409 conflict response when attaching we
-		// presume that the device is already attached.
-		logger.With("volumeID", volumeOCID).Info("Volume already attached.")
-		attachment, err = c.Compute().FindVolumeAttachment(ctx, cfg.CompartmentID, volumeOCID)
-		if err != nil {
-			return flexvolume.Fail(logger, "Failed to find volume attachment: ", err)
-		}
+	//Checking if the volume is already attached
+	attachment, err := c.Compute().FindVolumeAttachment(ctx, cfg.CompartmentID, volumeOCID)
+	if err != nil && !client.IsNotFound(err) {
+		return flexvolume.Fail(logger, "Got error in finding volume attachment", err)
+	}
+	// volume already attached to an instance
+	if err == nil {
 		if *attachment.GetInstanceId() != *instance.Id {
-			return flexvolume.Fail(logger, "Already attached to another instance: ", *instance.Id)
+			return flexvolume.Fail(logger, "Already attached to another instance: ", *attachment.GetInstanceId())
+		}
+		logger.With("volumeID", volumeOCID, "instanceID", *instance.Id).Info("Volume is already attached to instance")
+		iscsiAttachment, err := getISCSIAttachment(attachment)
+		if err != nil {
+			return flexvolume.Fail(logger, iscsiError)
+		}
+		return flexvolume.DriverStatus{
+			Status: flexvolume.StatusSuccess,
+			Device: fmt.Sprintf(diskIDByPathTemplate, *iscsiAttachment.Ipv4, *iscsiAttachment.Port, *iscsiAttachment.Iqn),
 		}
 	}
-
+	// volume not attached to any instance, proceed with volume attachment
+	logger.With("volumeID", volumeOCID, "instanceID", *instance.Id).Info("Attaching volume to instance")
+	attachment, err = c.Compute().AttachVolume(ctx, *instance.Id, volumeOCID)
+	if err != nil {
+		return flexvolume.Fail(logger, "Failed to attach volume: ", err)
+	}
 	attachment, err = c.Compute().WaitForVolumeAttached(ctx, *attachment.GetId())
 	if err != nil {
 		return flexvolume.Fail(logger, err)
 	}
-
 	logger.With("attachmentID", *attachment.GetId()).Info("Volume attached")
-	iscsiAttachment, ok := attachment.(core.IScsiVolumeAttachment)
-	if !ok {
-		return flexvolume.Fail(logger, "Only ISCSI volume attachments are currently supported")
+
+	iscsiAttachment, err := getISCSIAttachment(attachment)
+	if err != nil {
+		return flexvolume.Fail(logger, iscsiError)
 	}
 
 	return flexvolume.DriverStatus{
