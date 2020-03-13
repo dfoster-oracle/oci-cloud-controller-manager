@@ -69,7 +69,7 @@ build-dirs:
 .PHONY: build
 build: build-dirs
 	@for component in $(COMPONENT); do \
-		GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
+		GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
     done
 
 .PHONY: manifests
@@ -127,7 +127,7 @@ run-volume-provisioner-dev:
 
 .PHONY: image
 BUILD_ARGS = --build-arg COMPONENT="$(COMPONENT)"
-image: build
+image:
 	docker  build $(BUILD_ARGS) \
 		-t $(IMAGE):$(VERSION) .
 
