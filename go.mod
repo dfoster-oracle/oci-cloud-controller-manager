@@ -4,7 +4,7 @@ go 1.12
 
 replace (
 	bitbucket.oci.oraclecorp.com/oke/oke-common => bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20190917222423-ba5e028f261d
-	github.com/Sirupsen/logrus v1.4.2 => github.com/sirupsen/logrus v1.4.2
+	github.com/docker/docker => github.com/docker/engine v0.0.0-20181106193140-f5749085e9cb
 	github.com/oracle/oci-go-sdk => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk v0.0.0-00000000000000-8dac74d567d
 	k8s.io/api => k8s.io/api v0.0.0-20190620084959-7cf5895f2711
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190620085554-14e95df34f1f
@@ -39,11 +39,9 @@ require (
 	bitbucket.oci.oraclecorp.com/oke/bmc-go-sdk v0.0.0-20180119170638-a7c726955dd4 // indirect
 	bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20190917222423-ba5e028f261d
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
-	github.com/Sirupsen/logrus v1.4.2 // indirect
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/container-storage-interface/spec v1.1.0
 	github.com/docker/distribution v0.0.0-20180720172123-0dae0957e5fe // indirect
-	github.com/docker/docker v1.13.1 // indirect
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-kit/kit v0.9.0 // indirect
@@ -80,6 +78,7 @@ require (
 	go.uber.org/atomic v1.3.2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1
+	golang.org/x/net v0.0.0-20190827160401-ba9fcec4b297
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
 	golang.org/x/sys v0.0.0-20190904154756-749cb33beabd
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
