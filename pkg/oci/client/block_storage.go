@@ -46,7 +46,7 @@ const (
 	configFilePath = "/etc/oci/config.yaml"
 )
 
-// BlockStorageInterface defines the interface to OCI block storage utilisted
+// BlockStorageInterface defines the interface to OCI block storage utilised
 // by the volume provisioner.
 type BlockStorageInterface interface {
 	AwaitVolumeAvailable(ctx context.Context, id string) (*core.Volume, error)

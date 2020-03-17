@@ -113,7 +113,7 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	csiFlagSet.DurationVar(&csioption.RetryIntervalStart, "csi-retry-interval-start", time.Second, "Initial retry interval of failed provisioning or deletion. It doubles with each failure, up to retry-interval-max.")
 	csiFlagSet.DurationVar(&csioption.RetryIntervalMax, "csi-retry-interval-max", 5*time.Minute, "Maximum retry interval of failed provisioning or deletion.")
 	csiFlagSet.UintVar(&csioption.WorkerThreads, "csi-worker-threads", 100, "Number of provisioner worker threads, in other words nr. of simultaneous CSI calls.")
-	csiFlagSet.DurationVar(&csioption.OperationTimeout, "csi-op-timeout", 10*time.Second, "Timeout for waiting for creation or deletion of a volume")
+	csiFlagSet.DurationVar(&csioption.OperationTimeout, "csi-op-timeout", 120*time.Second, "Timeout for waiting for creation or deletion of a volume")
 	csiFlagSet.BoolVar(&csioption.EnableLeaderElection, "csi-enable-leader-election", false, "Enables leader election. If leader election is enabled, additional RBAC rules are required. Please refer to the Kubernetes CSI documentation for instructions on setting up these RBAC rules.")
 	csiFlagSet.StringVar(&csioption.LeaderElectionType, "csi-leader-election-type", "endpoints", "the type of leader election, options are 'endpoints' (default) or 'leases' (strongly recommended). The 'endpoints' option is deprecated in favor of 'leases'.")
 	csiFlagSet.StringVar(&csioption.LeaderElectionNamespace, "csi-leader-election-namespace", "", "Namespace where the leader election resource lives. Defaults to the pod namespace if not set.")
