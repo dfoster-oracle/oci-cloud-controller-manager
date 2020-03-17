@@ -17,8 +17,6 @@ github.com/NYTimes/gziphandler
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
-# github.com/Sirupsen/logrus v1.4.2 => github.com/sirupsen/logrus v1.4.2
-github.com/Sirupsen/logrus
 # github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
 github.com/beorn7/perks/quantile
 # github.com/container-storage-interface/spec v1.1.0
@@ -39,7 +37,7 @@ github.com/davecgh/go-spew/spew
 # github.com/docker/distribution v0.0.0-20180720172123-0dae0957e5fe
 github.com/docker/distribution/reference
 github.com/docker/distribution/digestset
-# github.com/docker/docker v1.13.1
+# github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0 => github.com/docker/engine v0.0.0-20181106193140-f5749085e9cb
 github.com/docker/docker/pkg/term
 github.com/docker/docker/pkg/term/windows
 # github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
@@ -220,8 +218,8 @@ github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/prometheus/client_golang v0.9.2
-github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/promhttp
+github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal
 # github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910
 github.com/prometheus/client_model/go
@@ -603,8 +601,8 @@ k8s.io/client-go/kubernetes/scheme
 k8s.io/client-go/tools/leaderelection
 k8s.io/client-go/tools/leaderelection/resourcelock
 k8s.io/client-go/tools/record
-k8s.io/client-go/tools/metrics
 k8s.io/client-go/kubernetes/typed/core/v1
+k8s.io/client-go/tools/metrics
 k8s.io/client-go/informers/storage/v1beta1
 k8s.io/client-go/listers/storage/v1beta1
 k8s.io/client-go/informers/admissionregistration
@@ -782,12 +780,12 @@ k8s.io/kube-openapi/pkg/util
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/schemaconv
 # k8s.io/kubernetes v1.15.0
-k8s.io/kubernetes/pkg/client/metrics/prometheus
-k8s.io/kubernetes/pkg/version/prometheus
 k8s.io/kubernetes/cmd/cloud-controller-manager/app
 k8s.io/kubernetes/cmd/cloud-controller-manager/app/config
 k8s.io/kubernetes/cmd/cloud-controller-manager/app/options
 k8s.io/kubernetes/pkg/version/verflag
+k8s.io/kubernetes/pkg/client/metrics/prometheus
+k8s.io/kubernetes/pkg/version/prometheus
 k8s.io/kubernetes/pkg/kubelet/apis/pluginregistration/v1alpha1
 k8s.io/kubernetes/pkg/api/v1/service
 k8s.io/kubernetes/pkg/master/ports
@@ -804,13 +802,13 @@ k8s.io/kubernetes/pkg/scheduler/nodeinfo
 k8s.io/kubernetes/test/utils
 k8s.io/kubernetes/test/utils/image
 k8s.io/kubernetes/pkg/client/conditions
-k8s.io/kubernetes/pkg/version
 k8s.io/kubernetes/cmd/controller-manager/app
 k8s.io/kubernetes/pkg/controller/cloud
 k8s.io/kubernetes/pkg/controller/route
 k8s.io/kubernetes/pkg/controller/service
 k8s.io/kubernetes/pkg/util/configz
 k8s.io/kubernetes/pkg/util/flag
+k8s.io/kubernetes/pkg/version
 k8s.io/kubernetes/cmd/cloud-controller-manager/app/apis/config
 k8s.io/kubernetes/cmd/cloud-controller-manager/app/apis/config/scheme
 k8s.io/kubernetes/cmd/cloud-controller-manager/app/apis/config/v1alpha1
