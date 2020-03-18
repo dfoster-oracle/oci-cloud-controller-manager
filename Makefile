@@ -16,6 +16,8 @@ PKG := github.com/oracle/oci-cloud-controller-manager
 REGISTRY ?= odo-docker-local.artifactory.oci.oraclecorp.com
 IMAGE ?= $(REGISTRY)/oke-public-cloud-provider-oci
 COMPONENT ?= oci-cloud-controller-manager oci-volume-provisioner oci-flexvolume-driver cloud-provider-oci oci-csi-controller-driver oci-csi-node-driver
+DOCKER_CONFIG_DIR ?= ""
+DOCKER_REPO_ROOT?=/go/src/github.com/oracle/oci-cloud-controller-manager
 
 GIT_COMMIT := $(shell GCOMMIT=`git rev-parse --short HEAD`; if [ -n "`git status . --porcelain`" ]; then echo "$$GCOMMIT-dirty"; else echo $$GCOMMIT; fi)
 # Allow overriding for release versions else just equal the build (git hash)
@@ -68,9 +70,16 @@ build-dirs:
 
 .PHONY: build
 build: build-dirs
-	@for component in $(COMPONENT); do \
-		GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
-    done
+	@docker --config $(DOCKER_CONFIG_DIR) run --rm \
+		   --privileged \
+			 -w $(DOCKER_REPO_ROOT) \
+			 -v $(PWD):$(DOCKER_REPO_ROOT) \
+			 -e COMPONENT="$(COMPONENT)" \
+			 -e GOPATH=/go/ \
+			iad.ocir.io/odx-oke/oke/golang-buildbox:1.12.7-fips /bin/bash -c \
+			'for component in ${COMPONENT}; do \
+				echo building $$component && GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
+			 done'
 
 .PHONY: manifests
 manifests: build-dirs
@@ -126,8 +135,7 @@ run-volume-provisioner-dev:
 	    -v=4
 
 .PHONY: image
-BUILD_ARGS = --build-arg COMPONENT="$(COMPONENT)"
-image:
+image: clean build
 	docker  build $(BUILD_ARGS) \
 		-t $(IMAGE):$(VERSION) .
 
