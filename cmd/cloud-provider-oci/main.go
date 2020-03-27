@@ -22,8 +22,8 @@ import (
 
 	"github.com/oracle/oci-cloud-controller-manager/cmd/cloud-provider-oci/app"
 	_ "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci"
-	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/logs"
@@ -33,13 +33,11 @@ var version string
 var build string
 
 func main() {
+	viper.AutomaticEnv()
 	syscall.Umask(0)
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	log := logging.Logger()
-	defer log.Sync()
-	zap.ReplaceGlobals(log)
-	logger := log.Sugar()
+	logger := zap.L().Sugar()
 
 	command := app.NewCloudProviderOCICommand(logger)
 

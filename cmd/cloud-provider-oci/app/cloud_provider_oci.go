@@ -27,6 +27,7 @@ import (
 
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
 	_ "github.com/oracle/oci-cloud-controller-manager/pkg/oci/client" // for oci client metric registration
 	provisioner "github.com/oracle/oci-cloud-controller-manager/pkg/volume/provisioner/core"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -34,6 +35,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apiserver/pkg/util/term"
 	cliflag "k8s.io/component-base/cli/flag"
 	utilflag "k8s.io/component-base/cli/flag"
@@ -45,9 +47,10 @@ import (
 )
 
 var (
-	minVolumeSize, resourcePrincipalFile, metricsEndpoint                            string
-	enableCSI, enableVolumeProvisioning, volumeRoundingEnabled, useResourcePrincipal bool
-	resourcePrincipalInitialTimeout                                                  time.Duration
+	logLevel                                                                                  int8
+	minVolumeSize, resourcePrincipalFile, metricsEndpoint, logfilePath                        string
+	enableCSI, enableVolumeProvisioning, volumeRoundingEnabled, useResourcePrincipal, logJSON bool
+	resourcePrincipalInitialTimeout                                                           time.Duration
 )
 
 var csioption = csioptions.CSIOptions{}
@@ -66,6 +69,10 @@ func NewCloudProviderOCICommand(logger *zap.SugaredLogger) *cobra.Command {
 		Long: `The cloud provider oci daemon is a agglomeration of oci cloud controller
 manager and oci volume provisioner. It embeds the cloud specific control loops shipped with Kubernetes.`,
 		Run: func(cmd *cobra.Command, args []string) {
+			log := logging.Logger()
+			defer log.Sync()
+			zap.ReplaceGlobals(log)
+			logger = log.Sugar()
 			verflag.PrintAndExitIfRequested()
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				logger.Infof("FLAG: --%s=%q", flag.Name, flag.Value)
@@ -85,6 +92,12 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	// cloud controller manager flag set
 	//ccmFlagSet := namedFlagSets.flagSet("cloud controller manager")
 	//s.AddFlags(ccmFlagSet)
+
+	// logging parameters flagset
+	loggingFlagSet := namedFlagSets.FlagSet("logging variables")
+	loggingFlagSet.Int8Var(&logLevel, "log-level", int8(zapcore.InfoLevel), "Adjusts the level of the logs that will be omitted.")
+	loggingFlagSet.BoolVar(&logJSON, "log-json", false, "Log in json format.")
+	loggingFlagSet.StringVar(&logfilePath, "logfile-path", "", "If specified, write log messages to a file at this path.")
 
 	// prometheus metrics endpoint flagset
 	metricsFlagSet := namedFlagSets.FlagSet("metrics endpoint")
