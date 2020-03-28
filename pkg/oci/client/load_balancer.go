@@ -267,11 +267,12 @@ func (c *client) CreateListener(ctx context.Context, lbID, name string, details 
 	resp, err := c.loadbalancer.CreateListener(ctx, loadbalancer.CreateListenerRequest{
 		LoadBalancerId: &lbID,
 		CreateListenerDetails: loadbalancer.CreateListenerDetails{
-			Name:                  &name,
-			DefaultBackendSetName: details.DefaultBackendSetName,
-			Port:                  details.Port,
-			Protocol:              details.Protocol,
-			SslConfiguration:      details.SslConfiguration,
+			Name:                    &name,
+			DefaultBackendSetName:   details.DefaultBackendSetName,
+			Port:                    details.Port,
+			Protocol:                details.Protocol,
+			SslConfiguration:        details.SslConfiguration,
+			ConnectionConfiguration: details.ConnectionConfiguration,
 		},
 	})
 	incRequestCounter(err, createVerb, listenerResource)
@@ -292,10 +293,11 @@ func (c *client) UpdateListener(ctx context.Context, lbID, name string, details 
 		LoadBalancerId: &lbID,
 		ListenerName:   &name,
 		UpdateListenerDetails: loadbalancer.UpdateListenerDetails{
-			DefaultBackendSetName: details.DefaultBackendSetName,
-			Port:                  details.Port,
-			Protocol:              details.Protocol,
-			SslConfiguration:      details.SslConfiguration,
+			DefaultBackendSetName:   details.DefaultBackendSetName,
+			Port:                    details.Port,
+			Protocol:                details.Protocol,
+			SslConfiguration:        details.SslConfiguration,
+			ConnectionConfiguration: details.ConnectionConfiguration,
 		},
 	})
 	incRequestCounter(err, updateVerb, listenerResource)
