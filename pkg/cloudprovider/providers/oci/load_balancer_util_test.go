@@ -636,6 +636,44 @@ func TestGetListenerChanges(t *testing.T) {
 			},
 		},
 		{
+			name: "idle timeout change",
+			desired: map[string]loadbalancer.ListenerDetails{
+				"TCP-80": loadbalancer.ListenerDetails{
+					DefaultBackendSetName: common.String("TCP-80"),
+					Protocol:              common.String("TCP"),
+					Port:                  common.Int(80),
+					ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
+						IdleTimeout: common.Int64(100),
+					},
+				},
+			},
+			actual: map[string]loadbalancer.Listener{
+				"TCP-80": loadbalancer.Listener{
+					Name:                  common.String("TCP-80"),
+					DefaultBackendSetName: common.String("TCP-80"),
+					Protocol:              common.String("TCP"),
+					Port:                  common.Int(80),
+					ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
+						IdleTimeout: common.Int64(200),
+					},
+				},
+			},
+			expected: []Action{
+				&ListenerAction{
+					name:       "TCP-80",
+					actionType: Update,
+					Listener: loadbalancer.ListenerDetails{
+						DefaultBackendSetName: common.String("TCP-80"),
+						Protocol:              common.String("TCP"),
+						Port:                  common.Int(80),
+						ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
+							IdleTimeout: common.Int64(100),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "ssl config change [legacy listeners]",
 			desired: map[string]loadbalancer.ListenerDetails{
 				"TCP-80": loadbalancer.ListenerDetails{

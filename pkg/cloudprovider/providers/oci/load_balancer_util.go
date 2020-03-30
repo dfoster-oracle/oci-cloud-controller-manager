@@ -357,6 +357,23 @@ func hasListenerChanged(actual loadbalancer.Listener, desired loadbalancer.Liste
 	if hasSSLConfigurationChanged(actual.SslConfiguration, desired.SslConfiguration) {
 		return true
 	}
+	if hasConnectionConfigurationChanged(actual.ConnectionConfiguration, desired.ConnectionConfiguration) {
+		return true
+	}
+	return false
+}
+
+func hasConnectionConfigurationChanged(actual *loadbalancer.ConnectionConfiguration, desired *loadbalancer.ConnectionConfiguration) bool {
+	if actual == nil || desired == nil {
+		if actual == nil && desired == nil {
+			return false
+		}
+		return true
+	}
+
+	if actual.IdleTimeout != desired.IdleTimeout {
+		return true
+	}
 	return false
 }
 
