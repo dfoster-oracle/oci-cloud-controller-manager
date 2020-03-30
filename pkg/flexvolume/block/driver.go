@@ -65,7 +65,7 @@ func NewOCIFlexvolumeDriver(logger *zap.SugaredLogger) (fvd *OCIFlexvolumeDriver
 		}
 		return &OCIFlexvolumeDriver{K: k, master: true}, nil
 	} else if os.IsNotExist(err) {
-		logger.With(zap.Error(err), "path", path).Info("Config file does not exist. Assuming worker node.")
+		logger.With(zap.Error(err), "path", path).Debug("Config file does not exist. Assuming worker node.")
 		return &OCIFlexvolumeDriver{}, nil
 	}
 	return nil, err
