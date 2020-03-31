@@ -260,8 +260,29 @@ func NewConfigurationProvider(cfg *Config) (common.ConfigurationProvider, error)
 
 	cp, err := auth.NewServicePrincipalWithInstancePrincipalConfigurationProvider("")
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to instantiate ServicePrincipalWithInstancePrincipalConfigurationProvider")
+		cp, _ = NewConfigurationProviderWithUserPrincipal(cfg)
+		if cp == nil {
+			return nil, errors.Wrap(err, "failed to instantiate ServicePrincipalWithInstancePrincipalConfigurationProvider")
+		}
 	}
 	return cp, nil
 
+}
+
+//NewConfigurationProviderWithUserPrincipal takes a cloud provider config file with user auth and returns an OCI ConfigurationProvider
+//to be consumed by e2e tests.
+func NewConfigurationProviderWithUserPrincipal(cfg *Config) (common.ConfigurationProvider, error) {
+	var conf common.ConfigurationProvider
+	if cfg != nil {
+		conf = common.NewRawConfigurationProvider(
+			cfg.Auth.TenancyID,
+			cfg.Auth.UserID,
+			cfg.Auth.Region,
+			cfg.Auth.Fingerprint,
+			cfg.Auth.PrivateKey,
+			common.String(cfg.Auth.PrivateKeyPassphrase))
+		return conf, nil
+	}
+
+	return nil, nil
 }
