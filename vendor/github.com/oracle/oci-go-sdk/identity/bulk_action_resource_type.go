@@ -1,0 +1,30 @@
+// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Code generated. DO NOT EDIT.
+
+// Identity and Access Management Service API
+//
+// APIs for managing users, groups, compartments, and policies.
+//
+
+package identity
+
+import (
+	"github.com/oracle/oci-go-sdk/common"
+)
+
+// BulkActionResourceType The representation of BulkActionResourceType
+type BulkActionResourceType struct {
+
+	// The unique name of the resource type.
+	Name *string `mandatory:"true" json:"name"`
+
+	// List of metadata keys required to identify the resource.
+	// E.g. for bucket, metadataKeys will be ["namespaceName", "bucketName"].
+	// This informatino will match the public API document:
+	// https://docs.cloud.oracle.com/en-us/iaas/api/#/en/objectstorage/20160918/Bucket/GetBucket
+	MetadataKeys []string `mandatory:"false" json:"metadataKeys"`
+}
+
+func (m BulkActionResourceType) String() string {
+	return common.PointerString(m)
+}

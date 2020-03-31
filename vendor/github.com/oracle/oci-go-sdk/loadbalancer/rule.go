@@ -76,6 +76,10 @@ func (m *rule) UnmarshalPolymorphicJSON(data []byte) (interface{}, error) {
 		mm := AllowRule{}
 		err = json.Unmarshal(data, &mm)
 		return mm, err
+	case "HTTP_HEADER":
+		mm := HttpHeaderRule{}
+		err = json.Unmarshal(data, &mm)
+		return mm, err
 	case "ADD_HTTP_RESPONSE_HEADER":
 		mm := AddHttpResponseHeaderRule{}
 		err = json.Unmarshal(data, &mm)
@@ -107,6 +111,7 @@ const (
 	RuleActionAllow                         RuleActionEnum = "ALLOW"
 	RuleActionControlAccessUsingHttpMethods RuleActionEnum = "CONTROL_ACCESS_USING_HTTP_METHODS"
 	RuleActionRedirect                      RuleActionEnum = "REDIRECT"
+	RuleActionHttpHeader                    RuleActionEnum = "HTTP_HEADER"
 )
 
 var mappingRuleAction = map[string]RuleActionEnum{
@@ -116,9 +121,10 @@ var mappingRuleAction = map[string]RuleActionEnum{
 	"ADD_HTTP_RESPONSE_HEADER":          RuleActionAddHttpResponseHeader,
 	"EXTEND_HTTP_RESPONSE_HEADER_VALUE": RuleActionExtendHttpResponseHeaderValue,
 	"REMOVE_HTTP_RESPONSE_HEADER":       RuleActionRemoveHttpResponseHeader,
-	"ALLOW": RuleActionAllow,
+	"ALLOW":                             RuleActionAllow,
 	"CONTROL_ACCESS_USING_HTTP_METHODS": RuleActionControlAccessUsingHttpMethods,
 	"REDIRECT":                          RuleActionRedirect,
+	"HTTP_HEADER":                       RuleActionHttpHeader,
 }
 
 // GetRuleActionEnumValues Enumerates the set of values for RuleActionEnum

@@ -26,8 +26,8 @@ import (
 // an administrator must create an IAM policy in your tenancy that lets the Networking service
 // put objects in that bucket. Otherwise, no flow logs can be written to the bucket.
 // Here's the required policy (which consists of three separate statements):
-// `define tenancy VcnFlowLogs as ocid1.tenancy.oc1..aaaaaaaacaswototo7jx2hx24wyanauiyzreowh2cmsbmrkakeaabdyk6c6q`
-// `define dynamic-group FlowLogsDynamicGroup as ocid1.dynamicgroup.oc1..aaaaaaaalzalw7g5jf5ujqlzuho3adrrhlioekcjigrcbv44gim5euyuostq`
+// `define tenancy VcnFlowLogs as ocid1.tenancy.oc1..<var>&lt;unique_ID&gt;</var>`
+// `define dynamic-group FlowLogsDynamicGroup as ocid1.dynamicgroup.oc1..<var>&lt;unique_ID&gt;</var>`
 // `admit dynamic-group FlowLogsDynamicGroup of tenancy VcnFlowLogs to manage objects in tenancy where target.bucket.name='yourbucketname'`
 // To enable flow logs for a subnet: after creating a flow
 // log configuration, attach the flow log configuration to that subnet. See
@@ -58,7 +58,7 @@ type FlowLogConfig struct {
 	// Where to store the flow logs.
 	Destination FlowLogDestination `mandatory:"true" json:"destination"`
 
-	// The date and time the flow log configuration was created, in the format defined by RFC3339.
+	// The date and time the flow log configuration was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
 

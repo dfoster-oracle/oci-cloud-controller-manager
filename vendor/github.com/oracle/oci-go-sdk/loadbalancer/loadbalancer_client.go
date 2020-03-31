@@ -30,6 +30,22 @@ func NewLoadBalancerClientWithConfigurationProvider(configProvider common.Config
 		return
 	}
 
+	return newLoadBalancerClientFromBaseClient(baseClient, configProvider)
+}
+
+// NewLoadBalancerClientWithOboToken Creates a new default LoadBalancer client with the given configuration provider.
+// The obotoken will be added to default headers and signed; the configuration provider will be used for the signer
+//  as well as reading the region
+func NewLoadBalancerClientWithOboToken(configProvider common.ConfigurationProvider, oboToken string) (client LoadBalancerClient, err error) {
+	baseClient, err := common.NewClientWithOboToken(configProvider, oboToken)
+	if err != nil {
+		return
+	}
+
+	return newLoadBalancerClientFromBaseClient(baseClient, configProvider)
+}
+
+func newLoadBalancerClientFromBaseClient(baseClient common.BaseClient, configProvider common.ConfigurationProvider) (client LoadBalancerClient, err error) {
 	client = LoadBalancerClient{BaseClient: baseClient}
 	client.BasePath = "20170115"
 	err = client.setConfigurationProvider(configProvider)
@@ -75,7 +91,8 @@ func (client LoadBalancerClient) ChangeLoadBalancerCompartment(ctx context.Conte
 	ociResponse, err = common.Retry(ctx, request, client.changeLoadBalancerCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ChangeLoadBalancerCompartmentResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ChangeLoadBalancerCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -122,7 +139,8 @@ func (client LoadBalancerClient) CreateBackend(ctx context.Context, request Crea
 	ociResponse, err = common.Retry(ctx, request, client.createBackend, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateBackendResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateBackendResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -169,7 +187,8 @@ func (client LoadBalancerClient) CreateBackendSet(ctx context.Context, request C
 	ociResponse, err = common.Retry(ctx, request, client.createBackendSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateBackendSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateBackendSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -216,7 +235,8 @@ func (client LoadBalancerClient) CreateCertificate(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.createCertificate, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateCertificateResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateCertificateResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -264,7 +284,8 @@ func (client LoadBalancerClient) CreateHostname(ctx context.Context, request Cre
 	ociResponse, err = common.Retry(ctx, request, client.createHostname, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateHostnameResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateHostnameResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -311,7 +332,8 @@ func (client LoadBalancerClient) CreateListener(ctx context.Context, request Cre
 	ociResponse, err = common.Retry(ctx, request, client.createListener, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateListenerResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateListenerResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -378,7 +400,8 @@ func (client LoadBalancerClient) CreateLoadBalancer(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.createLoadBalancer, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateLoadBalancerResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateLoadBalancerResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -426,7 +449,8 @@ func (client LoadBalancerClient) CreatePathRouteSet(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.createPathRouteSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreatePathRouteSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreatePathRouteSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -469,7 +493,8 @@ func (client LoadBalancerClient) CreateRuleSet(ctx context.Context, request Crea
 	ociResponse, err = common.Retry(ctx, request, client.createRuleSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateRuleSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateRuleSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -516,7 +541,8 @@ func (client LoadBalancerClient) CreateSSLCipherSuite(ctx context.Context, reque
 	ociResponse, err = common.Retry(ctx, request, client.createSSLCipherSuite, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateSSLCipherSuiteResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateSSLCipherSuiteResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -558,7 +584,8 @@ func (client LoadBalancerClient) DeleteBackend(ctx context.Context, request Dele
 	ociResponse, err = common.Retry(ctx, request, client.deleteBackend, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteBackendResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteBackendResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -601,7 +628,8 @@ func (client LoadBalancerClient) DeleteBackendSet(ctx context.Context, request D
 	ociResponse, err = common.Retry(ctx, request, client.deleteBackendSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteBackendSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteBackendSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -643,7 +671,8 @@ func (client LoadBalancerClient) DeleteCertificate(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.deleteCertificate, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteCertificateResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteCertificateResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -685,7 +714,8 @@ func (client LoadBalancerClient) DeleteHostname(ctx context.Context, request Del
 	ociResponse, err = common.Retry(ctx, request, client.deleteHostname, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteHostnameResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteHostnameResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -727,7 +757,8 @@ func (client LoadBalancerClient) DeleteListener(ctx context.Context, request Del
 	ociResponse, err = common.Retry(ctx, request, client.deleteListener, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteListenerResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteListenerResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -769,7 +800,8 @@ func (client LoadBalancerClient) DeleteLoadBalancer(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.deleteLoadBalancer, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteLoadBalancerResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteLoadBalancerResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -813,7 +845,8 @@ func (client LoadBalancerClient) DeletePathRouteSet(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.deletePathRouteSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeletePathRouteSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeletePathRouteSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -857,7 +890,8 @@ func (client LoadBalancerClient) DeleteRuleSet(ctx context.Context, request Dele
 	ociResponse, err = common.Retry(ctx, request, client.deleteRuleSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteRuleSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteRuleSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -899,7 +933,8 @@ func (client LoadBalancerClient) DeleteSSLCipherSuite(ctx context.Context, reque
 	ociResponse, err = common.Retry(ctx, request, client.deleteSSLCipherSuite, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteSSLCipherSuiteResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteSSLCipherSuiteResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -941,7 +976,8 @@ func (client LoadBalancerClient) GetBackend(ctx context.Context, request GetBack
 	ociResponse, err = common.Retry(ctx, request, client.getBackend, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetBackendResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetBackendResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -983,7 +1019,8 @@ func (client LoadBalancerClient) GetBackendHealth(ctx context.Context, request G
 	ociResponse, err = common.Retry(ctx, request, client.getBackendHealth, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetBackendHealthResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetBackendHealthResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1025,7 +1062,8 @@ func (client LoadBalancerClient) GetBackendSet(ctx context.Context, request GetB
 	ociResponse, err = common.Retry(ctx, request, client.getBackendSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetBackendSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetBackendSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1067,7 +1105,8 @@ func (client LoadBalancerClient) GetBackendSetHealth(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.getBackendSetHealth, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetBackendSetHealthResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetBackendSetHealthResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1109,7 +1148,8 @@ func (client LoadBalancerClient) GetHealthChecker(ctx context.Context, request G
 	ociResponse, err = common.Retry(ctx, request, client.getHealthChecker, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetHealthCheckerResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetHealthCheckerResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1151,7 +1191,8 @@ func (client LoadBalancerClient) GetHostname(ctx context.Context, request GetHos
 	ociResponse, err = common.Retry(ctx, request, client.getHostname, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetHostnameResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetHostnameResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1193,7 +1234,8 @@ func (client LoadBalancerClient) GetLoadBalancer(ctx context.Context, request Ge
 	ociResponse, err = common.Retry(ctx, request, client.getLoadBalancer, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetLoadBalancerResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetLoadBalancerResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1235,7 +1277,8 @@ func (client LoadBalancerClient) GetLoadBalancerHealth(ctx context.Context, requ
 	ociResponse, err = common.Retry(ctx, request, client.getLoadBalancerHealth, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetLoadBalancerHealthResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetLoadBalancerHealthResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1277,7 +1320,8 @@ func (client LoadBalancerClient) GetPathRouteSet(ctx context.Context, request Ge
 	ociResponse, err = common.Retry(ctx, request, client.getPathRouteSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetPathRouteSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetPathRouteSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1319,7 +1363,8 @@ func (client LoadBalancerClient) GetRuleSet(ctx context.Context, request GetRule
 	ociResponse, err = common.Retry(ctx, request, client.getRuleSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetRuleSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetRuleSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1361,7 +1406,8 @@ func (client LoadBalancerClient) GetSSLCipherSuite(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.getSSLCipherSuite, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetSSLCipherSuiteResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetSSLCipherSuiteResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1403,7 +1449,8 @@ func (client LoadBalancerClient) GetWorkRequest(ctx context.Context, request Get
 	ociResponse, err = common.Retry(ctx, request, client.getWorkRequest, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetWorkRequestResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetWorkRequestResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1445,7 +1492,8 @@ func (client LoadBalancerClient) ListBackendSets(ctx context.Context, request Li
 	ociResponse, err = common.Retry(ctx, request, client.listBackendSets, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListBackendSetsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListBackendSetsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1487,7 +1535,8 @@ func (client LoadBalancerClient) ListBackends(ctx context.Context, request ListB
 	ociResponse, err = common.Retry(ctx, request, client.listBackends, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListBackendsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListBackendsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1529,7 +1578,8 @@ func (client LoadBalancerClient) ListCertificates(ctx context.Context, request L
 	ociResponse, err = common.Retry(ctx, request, client.listCertificates, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListCertificatesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListCertificatesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1571,7 +1621,8 @@ func (client LoadBalancerClient) ListHostnames(ctx context.Context, request List
 	ociResponse, err = common.Retry(ctx, request, client.listHostnames, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListHostnamesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListHostnamesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1618,7 +1669,8 @@ func (client LoadBalancerClient) ListListenerRules(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.listListenerRules, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListListenerRulesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListListenerRulesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1660,7 +1712,8 @@ func (client LoadBalancerClient) ListLoadBalancerHealths(ctx context.Context, re
 	ociResponse, err = common.Retry(ctx, request, client.listLoadBalancerHealths, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListLoadBalancerHealthsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListLoadBalancerHealthsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1702,7 +1755,8 @@ func (client LoadBalancerClient) ListLoadBalancers(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.listLoadBalancers, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListLoadBalancersResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListLoadBalancersResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1744,7 +1798,8 @@ func (client LoadBalancerClient) ListPathRouteSets(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.listPathRouteSets, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListPathRouteSetsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListPathRouteSetsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1786,7 +1841,8 @@ func (client LoadBalancerClient) ListPolicies(ctx context.Context, request ListP
 	ociResponse, err = common.Retry(ctx, request, client.listPolicies, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListPoliciesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListPoliciesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1828,7 +1884,8 @@ func (client LoadBalancerClient) ListProtocols(ctx context.Context, request List
 	ociResponse, err = common.Retry(ctx, request, client.listProtocols, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListProtocolsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListProtocolsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1870,7 +1927,8 @@ func (client LoadBalancerClient) ListRuleSets(ctx context.Context, request ListR
 	ociResponse, err = common.Retry(ctx, request, client.listRuleSets, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListRuleSetsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListRuleSetsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1912,7 +1970,8 @@ func (client LoadBalancerClient) ListSSLCipherSuites(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.listSSLCipherSuites, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListSSLCipherSuitesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListSSLCipherSuitesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1954,7 +2013,8 @@ func (client LoadBalancerClient) ListShapes(ctx context.Context, request ListSha
 	ociResponse, err = common.Retry(ctx, request, client.listShapes, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListShapesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListShapesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1996,7 +2056,8 @@ func (client LoadBalancerClient) ListWorkRequests(ctx context.Context, request L
 	ociResponse, err = common.Retry(ctx, request, client.listWorkRequests, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListWorkRequestsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListWorkRequestsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2043,7 +2104,8 @@ func (client LoadBalancerClient) UpdateBackend(ctx context.Context, request Upda
 	ociResponse, err = common.Retry(ctx, request, client.updateBackend, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateBackendResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateBackendResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2090,7 +2152,8 @@ func (client LoadBalancerClient) UpdateBackendSet(ctx context.Context, request U
 	ociResponse, err = common.Retry(ctx, request, client.updateBackendSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateBackendSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateBackendSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2137,7 +2200,8 @@ func (client LoadBalancerClient) UpdateHealthChecker(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.updateHealthChecker, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateHealthCheckerResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateHealthCheckerResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2180,7 +2244,8 @@ func (client LoadBalancerClient) UpdateHostname(ctx context.Context, request Upd
 	ociResponse, err = common.Retry(ctx, request, client.updateHostname, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateHostnameResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateHostnameResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2227,7 +2292,8 @@ func (client LoadBalancerClient) UpdateListener(ctx context.Context, request Upd
 	ociResponse, err = common.Retry(ctx, request, client.updateListener, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateListenerResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateListenerResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2274,7 +2340,8 @@ func (client LoadBalancerClient) UpdateLoadBalancer(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.updateLoadBalancer, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateLoadBalancerResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateLoadBalancerResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2321,7 +2388,8 @@ func (client LoadBalancerClient) UpdateNetworkSecurityGroups(ctx context.Context
 	ociResponse, err = common.Retry(ctx, request, client.updateNetworkSecurityGroups, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateNetworkSecurityGroupsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateNetworkSecurityGroupsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2372,7 +2440,8 @@ func (client LoadBalancerClient) UpdatePathRouteSet(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.updatePathRouteSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdatePathRouteSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdatePathRouteSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2416,7 +2485,8 @@ func (client LoadBalancerClient) UpdateRuleSet(ctx context.Context, request Upda
 	ociResponse, err = common.Retry(ctx, request, client.updateRuleSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateRuleSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateRuleSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2463,7 +2533,8 @@ func (client LoadBalancerClient) UpdateSSLCipherSuite(ctx context.Context, reque
 	ociResponse, err = common.Retry(ctx, request, client.updateSSLCipherSuite, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateSSLCipherSuiteResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateSSLCipherSuiteResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}

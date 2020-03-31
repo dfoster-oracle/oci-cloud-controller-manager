@@ -33,6 +33,22 @@ func NewComputeClientWithConfigurationProvider(configProvider common.Configurati
 		return
 	}
 
+	return newComputeClientFromBaseClient(baseClient, configProvider)
+}
+
+// NewComputeClientWithOboToken Creates a new default Compute client with the given configuration provider.
+// The obotoken will be added to default headers and signed; the configuration provider will be used for the signer
+//  as well as reading the region
+func NewComputeClientWithOboToken(configProvider common.ConfigurationProvider, oboToken string) (client ComputeClient, err error) {
+	baseClient, err := common.NewClientWithOboToken(configProvider, oboToken)
+	if err != nil {
+		return
+	}
+
+	return newComputeClientFromBaseClient(baseClient, configProvider)
+}
+
+func newComputeClientFromBaseClient(baseClient common.BaseClient, configProvider common.ConfigurationProvider) (client ComputeClient, err error) {
 	client = ComputeClient{BaseClient: baseClient}
 	client.BasePath = "20160918"
 	err = client.setConfigurationProvider(configProvider)
@@ -72,7 +88,8 @@ func (client ComputeClient) AddImageShapeCompatibilityEntry(ctx context.Context,
 	ociResponse, err = common.Retry(ctx, request, client.addImageShapeCompatibilityEntry, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = AddImageShapeCompatibilityEntryResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = AddImageShapeCompatibilityEntryResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -119,7 +136,8 @@ func (client ComputeClient) AttachBootVolume(ctx context.Context, request Attach
 	ociResponse, err = common.Retry(ctx, request, client.attachBootVolume, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = AttachBootVolumeResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = AttachBootVolumeResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -168,7 +186,8 @@ func (client ComputeClient) AttachVnic(ctx context.Context, request AttachVnicRe
 	ociResponse, err = common.Retry(ctx, request, client.attachVnic, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = AttachVnicResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = AttachVnicResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -215,7 +234,8 @@ func (client ComputeClient) AttachVolume(ctx context.Context, request AttachVolu
 	ociResponse, err = common.Retry(ctx, request, client.attachVolume, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = AttachVolumeResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = AttachVolumeResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -276,7 +296,8 @@ func (client ComputeClient) CaptureConsoleHistory(ctx context.Context, request C
 	ociResponse, err = common.Retry(ctx, request, client.captureConsoleHistory, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CaptureConsoleHistoryResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CaptureConsoleHistoryResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -323,7 +344,8 @@ func (client ComputeClient) ChangeDedicatedVmHostCompartment(ctx context.Context
 	ociResponse, err = common.Retry(ctx, request, client.changeDedicatedVmHostCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ChangeDedicatedVmHostCompartmentResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ChangeDedicatedVmHostCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -372,7 +394,8 @@ func (client ComputeClient) ChangeImageCompartment(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.changeImageCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ChangeImageCompartmentResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ChangeImageCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -423,7 +446,8 @@ func (client ComputeClient) ChangeInstanceCompartment(ctx context.Context, reque
 	ociResponse, err = common.Retry(ctx, request, client.changeInstanceCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ChangeInstanceCompartmentResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ChangeInstanceCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -470,7 +494,8 @@ func (client ComputeClient) CreateAppCatalogSubscription(ctx context.Context, re
 	ociResponse, err = common.Retry(ctx, request, client.createAppCatalogSubscription, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateAppCatalogSubscriptionResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateAppCatalogSubscriptionResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -520,7 +545,8 @@ func (client ComputeClient) CreateDedicatedVmHost(ctx context.Context, request C
 	ociResponse, err = common.Retry(ctx, request, client.createDedicatedVmHost, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateDedicatedVmHostResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateDedicatedVmHostResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -583,7 +609,8 @@ func (client ComputeClient) CreateImage(ctx context.Context, request CreateImage
 	ociResponse, err = common.Retry(ctx, request, client.createImage, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateImageResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateImageResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -633,7 +660,8 @@ func (client ComputeClient) CreateInstanceConsoleConnection(ctx context.Context,
 	ociResponse, err = common.Retry(ctx, request, client.createInstanceConsoleConnection, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateInstanceConsoleConnectionResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateInstanceConsoleConnectionResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -675,7 +703,8 @@ func (client ComputeClient) DeleteAppCatalogSubscription(ctx context.Context, re
 	ociResponse, err = common.Retry(ctx, request, client.deleteAppCatalogSubscription, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteAppCatalogSubscriptionResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteAppCatalogSubscriptionResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -717,7 +746,8 @@ func (client ComputeClient) DeleteConsoleHistory(ctx context.Context, request De
 	ociResponse, err = common.Retry(ctx, request, client.deleteConsoleHistory, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteConsoleHistoryResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteConsoleHistoryResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -761,7 +791,8 @@ func (client ComputeClient) DeleteDedicatedVmHost(ctx context.Context, request D
 	ociResponse, err = common.Retry(ctx, request, client.deleteDedicatedVmHost, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteDedicatedVmHostResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteDedicatedVmHostResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -803,7 +834,8 @@ func (client ComputeClient) DeleteImage(ctx context.Context, request DeleteImage
 	ociResponse, err = common.Retry(ctx, request, client.deleteImage, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteImageResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteImageResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -845,7 +877,8 @@ func (client ComputeClient) DeleteInstanceConsoleConnection(ctx context.Context,
 	ociResponse, err = common.Retry(ctx, request, client.deleteInstanceConsoleConnection, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteInstanceConsoleConnectionResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteInstanceConsoleConnectionResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -889,7 +922,8 @@ func (client ComputeClient) DetachBootVolume(ctx context.Context, request Detach
 	ociResponse, err = common.Retry(ctx, request, client.detachBootVolume, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DetachBootVolumeResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DetachBootVolumeResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -939,7 +973,8 @@ func (client ComputeClient) DetachVnic(ctx context.Context, request DetachVnicRe
 	ociResponse, err = common.Retry(ctx, request, client.detachVnic, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DetachVnicResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DetachVnicResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -983,7 +1018,8 @@ func (client ComputeClient) DetachVolume(ctx context.Context, request DetachVolu
 	ociResponse, err = common.Retry(ctx, request, client.detachVolume, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DetachVolumeResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DetachVolumeResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1036,7 +1072,8 @@ func (client ComputeClient) ExportImage(ctx context.Context, request ExportImage
 	ociResponse, err = common.Retry(ctx, request, client.exportImage, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ExportImageResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ExportImageResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1078,7 +1115,8 @@ func (client ComputeClient) GetAppCatalogListing(ctx context.Context, request Ge
 	ociResponse, err = common.Retry(ctx, request, client.getAppCatalogListing, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetAppCatalogListingResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetAppCatalogListingResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1120,7 +1158,8 @@ func (client ComputeClient) GetAppCatalogListingAgreements(ctx context.Context, 
 	ociResponse, err = common.Retry(ctx, request, client.getAppCatalogListingAgreements, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetAppCatalogListingAgreementsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetAppCatalogListingAgreementsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1162,7 +1201,8 @@ func (client ComputeClient) GetAppCatalogListingResourceVersion(ctx context.Cont
 	ociResponse, err = common.Retry(ctx, request, client.getAppCatalogListingResourceVersion, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetAppCatalogListingResourceVersionResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetAppCatalogListingResourceVersionResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1204,7 +1244,8 @@ func (client ComputeClient) GetBootVolumeAttachment(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.getBootVolumeAttachment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetBootVolumeAttachmentResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetBootVolumeAttachmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1248,7 +1289,8 @@ func (client ComputeClient) GetConsoleHistory(ctx context.Context, request GetCo
 	ociResponse, err = common.Retry(ctx, request, client.getConsoleHistory, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetConsoleHistoryResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetConsoleHistoryResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1292,7 +1334,8 @@ func (client ComputeClient) GetConsoleHistoryContent(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.getConsoleHistoryContent, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetConsoleHistoryContentResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetConsoleHistoryContentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1334,7 +1377,8 @@ func (client ComputeClient) GetDedicatedVmHost(ctx context.Context, request GetD
 	ociResponse, err = common.Retry(ctx, request, client.getDedicatedVmHost, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetDedicatedVmHostResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetDedicatedVmHostResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1376,7 +1420,8 @@ func (client ComputeClient) GetImage(ctx context.Context, request GetImageReques
 	ociResponse, err = common.Retry(ctx, request, client.getImage, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetImageResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetImageResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1408,6 +1453,49 @@ func (client ComputeClient) getImage(ctx context.Context, request common.OCIRequ
 	return response, err
 }
 
+// GetImageShapeCompatibilityEntry Retrieves an image shape compatibility entry.
+func (client ComputeClient) GetImageShapeCompatibilityEntry(ctx context.Context, request GetImageShapeCompatibilityEntryRequest) (response GetImageShapeCompatibilityEntryResponse, err error) {
+	var ociResponse common.OCIResponse
+	policy := common.NoRetryPolicy()
+	if request.RetryPolicy() != nil {
+		policy = *request.RetryPolicy()
+	}
+	ociResponse, err = common.Retry(ctx, request, client.getImageShapeCompatibilityEntry, policy)
+	if err != nil {
+		if ociResponse != nil {
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetImageShapeCompatibilityEntryResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+		}
+		return
+	}
+	if convertedResponse, ok := ociResponse.(GetImageShapeCompatibilityEntryResponse); ok {
+		response = convertedResponse
+	} else {
+		err = fmt.Errorf("failed to convert OCIResponse into GetImageShapeCompatibilityEntryResponse")
+	}
+	return
+}
+
+// getImageShapeCompatibilityEntry implements the OCIOperation interface (enables retrying operations)
+func (client ComputeClient) getImageShapeCompatibilityEntry(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
+	httpRequest, err := request.HTTPRequest(http.MethodGet, "/images/{imageId}/shapes/{shapeName}")
+	if err != nil {
+		return nil, err
+	}
+
+	var response GetImageShapeCompatibilityEntryResponse
+	var httpResponse *http.Response
+	httpResponse, err = client.Call(ctx, &httpRequest)
+	defer common.CloseBodyIfValid(httpResponse)
+	response.RawResponse = httpResponse
+	if err != nil {
+		return response, err
+	}
+
+	err = common.UnmarshalResponse(httpResponse, &response)
+	return response, err
+}
+
 // GetInstance Gets information about the specified instance.
 func (client ComputeClient) GetInstance(ctx context.Context, request GetInstanceRequest) (response GetInstanceResponse, err error) {
 	var ociResponse common.OCIResponse
@@ -1418,7 +1506,8 @@ func (client ComputeClient) GetInstance(ctx context.Context, request GetInstance
 	ociResponse, err = common.Retry(ctx, request, client.getInstance, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetInstanceResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetInstanceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1460,7 +1549,8 @@ func (client ComputeClient) GetInstanceConsoleConnection(ctx context.Context, re
 	ociResponse, err = common.Retry(ctx, request, client.getInstanceConsoleConnection, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetInstanceConsoleConnectionResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetInstanceConsoleConnectionResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1502,7 +1592,8 @@ func (client ComputeClient) GetVnicAttachment(ctx context.Context, request GetVn
 	ociResponse, err = common.Retry(ctx, request, client.getVnicAttachment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetVnicAttachmentResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetVnicAttachmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1544,7 +1635,8 @@ func (client ComputeClient) GetVolumeAttachment(ctx context.Context, request Get
 	ociResponse, err = common.Retry(ctx, request, client.getVolumeAttachment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetVolumeAttachmentResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetVolumeAttachmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1576,8 +1668,8 @@ func (client ComputeClient) getVolumeAttachment(ctx context.Context, request com
 	return response, err
 }
 
-// GetWindowsInstanceInitialCredentials Gets the generated credentials for the instance. Only works for instances that require password to log in (E.g. Windows).
-// For certain OS'es, users will be forced to change the initial credentials.
+// GetWindowsInstanceInitialCredentials Gets the generated credentials for the instance. Only works for instances that require a password to log in, such as Windows.
+// For certain operating systems, users will be forced to change the initial credentials.
 func (client ComputeClient) GetWindowsInstanceInitialCredentials(ctx context.Context, request GetWindowsInstanceInitialCredentialsRequest) (response GetWindowsInstanceInitialCredentialsResponse, err error) {
 	var ociResponse common.OCIResponse
 	policy := common.NoRetryPolicy()
@@ -1587,7 +1679,8 @@ func (client ComputeClient) GetWindowsInstanceInitialCredentials(ctx context.Con
 	ociResponse, err = common.Retry(ctx, request, client.getWindowsInstanceInitialCredentials, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetWindowsInstanceInitialCredentialsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetWindowsInstanceInitialCredentialsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1622,12 +1715,16 @@ func (client ComputeClient) getWindowsInstanceInitialCredentials(ctx context.Con
 // InstanceAction Performs one of the following power actions on the specified instance:
 // - **START** - Powers on the instance.
 // - **STOP** - Powers off the instance.
-// - **SOFTRESET** - Gracefully reboots instance by sending a shutdown command to the operating system and then powers the instance back on.
-// - **SOFTSTOP** - Gracefully shuts down instance by sending a shutdown command to the operating system.
 // - **RESET** - Powers off the instance and then powers it back on.
+// - **SOFTSTOP** - Gracefully shuts down the instance by sending a shutdown command to the operating system.
+// If the applications that run on the instance take a long time to shut down, they could be improperly stopped, resulting
+// in data corruption. To avoid this, shut down the instance using the commands available in the OS before you softstop the
+// instance.
+// - **SOFTRESET** - Gracefully reboots the instance by sending a shutdown command to the operating system, and
+// then powers the instance back on.
 // - **VALIDATELIVEMIGRATE** - Live migrate the instance to validate impact on the customer workload.
 //                             Live migrating an instance moves it to a different physical host while the instance is running.
-// For more information see Stopping and Starting an Instance (https://docs.cloud.oracle.com/Content/Compute/Tasks/restartinginstance.htm).
+// For more information, see Stopping and Starting an Instance (https://docs.cloud.oracle.com/Content/Compute/Tasks/restartinginstance.htm).
 func (client ComputeClient) InstanceAction(ctx context.Context, request InstanceActionRequest) (response InstanceActionResponse, err error) {
 	var ociResponse common.OCIResponse
 	policy := common.NoRetryPolicy()
@@ -1642,7 +1739,8 @@ func (client ComputeClient) InstanceAction(ctx context.Context, request Instance
 	ociResponse, err = common.Retry(ctx, request, client.instanceAction, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = InstanceActionResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = InstanceActionResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1713,7 +1811,8 @@ func (client ComputeClient) LaunchInstance(ctx context.Context, request LaunchIn
 	ociResponse, err = common.Retry(ctx, request, client.launchInstance, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = LaunchInstanceResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = LaunchInstanceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1755,7 +1854,8 @@ func (client ComputeClient) ListAppCatalogListingResourceVersions(ctx context.Co
 	ociResponse, err = common.Retry(ctx, request, client.listAppCatalogListingResourceVersions, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListAppCatalogListingResourceVersionsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListAppCatalogListingResourceVersionsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1797,7 +1897,8 @@ func (client ComputeClient) ListAppCatalogListings(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.listAppCatalogListings, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListAppCatalogListingsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListAppCatalogListingsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1839,7 +1940,8 @@ func (client ComputeClient) ListAppCatalogSubscriptions(ctx context.Context, req
 	ociResponse, err = common.Retry(ctx, request, client.listAppCatalogSubscriptions, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListAppCatalogSubscriptionsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListAppCatalogSubscriptionsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1882,7 +1984,8 @@ func (client ComputeClient) ListBootVolumeAttachments(ctx context.Context, reque
 	ociResponse, err = common.Retry(ctx, request, client.listBootVolumeAttachments, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListBootVolumeAttachmentsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListBootVolumeAttachmentsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1924,7 +2027,8 @@ func (client ComputeClient) ListConsoleHistories(ctx context.Context, request Li
 	ociResponse, err = common.Retry(ctx, request, client.listConsoleHistories, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListConsoleHistoriesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListConsoleHistoriesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1967,7 +2071,8 @@ func (client ComputeClient) ListDedicatedVmHostInstanceShapes(ctx context.Contex
 	ociResponse, err = common.Retry(ctx, request, client.listDedicatedVmHostInstanceShapes, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListDedicatedVmHostInstanceShapesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListDedicatedVmHostInstanceShapesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2009,7 +2114,8 @@ func (client ComputeClient) ListDedicatedVmHostInstances(ctx context.Context, re
 	ociResponse, err = common.Retry(ctx, request, client.listDedicatedVmHostInstances, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListDedicatedVmHostInstancesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListDedicatedVmHostInstancesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2051,7 +2157,8 @@ func (client ComputeClient) ListDedicatedVmHostShapes(ctx context.Context, reque
 	ociResponse, err = common.Retry(ctx, request, client.listDedicatedVmHostShapes, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListDedicatedVmHostShapesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListDedicatedVmHostShapesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2095,7 +2202,8 @@ func (client ComputeClient) ListDedicatedVmHosts(ctx context.Context, request Li
 	ociResponse, err = common.Retry(ctx, request, client.listDedicatedVmHosts, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListDedicatedVmHostsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListDedicatedVmHostsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2127,6 +2235,49 @@ func (client ComputeClient) listDedicatedVmHosts(ctx context.Context, request co
 	return response, err
 }
 
+// ListImageShapeCompatibilityEntries Lists the shape compatibilities for the image.
+func (client ComputeClient) ListImageShapeCompatibilityEntries(ctx context.Context, request ListImageShapeCompatibilityEntriesRequest) (response ListImageShapeCompatibilityEntriesResponse, err error) {
+	var ociResponse common.OCIResponse
+	policy := common.NoRetryPolicy()
+	if request.RetryPolicy() != nil {
+		policy = *request.RetryPolicy()
+	}
+	ociResponse, err = common.Retry(ctx, request, client.listImageShapeCompatibilityEntries, policy)
+	if err != nil {
+		if ociResponse != nil {
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListImageShapeCompatibilityEntriesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+		}
+		return
+	}
+	if convertedResponse, ok := ociResponse.(ListImageShapeCompatibilityEntriesResponse); ok {
+		response = convertedResponse
+	} else {
+		err = fmt.Errorf("failed to convert OCIResponse into ListImageShapeCompatibilityEntriesResponse")
+	}
+	return
+}
+
+// listImageShapeCompatibilityEntries implements the OCIOperation interface (enables retrying operations)
+func (client ComputeClient) listImageShapeCompatibilityEntries(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
+	httpRequest, err := request.HTTPRequest(http.MethodGet, "/images/{imageId}/shapes")
+	if err != nil {
+		return nil, err
+	}
+
+	var response ListImageShapeCompatibilityEntriesResponse
+	var httpResponse *http.Response
+	httpResponse, err = client.Call(ctx, &httpRequest)
+	defer common.CloseBodyIfValid(httpResponse)
+	response.RawResponse = httpResponse
+	if err != nil {
+		return response, err
+	}
+
+	err = common.UnmarshalResponse(httpResponse, &response)
+	return response, err
+}
+
 // ListImages Lists the available images in the specified compartment, including both
 // Oracle-provided images (https://docs.cloud.oracle.com/Content/Compute/References/images.htm) and
 // custom images (https://docs.cloud.oracle.com/Content/Compute/Tasks/managingcustomimages.htm) that have
@@ -2142,7 +2293,8 @@ func (client ComputeClient) ListImages(ctx context.Context, request ListImagesRe
 	ociResponse, err = common.Retry(ctx, request, client.listImages, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListImagesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListImagesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2185,7 +2337,8 @@ func (client ComputeClient) ListInstanceConsoleConnections(ctx context.Context, 
 	ociResponse, err = common.Retry(ctx, request, client.listInstanceConsoleConnections, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListInstanceConsoleConnectionsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListInstanceConsoleConnectionsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2227,7 +2380,8 @@ func (client ComputeClient) ListInstanceDevices(ctx context.Context, request Lis
 	ociResponse, err = common.Retry(ctx, request, client.listInstanceDevices, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListInstanceDevicesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListInstanceDevicesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2271,7 +2425,8 @@ func (client ComputeClient) ListInstances(ctx context.Context, request ListInsta
 	ociResponse, err = common.Retry(ctx, request, client.listInstances, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListInstancesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListInstancesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2314,7 +2469,8 @@ func (client ComputeClient) ListShapes(ctx context.Context, request ListShapesRe
 	ociResponse, err = common.Retry(ctx, request, client.listShapes, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListShapesResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListShapesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2358,7 +2514,8 @@ func (client ComputeClient) ListVnicAttachments(ctx context.Context, request Lis
 	ociResponse, err = common.Retry(ctx, request, client.listVnicAttachments, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListVnicAttachmentsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListVnicAttachmentsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2419,7 +2576,8 @@ func (client ComputeClient) ListVolumeAttachments(ctx context.Context, request L
 	ociResponse, err = common.Retry(ctx, request, client.listVolumeAttachments, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListVolumeAttachmentsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListVolumeAttachmentsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2461,7 +2619,8 @@ func (client ComputeClient) RemoveImageShapeCompatibilityEntry(ctx context.Conte
 	ociResponse, err = common.Retry(ctx, request, client.removeImageShapeCompatibilityEntry, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = RemoveImageShapeCompatibilityEntryResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = RemoveImageShapeCompatibilityEntryResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2508,7 +2667,8 @@ func (client ComputeClient) TerminateInstance(ctx context.Context, request Termi
 	ociResponse, err = common.Retry(ctx, request, client.terminateInstance, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = TerminateInstanceResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = TerminateInstanceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2550,7 +2710,8 @@ func (client ComputeClient) UpdateConsoleHistory(ctx context.Context, request Up
 	ociResponse, err = common.Retry(ctx, request, client.updateConsoleHistory, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateConsoleHistoryResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateConsoleHistoryResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2598,7 +2759,8 @@ func (client ComputeClient) UpdateDedicatedVmHost(ctx context.Context, request U
 	ociResponse, err = common.Retry(ctx, request, client.updateDedicatedVmHost, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateDedicatedVmHostResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateDedicatedVmHostResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2645,7 +2807,8 @@ func (client ComputeClient) UpdateImage(ctx context.Context, request UpdateImage
 	ociResponse, err = common.Retry(ctx, request, client.updateImage, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateImageResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateImageResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2696,7 +2859,8 @@ func (client ComputeClient) UpdateInstance(ctx context.Context, request UpdateIn
 	ociResponse, err = common.Retry(ctx, request, client.updateInstance, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateInstanceResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateInstanceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -2738,7 +2902,8 @@ func (client ComputeClient) UpdateInstanceConsoleConnection(ctx context.Context,
 	ociResponse, err = common.Retry(ctx, request, client.updateInstanceConsoleConnection, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateInstanceConsoleConnectionResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateInstanceConsoleConnectionResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}

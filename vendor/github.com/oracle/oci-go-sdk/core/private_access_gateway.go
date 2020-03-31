@@ -38,7 +38,7 @@ type PrivateAccessGateway struct {
 	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the service VCN that the PAG belongs to.
 	VcnId *string `mandatory:"true" json:"vcnId"`
 
-	// The date and time the PAG was created, in the format defined by RFC3339.
+	// The date and time the PAG was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
 

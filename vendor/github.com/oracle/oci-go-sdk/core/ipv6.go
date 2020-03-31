@@ -20,8 +20,8 @@ import (
 // The `IPv6` object is the API representation of an IPv6.
 // You can create and assign an IPv6 to any VNIC that is in an IPv6-enabled subnet in an
 // IPv6-enabled VCN.
-// **Note:** IPv6 addressing is currently supported only in the Government Cloud.
-// For important details about IPv6 addressing in a VCN, see IPv6 Addresses (https://docs.cloud.oracle.com/Content/Network/Concepts/ipv6.htm).
+// **Note:** IPv6 addressing is currently supported only in certain regions. For important
+// details about IPv6 addressing in a VCN, see IPv6 Addresses (https://docs.cloud.oracle.com/Content/Network/Concepts/ipv6.htm).
 type Ipv6 struct {
 
 	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the compartment containing the IPv6.
@@ -47,7 +47,7 @@ type Ipv6 struct {
 	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the subnet the VNIC is in.
 	SubnetId *string `mandatory:"true" json:"subnetId"`
 
-	// The date and time the IPv6 was created, in the format defined by RFC3339.
+	// The date and time the IPv6 was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
 

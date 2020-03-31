@@ -29,6 +29,22 @@ func NewFileStorageClientWithConfigurationProvider(configProvider common.Configu
 		return
 	}
 
+	return newFileStorageClientFromBaseClient(baseClient, configProvider)
+}
+
+// NewFileStorageClientWithOboToken Creates a new default FileStorage client with the given configuration provider.
+// The obotoken will be added to default headers and signed; the configuration provider will be used for the signer
+//  as well as reading the region
+func NewFileStorageClientWithOboToken(configProvider common.ConfigurationProvider, oboToken string) (client FileStorageClient, err error) {
+	baseClient, err := common.NewClientWithOboToken(configProvider, oboToken)
+	if err != nil {
+		return
+	}
+
+	return newFileStorageClientFromBaseClient(baseClient, configProvider)
+}
+
+func newFileStorageClientFromBaseClient(baseClient common.BaseClient, configProvider common.ConfigurationProvider) (client FileStorageClient, err error) {
 	client = FileStorageClient{BaseClient: baseClient}
 	client.BasePath = "20171215"
 	err = client.setConfigurationProvider(configProvider)
@@ -68,7 +84,8 @@ func (client FileStorageClient) ChangeFileSystemCompartment(ctx context.Context,
 	ociResponse, err = common.Retry(ctx, request, client.changeFileSystemCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ChangeFileSystemCompartmentResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ChangeFileSystemCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -110,7 +127,8 @@ func (client FileStorageClient) ChangeMountTargetCompartment(ctx context.Context
 	ociResponse, err = common.Retry(ctx, request, client.changeMountTargetCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ChangeMountTargetCompartmentResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ChangeMountTargetCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -158,7 +176,8 @@ func (client FileStorageClient) CreateExport(ctx context.Context, request Create
 	ociResponse, err = common.Retry(ctx, request, client.createExport, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateExportResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateExportResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -228,7 +247,8 @@ func (client FileStorageClient) CreateFileSystem(ctx context.Context, request Cr
 	ociResponse, err = common.Retry(ctx, request, client.createFileSystem, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateFileSystemResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateFileSystemResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -302,7 +322,8 @@ func (client FileStorageClient) CreateMountTarget(ctx context.Context, request C
 	ociResponse, err = common.Retry(ctx, request, client.createMountTarget, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateMountTargetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateMountTargetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -350,7 +371,8 @@ func (client FileStorageClient) CreateSnapshot(ctx context.Context, request Crea
 	ociResponse, err = common.Retry(ctx, request, client.createSnapshot, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = CreateSnapshotResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = CreateSnapshotResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -392,7 +414,8 @@ func (client FileStorageClient) DeleteExport(ctx context.Context, request Delete
 	ociResponse, err = common.Retry(ctx, request, client.deleteExport, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteExportResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteExportResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -436,7 +459,8 @@ func (client FileStorageClient) DeleteFileSystem(ctx context.Context, request De
 	ociResponse, err = common.Retry(ctx, request, client.deleteFileSystem, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteFileSystemResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteFileSystemResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -479,7 +503,8 @@ func (client FileStorageClient) DeleteMountTarget(ctx context.Context, request D
 	ociResponse, err = common.Retry(ctx, request, client.deleteMountTarget, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteMountTargetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteMountTargetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -521,7 +546,8 @@ func (client FileStorageClient) DeleteSnapshot(ctx context.Context, request Dele
 	ociResponse, err = common.Retry(ctx, request, client.deleteSnapshot, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = DeleteSnapshotResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = DeleteSnapshotResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -563,7 +589,8 @@ func (client FileStorageClient) GetExport(ctx context.Context, request GetExport
 	ociResponse, err = common.Retry(ctx, request, client.getExport, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetExportResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetExportResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -605,7 +632,8 @@ func (client FileStorageClient) GetExportSet(ctx context.Context, request GetExp
 	ociResponse, err = common.Retry(ctx, request, client.getExportSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetExportSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetExportSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -647,7 +675,8 @@ func (client FileStorageClient) GetFileSystem(ctx context.Context, request GetFi
 	ociResponse, err = common.Retry(ctx, request, client.getFileSystem, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetFileSystemResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetFileSystemResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -689,7 +718,8 @@ func (client FileStorageClient) GetMountTarget(ctx context.Context, request GetM
 	ociResponse, err = common.Retry(ctx, request, client.getMountTarget, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetMountTargetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetMountTargetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -731,7 +761,8 @@ func (client FileStorageClient) GetSnapshot(ctx context.Context, request GetSnap
 	ociResponse, err = common.Retry(ctx, request, client.getSnapshot, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = GetSnapshotResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = GetSnapshotResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -773,7 +804,8 @@ func (client FileStorageClient) ListExportSets(ctx context.Context, request List
 	ociResponse, err = common.Retry(ctx, request, client.listExportSets, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListExportSetsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListExportSetsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -817,7 +849,8 @@ func (client FileStorageClient) ListExports(ctx context.Context, request ListExp
 	ociResponse, err = common.Retry(ctx, request, client.listExports, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListExportsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListExportsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -859,7 +892,8 @@ func (client FileStorageClient) ListFileSystems(ctx context.Context, request Lis
 	ociResponse, err = common.Retry(ctx, request, client.listFileSystems, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListFileSystemsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListFileSystemsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -901,7 +935,8 @@ func (client FileStorageClient) ListMountTargets(ctx context.Context, request Li
 	ociResponse, err = common.Retry(ctx, request, client.listMountTargets, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListMountTargetsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListMountTargetsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -943,7 +978,8 @@ func (client FileStorageClient) ListSnapshots(ctx context.Context, request ListS
 	ociResponse, err = common.Retry(ctx, request, client.listSnapshots, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = ListSnapshotsResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = ListSnapshotsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -985,7 +1021,8 @@ func (client FileStorageClient) UpdateExport(ctx context.Context, request Update
 	ociResponse, err = common.Retry(ctx, request, client.updateExport, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateExportResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateExportResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1027,7 +1064,8 @@ func (client FileStorageClient) UpdateExportSet(ctx context.Context, request Upd
 	ociResponse, err = common.Retry(ctx, request, client.updateExportSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateExportSetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateExportSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1070,7 +1108,8 @@ func (client FileStorageClient) UpdateFileSystem(ctx context.Context, request Up
 	ociResponse, err = common.Retry(ctx, request, client.updateFileSystem, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateFileSystemResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateFileSystemResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1112,7 +1151,8 @@ func (client FileStorageClient) UpdateMountTarget(ctx context.Context, request U
 	ociResponse, err = common.Retry(ctx, request, client.updateMountTarget, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateMountTargetResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateMountTargetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}
@@ -1154,7 +1194,8 @@ func (client FileStorageClient) UpdateSnapshot(ctx context.Context, request Upda
 	ociResponse, err = common.Retry(ctx, request, client.updateSnapshot, policy)
 	if err != nil {
 		if ociResponse != nil {
-			response = UpdateSnapshotResponse{RawResponse: ociResponse.HTTPResponse()}
+			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
+			response = UpdateSnapshotResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
 		}
 		return
 	}

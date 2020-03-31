@@ -40,6 +40,10 @@ import (
 //     It always takes precedence over any value set in the `EndpointService` object.
 //   * If the `EndpointService` object does not have an FQDN value set, and you don't provide a value
 //     in `CreatePrivateEndpointDetails` during creation, the PE does not get an FQDN.
+//   * You can further specify additional FQDNs during the PE creation using the `additionalFqdns` attribute. This
+//     enables customer to use any of the above FQDNs instead of PE's private IP to access the service. Note that you
+//     can provide value for this field only when PE already has FQDN either via `endpointFqdn` attribute or
+//     endpoint service's `endpointFqdn`.
 //   * **Special scenario:**  If the endpoint service allows multiple PE's to be created per customer VCN
 //     (see the `areMultiplePrivateEndpointsPerVcnAllowed` attribute in the `EndpointService`),
 //     the `EndpointService` is prohibited from also having an `endpointFqdn` value. This restriction ensures
@@ -98,7 +102,7 @@ type PrivateEndpoint struct {
 	// A description of this private endpoint.
 	Description *string `mandatory:"false" json:"description"`
 
-	// The date and time the private endpoint was created, in the format defined by RFC3339.
+	// The date and time the private endpoint was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"false" json:"timeCreated"`
 
@@ -111,6 +115,14 @@ type PrivateEndpoint struct {
 	// UpdatePrivateEndpointDetails).
 	// Example: `xyz.oraclecloud.com`
 	EndpointFqdn *string `mandatory:"false" json:"endpointFqdn"`
+
+	// A list of additional FQDNs that you can provide along with endpointFqdn. These FQDNs are added to the
+	// customer VCN's DNS record.  Note that you can provide value for this field only when PE already has FQDN
+	// either via `endpointFqdn` attribute or endpoint service's `endpointFqdn`. For more information, see the
+	// discussion of DNS and FQDNs in PrivateEndpoint.
+	// You can change the PE's FQDN (see
+	// UpdatePrivateEndpointDetails).
+	AdditionalFqdns []string `mandatory:"false" json:"additionalFqdns"`
 
 	// A list of the OCIDs of the network security groups that the private endpoint's VNIC belongs to.
 	// For more information about NSGs, see

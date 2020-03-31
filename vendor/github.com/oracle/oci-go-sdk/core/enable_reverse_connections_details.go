@@ -51,6 +51,11 @@ type EnableReverseConnectionsDetails struct {
 	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the service's subnet where
 	// the DNS proxy endpoint will be created.
 	ServiceSubnetId *string `mandatory:"false" json:"serviceSubnetId"`
+
+	// A list of the OCIDs of the network security groups that the reverse connection's VNIC belongs to.
+	// For more information about NSGs, see
+	// NetworkSecurityGroup.
+	NsgIds []string `mandatory:"false" json:"nsgIds"`
 }
 
 func (m EnableReverseConnectionsDetails) String() string {
