@@ -56,7 +56,7 @@ var _ = Describe("Instances", func() {
 	})
 
 	It("should be possible to get node addresses", func() {
-		nodeName := apitypes.NodeName(node.Name)
+		nodeName := apitypes.NodeName(node.Labels["hostname"])
 		Expect(nodeName).NotTo(BeEmpty())
 
 		By("calling NodeAddresses()")
@@ -80,7 +80,7 @@ var _ = Describe("Instances", func() {
 	})
 
 	It("should be possible to get the provider ID of an instance", func() {
-		nodeName := apitypes.NodeName(node.Name)
+		nodeName := apitypes.NodeName(node.Labels["hostname"])
 		Expect(nodeName).NotTo(BeEmpty())
 
 		By("calling InstanceID()")
@@ -91,7 +91,7 @@ var _ = Describe("Instances", func() {
 	})
 
 	It("should be possible to get the type of an instance", func() {
-		nodeName := apitypes.NodeName(node.Name)
+		nodeName := apitypes.NodeName(node.Labels["hostname"])
 		Expect(nodeName).NotTo(BeEmpty())
 
 		By("calling InstanceType()")

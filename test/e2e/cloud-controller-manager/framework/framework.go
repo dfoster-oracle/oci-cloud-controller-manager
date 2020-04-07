@@ -40,7 +40,6 @@ import (
 	wait "k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 	clientcmd "k8s.io/client-go/tools/clientcmd"
-	"k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 	"k8s.io/cloud-provider"
 )
 
@@ -75,7 +74,7 @@ type Framework struct {
 	CloudProvider     cloudprovider.Interface // Every test has a cloud provider unless initialisation is skipped
 
 	ClientSet         clientset.Interface
-	InternalClientset internalclientset.Interface
+	InternalClientSet clientset.Interface
 
 	CloudProviderConfig *providercfg.Config // If specified, the CloudProviderConfig. This provides information on the configuration of the test cluster.
 	Client              client.Interface    // An OCI client for checking the state of any provisioned OCI infrastructure during testing.
@@ -232,7 +231,7 @@ func (f *Framework) BeforeEach() {
 		Expect(err).NotTo(HaveOccurred())
 		f.ClientSet, err = clientset.NewForConfig(config)
 		Expect(err).NotTo(HaveOccurred())
-		f.InternalClientset, err = internalclientset.NewForConfig(config)
+		f.InternalClientSet, err = clientset.NewForConfig(config)
 		Expect(err).NotTo(HaveOccurred())
 	}
 

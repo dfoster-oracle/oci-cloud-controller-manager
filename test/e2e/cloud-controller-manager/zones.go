@@ -59,7 +59,7 @@ var _ = Describe("Zones", func() {
 	})
 
 	It("should be possible to get a non-empty zone by node name", func() {
-		nodeName := apitypes.NodeName(node.Name)
+		nodeName := apitypes.NodeName(node.Labels["hostname"])
 		Expect(nodeName).NotTo(BeEmpty())
 
 		By("calling GetZoneByNodeName()")
