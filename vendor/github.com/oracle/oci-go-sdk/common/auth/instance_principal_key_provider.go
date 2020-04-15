@@ -6,20 +6,27 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"fmt"
-
 	"net/http"
+	"strings"
 
 	"github.com/oracle/oci-go-sdk/common"
 )
 
 const (
-	regionURL                            = `http://169.254.169.254/opc/v1/instance/region`
-	leafCertificateURL                   = `http://169.254.169.254/opc/v1/identity/cert.pem`
-	leafCertificateKeyURL                = `http://169.254.169.254/opc/v1/identity/key.pem`
+	metadataBaseURL             = `http://169.254.169.254/opc/v2`
+	metadataFallbackURL         = `http://169.254.169.254/opc/v1`
+	regionPath                  = `/instance/region`
+	leafCertificatePath         = `/identity/cert.pem`
+	leafCertificateKeyPath      = `/identity/key.pem`
+	intermediateCertificatePath = `/identity/intermediate.pem`
+
 	leafCertificateKeyPassphrase         = `` // No passphrase for the private key for Compute instances
-	intermediateCertificateURL           = `http://169.254.169.254/opc/v1/identity/intermediate.pem`
 	intermediateCertificateKeyURL        = ``
 	intermediateCertificateKeyPassphrase = `` // No passphrase for the private key for Compute instances
+)
+
+var (
+	regionURL, leafCertificateURL, leafCertificateKeyURL, intermediateCertificateURL string
 )
 
 // instancePrincipalKeyProvider implements KeyProvider to provide a key ID and its corresponding private key
@@ -43,6 +50,7 @@ type instancePrincipalKeyProvider struct {
 // invalid because the KeyID could be already expired.
 func newInstancePrincipalKeyProvider(modifier func(common.HTTPRequestDispatcher) (common.HTTPRequestDispatcher, error),
 	tokenPurpose string) (provider *instancePrincipalKeyProvider, err error) {
+	updateX509CertRetrieverURLParas(metadataBaseURL)
 	clientModifier := newDispatcherModifier(modifier)
 
 	client, err := clientModifier.Modify(&http.Client{})
@@ -87,10 +95,23 @@ func newInstancePrincipalKeyProvider(modifier func(common.HTTPRequestDispatcher)
 
 func getRegionForFederationClient(dispatcher common.HTTPRequestDispatcher, url string) (r common.Region, err error) {
 	var body bytes.Buffer
-	if body, err = httpGet(dispatcher, url); err != nil {
+	var statusCode int
+	if body, statusCode, err = httpGet(dispatcher, url); err != nil {
+		if statusCode == 404 && strings.Compare(url, metadataBaseURL+regionPath) == 0 {
+			common.Logf("Falling back to http://169.254.169.254/opc/v1 to try again...\n")
+			updateX509CertRetrieverURLParas(metadataFallbackURL)
+			return getRegionForFederationClient(dispatcher, regionURL)
+		}
 		return
 	}
 	return common.StringToRegion(body.String()), nil
+}
+
+func updateX509CertRetrieverURLParas(baseURL string) {
+	regionURL = baseURL + regionPath
+	leafCertificateURL = baseURL + leafCertificatePath
+	leafCertificateKeyURL = baseURL + leafCertificateKeyPath
+	intermediateCertificateURL = baseURL + intermediateCertificatePath
 }
 
 func (p *instancePrincipalKeyProvider) RegionForFederationClient() common.Region {

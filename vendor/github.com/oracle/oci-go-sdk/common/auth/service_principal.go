@@ -5,6 +5,8 @@ package auth
 import (
 	"crypto/rsa"
 	"fmt"
+	"io/ioutil"
+	"path"
 
 	"github.com/oracle/oci-go-sdk/common"
 )
@@ -78,6 +80,51 @@ func NewServicePrincipalConfigurationProviderWithCustomClient(modifier func(comm
 //NewServicePrincipalWithInstancePrincipalConfigurationProvider create a S2S configuration provider by acquiring credentials via instance principals
 func NewServicePrincipalWithInstancePrincipalConfigurationProvider(region common.Region) (common.ConfigurationProvider, error) {
 	return newInstancePrincipalConfigurationProvider(region, servicePrincipalTokenPurpose, nil)
+}
+
+//NewServicePrincipalConfigurationWithCerts returns a configuration for service principals with a given region and hardcoded certificates in lieu of metadata service certs
+func NewServicePrincipalConfigurationWithCerts(region common.Region, leafCertificate, leafPassphrase, leafPrivateKey []byte, intermediateCertificates [][]byte) (common.ConfigurationProvider, error) {
+	leafCertificateRetriever := staticCertificateRetriever{Passphrase: leafPassphrase, CertificatePem: leafCertificate, PrivateKeyPem: leafPrivateKey}
+
+	//The .Refresh() call actually reads the certificates from the inputs
+	err := leafCertificateRetriever.Refresh()
+	if err != nil {
+		return nil, err
+	}
+	certificate := leafCertificateRetriever.Certificate()
+	tenancyID := extractTenancyIDFromCertificate(certificate)
+	fedClient, err := newX509FederationClientWithCerts(region, tenancyID, leafCertificate, leafPassphrase, leafPrivateKey, intermediateCertificates, *newDispatcherModifier(nil), "")
+	if err != nil {
+		return nil, err
+	}
+	keyProvider := servicePrincipalKeyProvider{federationClient: fedClient}
+	return servicePrincipalConfigurationProvider{keyProvider: &keyProvider, region: string(region), tenancyID: tenancyID}, nil
+}
+
+//NewServicePrincipalConfigurationProviderFromHostCerts returns a configuration for service principals,
+//given the region and a pathname to the host's service principal certificate directory.
+//The pathname generally follows the pattern "/var/certs/hostclass/${hostclass}/${servicePrincipalName}-identity"
+func NewServicePrincipalConfigurationProviderFromHostCerts(region common.Region, certDir string) (common.ConfigurationProvider, error) {
+	if certDir == "" {
+		return nil, fmt.Errorf("empty input string")
+	}
+	// Read certs from substrate host.
+	leafKey, err := ioutil.ReadFile(path.Join(certDir, "key.pem"))
+	if err != nil {
+		return nil, fmt.Errorf("error reading leafPrivateKey")
+	}
+	leafCert, err := ioutil.ReadFile(path.Join(certDir, "cert.pem"))
+	if err != nil {
+		return nil, fmt.Errorf("error reading leafCertificate")
+	}
+	interCert, err := ioutil.ReadFile(path.Join(certDir, "intermediates.pem"))
+	if err != nil {
+		return nil, fmt.Errorf("error reading intermediateCertificate")
+	}
+	var interCerts [][]byte
+	interCerts = append(interCerts, interCert)
+	var leafPass = []byte("")
+	return NewServicePrincipalConfigurationWithCerts(region, leafCert, leafPass, leafKey, interCerts)
 }
 
 func (p servicePrincipalConfigurationProvider) PrivateRSAKey() (*rsa.PrivateKey, error) {

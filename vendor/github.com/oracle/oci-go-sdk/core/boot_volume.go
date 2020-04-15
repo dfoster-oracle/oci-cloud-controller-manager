@@ -43,7 +43,8 @@ type BootVolume struct {
 	// This field is deprecated. Please use sizeInGBs.
 	SizeInMBs *int64 `mandatory:"true" json:"sizeInMBs"`
 
-	// The date and time the boot volume was created. Format defined by RFC3339.
+	// The date and time the boot volume was created. Format defined
+	// by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
 
 	// Defined tags for this resource. Each key is predefined and scoped to a

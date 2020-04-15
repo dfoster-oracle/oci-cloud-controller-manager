@@ -21,6 +21,11 @@ type ModifyReverseConnectionsDetails struct {
 
 	// List of DNS zones to exclude from the default DNS resolution context.
 	ExcludedDnsZones []string `mandatory:"false" json:"excludedDnsZones"`
+
+	// A list of the OCIDs of the network security groups that the reverse connection's VNIC belongs to.
+	// For more information about NSGs, see
+	// NetworkSecurityGroup.
+	NsgIds []string `mandatory:"false" json:"nsgIds"`
 }
 
 func (m ModifyReverseConnectionsDetails) String() string {

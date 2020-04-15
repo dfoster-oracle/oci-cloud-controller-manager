@@ -38,6 +38,12 @@ type UpdatePrivateEndpointDetails struct {
 	// Example: `xyz.oraclecloud.com`
 	EndpointFqdn *string `mandatory:"false" json:"endpointFqdn"`
 
+	// A list of additional three-label FQDNs that you can provide along with endpointFqdn. The customer VCN's DNS
+	// records are updated with these FQDNs.  Note that you can provide value for this field only when either PE
+	// already has endpointFQDN or the update payload has `endpointFqdn` attribute. For more information,
+	// see the discussion of DNS and FQDNs in PrivateEndpoint.
+	AdditionalFqdns []string `mandatory:"false" json:"additionalFqdns"`
+
 	// Defined tags for this resource. Each key is predefined and scoped to a
 	// namespace. For more information, see Resource Tags (https://docs.cloud.oracle.com/Content/General/Concepts/resourcetags.htm).
 	// Example: `{"Operations": {"CostCenter": "42"}}`

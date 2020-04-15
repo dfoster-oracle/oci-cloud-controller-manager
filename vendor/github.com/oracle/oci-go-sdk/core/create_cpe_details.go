@@ -23,7 +23,7 @@ type CreateCpeDetails struct {
 	CompartmentId *string `mandatory:"true" json:"compartmentId"`
 
 	// The public IP address of the on-premises router.
-	// Example: `143.19.23.16`
+	// Example: `203.0.113.2`
 	IpAddress *string `mandatory:"true" json:"ipAddress"`
 
 	// Defined tags for this resource. Each key is predefined and scoped to a
@@ -38,6 +38,18 @@ type CreateCpeDetails struct {
 	// predefined name, type, or namespace. For more information, see Resource Tags (https://docs.cloud.oracle.com/Content/General/Concepts/resourcetags.htm).
 	// Example: `{"Department": "Finance"}`
 	FreeformTags map[string]string `mandatory:"false" json:"freeformTags"`
+
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the CPE device type. You can provide
+	// a value if you want to later generate CPE device configuration content for IPSec connections
+	// that use this CPE. You can also call UpdateCpe later to
+	// provide a value. For a list of possible values, see
+	// ListCpeDeviceShapes.
+	// For more information about generating CPE device configuration content, see:
+	//   * GetCpeDeviceConfigContent
+	//   * GetIpsecCpeDeviceConfigContent
+	//   * GetTunnelCpeDeviceConfigContent
+	//   * GetTunnelCpeDeviceConfig
+	CpeDeviceShapeId *string `mandatory:"false" json:"cpeDeviceShapeId"`
 }
 
 func (m CreateCpeDetails) String() string {

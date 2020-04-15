@@ -5,7 +5,7 @@ go 1.12
 replace (
 	bitbucket.oci.oraclecorp.com/oke/oke-common => bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20190917222423-ba5e028f261d
 	github.com/docker/docker => github.com/docker/engine v0.0.0-20181106193140-f5749085e9cb
-	github.com/oracle/oci-go-sdk => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk v0.0.0-00000000000000-8dac74d567d
+	github.com/oracle/oci-go-sdk => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk v1.0.1-0.20200331033925-42acda14d09a
 	k8s.io/api => k8s.io/api v0.0.0-20190620084959-7cf5895f2711
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190620085554-14e95df34f1f
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190612205821-1799e75a0719

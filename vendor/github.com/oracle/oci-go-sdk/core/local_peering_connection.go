@@ -40,7 +40,7 @@ type LocalPeeringConnection struct {
 	// Indicates whether the local peering connection is peered with another local peering connection.
 	PeeringStatus LocalPeeringConnectionPeeringStatusEnum `mandatory:"true" json:"peeringStatus"`
 
-	// The date and time the local peering connection was created, in the format defined by RFC3339.
+	// The date and time the local peering connection was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
 

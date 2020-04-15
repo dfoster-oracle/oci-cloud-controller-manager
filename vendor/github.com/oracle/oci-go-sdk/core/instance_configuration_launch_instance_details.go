@@ -102,9 +102,8 @@ type InstanceConfigurationLaunchInstanceDetails struct {
 	//  **Metadata Example**
 	//       "metadata" : {
 	//          "quake_bot_level" : "Severe",
-	//          "ssh_authorized_keys" : "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCZ06fccNTQfq+xubFlJ5ZR3kt+uzspdH9tXL+lAejSM1NXM+CFZev7MIxfEjas06y80ZBZ7DUTQO0GxJPeD8NCOb1VorF8M4xuLwrmzRtkoZzU16umt4y1W0Q4ifdp3IiiU0U8/WxczSXcUVZOLqkz5dc6oMHdMVpkimietWzGZ4LBBsH/LjEVY7E0V+a0sNchlVDIZcm7ErReBLcdTGDq0uLBiuChyl6RUkX1PNhusquTGwK7zc8OBXkRuubn5UKXhI3Ul9Nyk4XESkVWIGNKmw8mSpoJSjR8P9ZjRmcZVo8S+x4KVPMZKQEor== ryan.smith@company.com
-	//          ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAzJSAtwEPoB3Jmr58IXrDGzLuDYkWAYg8AsLYlo6JZvKpjY1xednIcfEVQJm4T2DhVmdWhRrwQ8DmayVZvBkLt+zs2LdoAJEVimKwXcJFD/7wtH8Lnk17HiglbbbNXsemjDY0hea4JUE5CfvkIdZBITuMrfqSmA4n3VNoorXYdvtTMoGG8fxMub46RPtuxtqi9bG9Zqenordkg5FJt2mVNfQRqf83CWojcOkklUWq4CjyxaeLf5i9gv1fRoBo4QhiA8I6NCSppO8GnoV/6Ox6TNoh9BiifqGKC9VGYuC89RvUajRBTZSK2TK4DPfaT+2R+slPsFrwiT/oPEhhEK1S5Q== rsa-key-20160227",
-	//          "user_data" : "SWYgeW91IGNhbiBzZWUgdGhpcywgdGhlbiBpdCB3b3JrZWQgbWF5YmUuCg=="
+	//          "ssh_authorized_keys" : "ssh-rsa <your_public_SSH_key>== rsa-key-20160227",
+	//          "user_data" : "<your_public_SSH_key>=="
 	//       }
 	//  **Getting Metadata on the Instance**
 	//  To get information about your instance, connect to the instance using SSH and issue any of the
@@ -120,6 +119,8 @@ type InstanceConfigurationLaunchInstanceDetails struct {
 	// and other resources allocated to the instance.
 	// You can enumerate all available shapes by calling ListShapes.
 	Shape *string `mandatory:"false" json:"shape"`
+
+	ShapeConfig *InstanceConfigurationLaunchInstanceShapeConfigDetails `mandatory:"false" json:"shapeConfig"`
 
 	// Details for creating an instance.
 	// Use this parameter to specify whether a boot volume or an image should be used to launch a new instance.
@@ -137,6 +138,28 @@ type InstanceConfigurationLaunchInstanceDetails struct {
 	// Identity and Access Management Service API.
 	// Example: `FAULT-DOMAIN-1`
 	FaultDomain *string `mandatory:"false" json:"faultDomain"`
+
+	// The OCID of dedicated VM host.
+	DedicatedVmHostId *string `mandatory:"false" json:"dedicatedVmHostId"`
+
+	// Specifies the configuration mode for launching virtual machine (VM) instances. The configuration modes are:
+	// * `NATIVE` - VM instances launch with iSCSI boot and VFIO devices. The default value for Oracle-provided images.
+	// * `EMULATED` - VM instances launch with emulated devices, such as the E1000 network driver and emulated SCSI disk controller.
+	// * `PARAVIRTUALIZED` - VM instances launch with paravirtualized devices using virtio drivers.
+	// * `CUSTOM` - VM instances launch with custom configuration settings specified in the `LaunchOptions` parameter.
+	LaunchMode InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum `mandatory:"false" json:"launchMode,omitempty"`
+
+	LaunchOptions *InstanceConfigurationLaunchOptions `mandatory:"false" json:"launchOptions"`
+
+	AgentConfig *InstanceConfigurationLaunchInstanceAgentConfigDetails `mandatory:"false" json:"agentConfig"`
+
+	// Whether to enable in-transit encryption for the data volume's paravirtualized attachment. The default value is false.
+	IsPvEncryptionInTransitEnabled *bool `mandatory:"false" json:"isPvEncryptionInTransitEnabled"`
+
+	// The preferred maintenance action for an instance. The default is LIVE_MIGRATE, if live migration is supported.
+	// * `LIVE_MIGRATE` - Run maintenance using a live migration.
+	// * `REBOOT` - Run maintenance using a reboot.
+	PreferredMaintenanceAction InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum `mandatory:"false" json:"preferredMaintenanceAction,omitempty"`
 }
 
 func (m InstanceConfigurationLaunchInstanceDetails) String() string {
@@ -146,18 +169,25 @@ func (m InstanceConfigurationLaunchInstanceDetails) String() string {
 // UnmarshalJSON unmarshals from json
 func (m *InstanceConfigurationLaunchInstanceDetails) UnmarshalJSON(data []byte) (e error) {
 	model := struct {
-		AvailabilityDomain *string                                    `json:"availabilityDomain"`
-		CompartmentId      *string                                    `json:"compartmentId"`
-		CreateVnicDetails  *InstanceConfigurationCreateVnicDetails    `json:"createVnicDetails"`
-		DefinedTags        map[string]map[string]interface{}          `json:"definedTags"`
-		DisplayName        *string                                    `json:"displayName"`
-		ExtendedMetadata   map[string]interface{}                     `json:"extendedMetadata"`
-		FreeformTags       map[string]string                          `json:"freeformTags"`
-		IpxeScript         *string                                    `json:"ipxeScript"`
-		Metadata           map[string]string                          `json:"metadata"`
-		Shape              *string                                    `json:"shape"`
-		SourceDetails      instanceconfigurationinstancesourcedetails `json:"sourceDetails"`
-		FaultDomain        *string                                    `json:"faultDomain"`
+		AvailabilityDomain             *string                                                                  `json:"availabilityDomain"`
+		CompartmentId                  *string                                                                  `json:"compartmentId"`
+		CreateVnicDetails              *InstanceConfigurationCreateVnicDetails                                  `json:"createVnicDetails"`
+		DefinedTags                    map[string]map[string]interface{}                                        `json:"definedTags"`
+		DisplayName                    *string                                                                  `json:"displayName"`
+		ExtendedMetadata               map[string]interface{}                                                   `json:"extendedMetadata"`
+		FreeformTags                   map[string]string                                                        `json:"freeformTags"`
+		IpxeScript                     *string                                                                  `json:"ipxeScript"`
+		Metadata                       map[string]string                                                        `json:"metadata"`
+		Shape                          *string                                                                  `json:"shape"`
+		ShapeConfig                    *InstanceConfigurationLaunchInstanceShapeConfigDetails                   `json:"shapeConfig"`
+		SourceDetails                  instanceconfigurationinstancesourcedetails                               `json:"sourceDetails"`
+		FaultDomain                    *string                                                                  `json:"faultDomain"`
+		DedicatedVmHostId              *string                                                                  `json:"dedicatedVmHostId"`
+		LaunchMode                     InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum                 `json:"launchMode"`
+		LaunchOptions                  *InstanceConfigurationLaunchOptions                                      `json:"launchOptions"`
+		AgentConfig                    *InstanceConfigurationLaunchInstanceAgentConfigDetails                   `json:"agentConfig"`
+		IsPvEncryptionInTransitEnabled *bool                                                                    `json:"isPvEncryptionInTransitEnabled"`
+		PreferredMaintenanceAction     InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum `json:"preferredMaintenanceAction"`
 	}{}
 
 	e = json.Unmarshal(data, &model)
@@ -185,6 +215,8 @@ func (m *InstanceConfigurationLaunchInstanceDetails) UnmarshalJSON(data []byte) 
 
 	m.Shape = model.Shape
 
+	m.ShapeConfig = model.ShapeConfig
+
 	nn, e = model.SourceDetails.UnmarshalPolymorphicJSON(model.SourceDetails.JsonData)
 	if e != nil {
 		return
@@ -196,5 +228,67 @@ func (m *InstanceConfigurationLaunchInstanceDetails) UnmarshalJSON(data []byte) 
 	}
 
 	m.FaultDomain = model.FaultDomain
+
+	m.DedicatedVmHostId = model.DedicatedVmHostId
+
+	m.LaunchMode = model.LaunchMode
+
+	m.LaunchOptions = model.LaunchOptions
+
+	m.AgentConfig = model.AgentConfig
+
+	m.IsPvEncryptionInTransitEnabled = model.IsPvEncryptionInTransitEnabled
+
+	m.PreferredMaintenanceAction = model.PreferredMaintenanceAction
 	return
+}
+
+// InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum Enum with underlying type: string
+type InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum string
+
+// Set of constants representing the allowable values for InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum
+const (
+	InstanceConfigurationLaunchInstanceDetailsLaunchModeNative          InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum = "NATIVE"
+	InstanceConfigurationLaunchInstanceDetailsLaunchModeEmulated        InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum = "EMULATED"
+	InstanceConfigurationLaunchInstanceDetailsLaunchModeParavirtualized InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum = "PARAVIRTUALIZED"
+	InstanceConfigurationLaunchInstanceDetailsLaunchModeCustom          InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum = "CUSTOM"
+)
+
+var mappingInstanceConfigurationLaunchInstanceDetailsLaunchMode = map[string]InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum{
+	"NATIVE":          InstanceConfigurationLaunchInstanceDetailsLaunchModeNative,
+	"EMULATED":        InstanceConfigurationLaunchInstanceDetailsLaunchModeEmulated,
+	"PARAVIRTUALIZED": InstanceConfigurationLaunchInstanceDetailsLaunchModeParavirtualized,
+	"CUSTOM":          InstanceConfigurationLaunchInstanceDetailsLaunchModeCustom,
+}
+
+// GetInstanceConfigurationLaunchInstanceDetailsLaunchModeEnumValues Enumerates the set of values for InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum
+func GetInstanceConfigurationLaunchInstanceDetailsLaunchModeEnumValues() []InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum {
+	values := make([]InstanceConfigurationLaunchInstanceDetailsLaunchModeEnum, 0)
+	for _, v := range mappingInstanceConfigurationLaunchInstanceDetailsLaunchMode {
+		values = append(values, v)
+	}
+	return values
+}
+
+// InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum Enum with underlying type: string
+type InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum string
+
+// Set of constants representing the allowable values for InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum
+const (
+	InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionLiveMigrate InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum = "LIVE_MIGRATE"
+	InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot      InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum = "REBOOT"
+)
+
+var mappingInstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceAction = map[string]InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum{
+	"LIVE_MIGRATE": InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionLiveMigrate,
+	"REBOOT":       InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionReboot,
+}
+
+// GetInstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnumValues Enumerates the set of values for InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum
+func GetInstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnumValues() []InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum {
+	values := make([]InstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceActionEnum, 0)
+	for _, v := range mappingInstanceConfigurationLaunchInstanceDetailsPreferredMaintenanceAction {
+		values = append(values, v)
+	}
+	return values
 }

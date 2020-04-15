@@ -118,7 +118,7 @@ type VirtualCircuit struct {
 	ProviderState VirtualCircuitProviderStateEnum `mandatory:"false" json:"providerState,omitempty"`
 
 	// For a public virtual circuit. The public IP prefixes (CIDRs) the customer wants to
-	// advertise across the connection. Each prefix must be /31 or less specific.
+	// advertise across the connection. All prefix sizes are allowed.
 	PublicPrefixes []string `mandatory:"false" json:"publicPrefixes"`
 
 	// Provider-supplied reference information about this virtual circuit
@@ -133,7 +133,7 @@ type VirtualCircuit struct {
 	ServiceType VirtualCircuitServiceTypeEnum `mandatory:"false" json:"serviceType,omitempty"`
 
 	// The date and time the virtual circuit was created,
-	// in the format defined by RFC3339.
+	// in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"false" json:"timeCreated"`
 

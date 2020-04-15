@@ -54,6 +54,11 @@ type CreatePrivateEndpointDetails struct {
 	// Example: `xyz.oraclecloud.com`
 	EndpointFqdn *string `mandatory:"false" json:"endpointFqdn"`
 
+	// A list of additional FQDNs that you can provide along with endpointFqdn. These FQDNs are added to the
+	// customer VCN's DNS record.  For more information, see the discussion of DNS and FQDNs in
+	// PrivateEndpoint.
+	AdditionalFqdns []string `mandatory:"false" json:"additionalFqdns"`
+
 	// A list of the OCIDs of the network security groups (NSGs) to add the private endpoint's VNIC to.
 	// For more information about NSGs, see
 	// NetworkSecurityGroup.

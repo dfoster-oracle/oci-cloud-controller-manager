@@ -39,10 +39,7 @@ type VnicAttachment struct {
 	// The current state of the VNIC attachment.
 	LifecycleState VnicAttachmentLifecycleStateEnum `mandatory:"true" json:"lifecycleState"`
 
-	// The OCID of the VNIC's subnet.
-	SubnetId *string `mandatory:"true" json:"subnetId"`
-
-	// The date and time the VNIC attachment was created, in the format defined by RFC3339.
+	// The date and time the VNIC attachment was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
 
@@ -56,6 +53,12 @@ type VnicAttachment struct {
 	// the VNIC will use. For more information, see
 	// Virtual Network Interface Cards (VNICs) (https://docs.cloud.oracle.com/Content/Network/Tasks/managingVNICs.htm).
 	NicIndex *int `mandatory:"false" json:"nicIndex"`
+
+	// The OCID of the subnet to create the VNIC in.
+	SubnetId *string `mandatory:"false" json:"subnetId"`
+
+	// The OCID of the Oracle VLAN to create the VNIC in.
+	VlanId *string `mandatory:"false" json:"vlanId"`
 
 	// The Oracle-assigned VLAN tag of the attached VNIC. Available after the
 	// attachment process is complete.

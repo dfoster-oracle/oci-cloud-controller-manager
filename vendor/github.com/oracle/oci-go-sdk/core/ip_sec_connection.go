@@ -60,7 +60,7 @@ type IpSecConnection struct {
 	// you must provide at least one valid static route. If you configure both
 	// tunnels to use BGP dynamic routing, you can provide an empty list for the static routes.
 	// The CIDR can be either IPv4 or IPv6. Note that IPv6 addressing is currently supported only
-	// in the Government Cloud.
+	// in certain regions. See IPv6 Addresses (https://docs.cloud.oracle.com/Content/Network/Concepts/ipv6.htm).
 	// Example: `10.0.1.0/24`
 	// Example: `2001:db8::/32`
 	StaticRoutes []string `mandatory:"true" json:"staticRoutes"`
@@ -94,7 +94,7 @@ type IpSecConnection struct {
 	// for `cpeLocalIdentifier`.
 	CpeLocalIdentifierType IpSecConnectionCpeLocalIdentifierTypeEnum `mandatory:"false" json:"cpeLocalIdentifierType,omitempty"`
 
-	// The date and time the IPSec connection was created, in the format defined by RFC3339.
+	// The date and time the IPSec connection was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"false" json:"timeCreated"`
 }

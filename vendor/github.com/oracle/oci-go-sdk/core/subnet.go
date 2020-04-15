@@ -16,7 +16,7 @@ import (
 	"github.com/oracle/oci-go-sdk/common"
 )
 
-// Subnet A logical subdivision of a VCN. Each subnet exists in a single availability domain and
+// Subnet A logical subdivision of a VCN. Each subnet
 // consists of a contiguous range of IP addresses that do not overlap with
 // other subnets in the VCN. Example: 172.16.1.0/24. For more information, see
 // Overview of the Networking Service (https://docs.cloud.oracle.com/Content/Network/Concepts/overview.htm) and
@@ -29,7 +29,7 @@ import (
 type Subnet struct {
 
 	// The subnet's CIDR block.
-	// Example: `172.16.1.0/24`
+	// Example: `10.0.1.0/24`
 	CidrBlock *string `mandatory:"true" json:"cidrBlock"`
 
 	// The OCID of the compartment containing the subnet.
@@ -52,7 +52,7 @@ type Subnet struct {
 	VirtualRouterIp *string `mandatory:"true" json:"virtualRouterIp"`
 
 	// The MAC address of the virtual router.
-	// Example: `00:00:17:B6:4D:DD`
+	// Example: `00:00:00:00:00:01`
 	VirtualRouterMac *string `mandatory:"true" json:"virtualRouterMac"`
 
 	// The subnet's availability domain. This attribute will be null if this is a regional subnet
@@ -91,7 +91,7 @@ type Subnet struct {
 
 	// For an IPv6-enabled subnet, this is the IPv6 CIDR block for the subnet's private IP address
 	// space. The subnet size is always /64. Note that IPv6 addressing is currently supported only
-	// in the Government Cloud.
+	// in certain regions. See IPv6 Addresses (https://docs.cloud.oracle.com/Content/Network/Concepts/ipv6.htm).
 	// Example: `2001:0db8:0123:1111::/64`
 	Ipv6CidrBlock *string `mandatory:"false" json:"ipv6CidrBlock"`
 
@@ -141,7 +141,7 @@ type Subnet struct {
 	// Example: `subnet123.vcn1.oraclevcn.com`
 	SubnetDomainName *string `mandatory:"false" json:"subnetDomainName"`
 
-	// The date and time the subnet was created, in the format defined by RFC3339.
+	// The date and time the subnet was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"false" json:"timeCreated"`
 }

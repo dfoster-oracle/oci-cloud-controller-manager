@@ -25,6 +25,33 @@ type InstanceShapeConfig struct {
 
 	// The total amount of memory, in gigabytes, available to the instance.
 	MemoryInGBs *float32 `mandatory:"false" json:"memoryInGBs"`
+
+	// A short description of the processors available to the instance.
+	ProcessorDescription *string `mandatory:"false" json:"processorDescription"`
+
+	// The networking bandwidth, in gigabits per second, available to the instance.
+	NetworkingBandwidthInGbps *float32 `mandatory:"false" json:"networkingBandwidthInGbps"`
+
+	// The maximum number of VNIC attachments for the instance.
+	MaxVnicAttachments *int `mandatory:"false" json:"maxVnicAttachments"`
+
+	// The number of GPUs available to this instance.
+	Gpus *int `mandatory:"false" json:"gpus"`
+
+	// A short description of the GPUs available to this instance.
+	// This field is `null` if `gpus` is `0`.
+	GpuDescription *string `mandatory:"false" json:"gpuDescription"`
+
+	// The number of local disks available to the instance.
+	LocalDisks *int `mandatory:"false" json:"localDisks"`
+
+	// The size of the local disks, aggregated, in gigabytes.
+	// This field is `null` if `localDisks` is equal to `0`.
+	LocalDisksTotalSizeInGBs *float32 `mandatory:"false" json:"localDisksTotalSizeInGBs"`
+
+	// A short description of the local disks available to this instance.
+	// This field is `null` if `localDisks` is equal to `0`.
+	LocalDiskDescription *string `mandatory:"false" json:"localDiskDescription"`
 }
 
 func (m InstanceShapeConfig) String() string {

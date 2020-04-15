@@ -37,7 +37,8 @@ type SecurityRule struct {
 	// can go to.
 	// Allowed values:
 	//   * An IP address range in CIDR notation. For example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`
-	//     Note that IPv6 addressing is currently supported only in the Government Cloud.
+	//     Note that IPv6 addressing is currently supported only in certain regions. See
+	//     IPv6 Addresses (https://docs.cloud.oracle.com/Content/Network/Concepts/ipv6.htm).
 	//   * The `cidrBlock` value for a Service, if you're
 	//     setting up a security rule for traffic destined for a particular `Service` through
 	//     a service gateway. For example: `oci-phx-objectstorage`.
@@ -88,7 +89,8 @@ type SecurityRule struct {
 	// can come from.
 	// Allowed values:
 	//   * An IP address range in CIDR notation. For example: `192.168.1.0/24` or `2001:0db8:0123:45::/56`
-	//     Note that IPv6 addressing is currently supported only in the Government Cloud.
+	//     Note that IPv6 addressing is currently supported only in certain regions. See
+	//     IPv6 Addresses (https://docs.cloud.oracle.com/Content/Network/Concepts/ipv6.htm).
 	//   * The `cidrBlock` value for a Service, if you're
 	//     setting up a security rule for traffic coming from a particular `Service` through
 	//     a service gateway. For example: `oci-phx-objectstorage`.
@@ -110,7 +112,7 @@ type SecurityRule struct {
 	// If you specify TCP as the protocol but omit this object, then all destination ports are allowed.
 	TcpOptions *TcpOptions `mandatory:"false" json:"tcpOptions"`
 
-	// The date and time the security rule was created. Format defined by RFC3339.
+	// The date and time the security rule was created. Format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	TimeCreated *common.SDKTime `mandatory:"false" json:"timeCreated"`
 
 	// Optional and valid only for UDP. Use to specify particular destination ports for UDP rules.

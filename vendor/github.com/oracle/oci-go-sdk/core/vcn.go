@@ -77,7 +77,8 @@ type Vcn struct {
 	// The VCN size is always /48. If you don't provide a value when creating the VCN, Oracle
 	// provides one and uses that *same* CIDR for the `ipv6PublicCidrBlock`. If you do provide a
 	// value, Oracle provides a *different* CIDR for the `ipv6PublicCidrBlock`. Note that IPv6
-	// addressing is currently supported only in the Government Cloud.
+	// addressing is currently supported only in certain regions. See
+	// IPv6 Addresses (https://docs.cloud.oracle.com/Content/Network/Concepts/ipv6.htm).
 	// Example: `2001:0db8:0123::/48`
 	Ipv6CidrBlock *string `mandatory:"false" json:"ipv6CidrBlock"`
 
@@ -89,7 +90,7 @@ type Vcn struct {
 	// Example: `2001:0db8:0123::/48`
 	Ipv6PublicCidrBlock *string `mandatory:"false" json:"ipv6PublicCidrBlock"`
 
-	// The date and time the VCN was created, in the format defined by RFC3339.
+	// The date and time the VCN was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"false" json:"timeCreated"`
 
