@@ -275,7 +275,7 @@ func TestGetBackendSetChanges(t *testing.T) {
 				"one": loadbalancer.BackendSet{
 					Name: common.String("one"),
 					Backends: []loadbalancer.Backend{
-						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80)},
+						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80), Name: common.String("0.0.0.0:80")},
 					},
 				},
 			},
@@ -309,25 +309,17 @@ func TestGetBackendSetChanges(t *testing.T) {
 				"one": loadbalancer.BackendSet{
 					Name: common.String("one"),
 					Backends: []loadbalancer.Backend{
-						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80)},
+						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80), Name: common.String("0.0.0.0:80")},
 					},
 				},
 			},
 			expected: []Action{
-				&BackendSetAction{
-					name:       "one",
-					actionType: Update,
-					BackendSet: loadbalancer.BackendSetDetails{
-						Backends: []loadbalancer.BackendDetails{
-							{IpAddress: common.String("0.0.0.0"), Port: common.Int(80)},
-							{IpAddress: common.String("0.0.0.1"), Port: common.Int(80)},
-						},
-					},
-					Ports: portSpec{
-						BackendPort: 80,
-					},
-					OldPorts: &portSpec{
-						BackendPort: 80,
+				&BackendAction{
+					bsName:     "one",
+					actionType: Create,
+					Backend: loadbalancer.BackendDetails{
+						IpAddress: common.String("0.0.0.1"),
+						Port:      common.Int(80),
 					},
 				},
 			},
@@ -345,9 +337,36 @@ func TestGetBackendSetChanges(t *testing.T) {
 				"one": loadbalancer.BackendSet{
 					Name: common.String("one"),
 					Backends: []loadbalancer.Backend{
-						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80)},
-						{IpAddress: common.String("0.0.0.1"), Port: common.Int(80)},
+						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80), Name: common.String("0.0.0.0:80")},
+						{IpAddress: common.String("0.0.0.1"), Port: common.Int(80), Name: common.String("0.0.0.1:80")},
 					},
+				},
+			},
+			expected: []Action{
+				&BackendAction{
+					bsName:     "one",
+					actionType: Delete,
+					name:       "0.0.0.1:80",
+				},
+			},
+		},
+		{
+			name: "update backendset - update policy",
+			desired: map[string]loadbalancer.BackendSetDetails{
+				"one": loadbalancer.BackendSetDetails{
+					Backends: []loadbalancer.BackendDetails{
+						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80)},
+					},
+					Policy: common.String("ROUND_ROBIN"),
+				},
+			},
+			actual: map[string]loadbalancer.BackendSet{
+				"one": loadbalancer.BackendSet{
+					Name: common.String("one"),
+					Backends: []loadbalancer.Backend{
+						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80), Name: common.String("0.0.0.0:80")},
+					},
+					Policy: common.String("IP HASH"),
 				},
 			},
 			expected: []Action{
@@ -358,6 +377,7 @@ func TestGetBackendSetChanges(t *testing.T) {
 						Backends: []loadbalancer.BackendDetails{
 							{IpAddress: common.String("0.0.0.0"), Port: common.Int(80)},
 						},
+						Policy: common.String("ROUND_ROBIN"),
 					},
 					Ports: portSpec{
 						BackendPort: 80,
@@ -368,6 +388,7 @@ func TestGetBackendSetChanges(t *testing.T) {
 				},
 			},
 		},
+
 		{
 			name:    "remove backendset",
 			desired: map[string]loadbalancer.BackendSetDetails{},
@@ -375,7 +396,7 @@ func TestGetBackendSetChanges(t *testing.T) {
 				"one": loadbalancer.BackendSet{
 					Name: common.String("one"),
 					Backends: []loadbalancer.Backend{
-						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80)},
+						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80), Name: common.String("0.0.0.0:80")},
 					},
 				},
 			},
@@ -407,7 +428,7 @@ func TestGetBackendSetChanges(t *testing.T) {
 				"one": loadbalancer.BackendSet{
 					Name: common.String("one"),
 					Backends: []loadbalancer.Backend{
-						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80)},
+						{IpAddress: common.String("0.0.0.0"), Port: common.Int(80), Name: common.String("0.0.0.0:80")},
 					},
 				},
 			},
