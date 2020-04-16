@@ -152,3 +152,9 @@ build-local: build-dirs
 			'for component in ${COMPONENT}; do \
 				echo building $$component && GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
 			 done'
+
+.PHONY: run-ccm-e2e-tests
+run-ccm-e2e-tests:
+	ginkgo -v -progress test/e2e/cloud-controller-manager -- \
+        --kubeconfig=$(KUBECONFIG) \
+        --cloud-config=$(CLOUDCONFIG)
