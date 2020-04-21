@@ -74,17 +74,43 @@ type BackendSetAction struct {
 }
 
 // Type of the Action.
-func (b *BackendSetAction) Type() ActionType {
+func (bs *BackendSetAction) Type() ActionType {
+	return bs.actionType
+}
+
+// Name of the action's object.
+func (bs *BackendSetAction) Name() string {
+	return bs.name
+}
+
+func (bs *BackendSetAction) String() string {
+	return fmt.Sprintf("BackendSetAction:{Name: %s, Type: %v, Ports: %+v}", bs.Name(), bs.actionType, bs.Ports)
+}
+
+// BackendAction denotes the action that should be taken on the given
+// Backend.
+type BackendAction struct {
+	Action
+
+	actionType ActionType
+	name       string
+	bsName     string
+
+	Backend loadbalancer.BackendDetails
+}
+
+// Type of the Action.
+func (b *BackendAction) Type() ActionType {
 	return b.actionType
 }
 
 // Name of the action's object.
-func (b *BackendSetAction) Name() string {
+func (b *BackendAction) Name() string {
 	return b.name
 }
 
-func (b *BackendSetAction) String() string {
-	return fmt.Sprintf("BackendSetAction:{Name: %s, Type: %v, Ports: %+v}", b.Name(), b.actionType, b.Ports)
+func (b *BackendAction) String() string {
+	return fmt.Sprintf("BackendAction:{Name: %s, Type: %v}", b.Name(), b.actionType)
 }
 
 // ListenerAction denotes the action that should be taken on the given Listener.
@@ -143,24 +169,29 @@ func hasHealthCheckerChanged(actual *loadbalancer.HealthChecker, desired *loadba
 	if toInt(actual.Port) != toInt(desired.Port) {
 		return true
 	}
-
-	if toString(actual.ResponseBodyRegex) != toString(desired.ResponseBodyRegex) {
+	//If there is no value for ResponseBodyRegex,Retries,ReturnCode and TimeoutInMillis in the LBSpec,
+	//We would let the LBCS to set the default value. There is no point of reconciling.
+	if toString(desired.ResponseBodyRegex) != "" && toString(actual.ResponseBodyRegex) != toString(desired.ResponseBodyRegex) {
 		return true
 	}
 
-	if toInt(actual.Retries) != toInt(desired.Retries) {
+	if toInt(desired.Retries) != 0 && toInt(actual.Retries) != toInt(desired.Retries) {
 		return true
 	}
 
-	if toInt(actual.ReturnCode) != toInt(desired.ReturnCode) {
+	if toInt(desired.ReturnCode) != 0 && toInt(actual.ReturnCode) != toInt(desired.ReturnCode) {
 		return true
 	}
 
-	if toInt(actual.TimeoutInMillis) != toInt(desired.TimeoutInMillis) {
+	if toInt(desired.TimeoutInMillis) != 0 && toInt(actual.TimeoutInMillis) != toInt(desired.TimeoutInMillis) {
 		return true
 	}
 
 	if toString(actual.UrlPath) != toString(desired.UrlPath) {
+		return true
+	}
+
+	if toString(actual.Protocol) != toString(desired.Protocol) {
 		return true
 	}
 
@@ -176,27 +207,6 @@ func hasBackendSetChanged(actual loadbalancer.BackendSet, desired loadbalancer.B
 
 	if toString(actual.Policy) != toString(desired.Policy) {
 		return true
-	}
-
-	if len(actual.Backends) != len(desired.Backends) {
-		return true
-	}
-
-	nameFormat := "%s:%d"
-
-	// Since the lengths are equal that means the membership must be the same
-	// else there has been change.
-	desiredSet := sets.NewString()
-	for _, backend := range desired.Backends {
-		name := fmt.Sprintf(nameFormat, *backend.IpAddress, *backend.Port)
-		desiredSet.Insert(name)
-	}
-
-	for _, backend := range actual.Backends {
-		name := fmt.Sprintf(nameFormat, *backend.IpAddress, *backend.Port)
-		if !desiredSet.Has(name) {
-			return true
-		}
 	}
 
 	return false
@@ -306,6 +316,9 @@ func getBackendSetChanges(logger *zap.SugaredLogger, actual map[string]loadbalan
 				actionType: Update,
 			})
 		}
+
+		//get the Actions for the Backend changes and append it with the backendSetActions
+		backendSetActions = append(backendSetActions, getBackendChanges(logger, actualBackendSet, desiredBackendSet)...)
 	}
 
 	// Now check if any need to be created.
@@ -322,6 +335,55 @@ func getBackendSetChanges(logger *zap.SugaredLogger, actual map[string]loadbalan
 	}
 
 	return backendSetActions
+}
+
+func getBackendChanges(logger *zap.SugaredLogger, actual loadbalancer.BackendSet, desired loadbalancer.BackendSetDetails) []Action {
+
+	var backendActions []Action
+	nameFormat := "%s:%d"
+
+	desiredSet := sets.NewString()
+	actualSet := sets.NewString()
+	for _, backend := range desired.Backends {
+		name := fmt.Sprintf(nameFormat, *backend.IpAddress, *backend.Port)
+		desiredSet.Insert(name)
+	}
+
+	for _, backend := range actual.Backends {
+		actualSet.Insert(*backend.Name)
+	}
+
+	for name := range actualSet {
+		if !desiredSet.Has(name) {
+			backendActions = append(backendActions, &BackendAction{
+				name:       name,
+				bsName:     *actual.Name,
+				actionType: Delete,
+			})
+		}
+	}
+
+	for name := range desiredSet {
+		if !actualSet.Has(name) {
+			fields := strings.Split(name, ":")
+			ipAddress := fields[0]
+			port, err := strconv.Atoi(fields[1])
+			if err != nil {
+				logger.Errorf("port is not numeric IPAddress=%s, Port=%s, %v", fields[0], fields[1], err)
+				continue
+			}
+			backendActions = append(backendActions, &BackendAction{
+				bsName: *actual.Name,
+				Backend: loadbalancer.BackendDetails{
+					IpAddress: &ipAddress,
+					Port:      &port,
+				},
+				actionType: Create,
+			})
+		}
+
+	}
+	return backendActions
 }
 
 func hasSSLConfigurationChanged(actual *loadbalancer.SslConfiguration, desired *loadbalancer.SslConfigurationDetails) bool {
@@ -364,10 +426,13 @@ func hasListenerChanged(actual loadbalancer.Listener, desired loadbalancer.Liste
 }
 
 func hasConnectionConfigurationChanged(actual *loadbalancer.ConnectionConfiguration, desired *loadbalancer.ConnectionConfiguration) bool {
-	if actual == nil || desired == nil {
-		if actual == nil && desired == nil {
-			return false
-		}
+	// We would let LBCS to set the default IdleTimeout if desired is nil
+	if desired == nil {
+		return false
+	}
+
+	//desired is not nil and actual is nil. So we need to reconcile
+	if actual == nil {
 		return true
 	}
 
