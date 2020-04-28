@@ -40,6 +40,8 @@ rules:
   resources:
   - services/status
   verbs:
+  - patch
+  - get
   - update
 
 - apiGroups:
@@ -47,6 +49,8 @@ rules:
   resources:
   - events
   verbs:
+  - list
+  - watch
   - create
   - patch
   - update
@@ -87,6 +91,15 @@ rules:
   verbs:
   - get
   - update
+
+- apiGroups:
+    - ""
+  resources:
+    - configmaps
+  resourceNames:
+    - "extension-apiserver-authentication"
+  verbs:
+    - get
 
 - apiGroups:
   - ""
