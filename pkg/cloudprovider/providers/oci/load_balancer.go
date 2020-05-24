@@ -385,7 +385,7 @@ func (cp *CloudProvider) updateLoadBalancer(ctx context.Context, lb *loadbalance
 
 	actualListeners := lb.Listeners
 	desiredListeners := spec.Listeners
-	listenerActions := getListenerChanges(actualListeners, desiredListeners)
+	listenerActions := getListenerChanges(logger, actualListeners, desiredListeners)
 
 	if len(backendSetActions) == 0 && len(listenerActions) == 0 {
 		return nil // Nothing to do.
