@@ -1,6 +1,7 @@
 package nodepools
 
 import (
+	fmt "fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -22,6 +23,18 @@ const (
 	UpdateFieldSubnetsInfo = "SubnetsInfo"
 	// UpdateFieldSize is the affected fields key to indicate that the Size needs updating
 	UpdateFieldSize = "Size"
+	// UpdateFieldNodeImageID is the affected fields key to indicate that the NodeImageID needs updating
+	UpdateFieldNodeImageID = "NodeImageID"
+	// UpdateFieldNodeImageName is the affected fields key to indicate that the NodeImageName needs updating
+	UpdateFieldNodeImageName = "NodeImageName"
+	// UpdateFieldNodeMetadata is the affected fields key to indicate that the NodeMetadata needs updating
+	UpdateFieldNodeMetadata = "NodeMetadata"
+	// UpdateFieldNodeBootVolumeSizeInGBs is the affected fields key to indicate that the NodeBootVolumeSizeInGBs needs updating
+	UpdateFieldNodeBootVolumeSizeInGBs = "NodeBootVolumeSizeInGBs"
+	// UpdateFieldSSHPublicKey is the affected fields key to indicate that the SSHPublicKey needs updating
+	UpdateFieldSSHPublicKey = "SSHPublicKey"
+	// UpdateFieldNodeShape is the affected fields key to indicate that the NodeShape needs updating
+	UpdateFieldNodeShape= "NodeShape"
 
 	// k8s labels https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
 	maxLabelKeyPrefixLength = 253
@@ -53,7 +66,7 @@ func (src *NewResponse) ToV1() NodePoolNewResponseV1 {
 }
 
 // ValidateInitialNodeLabels validates the initial node labels, e.g. k1=v1,k2=v2
-func ValidateInitialNodeLabels(labels, disallowedPrefixes string) (int, *apierrors.ErrorV3) {
+func ValidateInitialNodeLabels(labels string, disallowedPrefixes []string) (int, *apierrors.ErrorV3) {
 	if len(labels) <= 0 {
 		return http.StatusOK, nil
 	}
@@ -67,13 +80,8 @@ func ValidateInitialNodeLabels(labels, disallowedPrefixes string) (int, *apierro
 			apierrors.HTTP400InvalidParameterMessageInitialNodeLabelsChars)
 	}
 
-	// setup to disallow prefixes
-	var disallowedPrefixesRegex func(b string) bool
-	if len(disallowedPrefixes) > 0 {
-		disallowedPrefixesRegex = regexp.MustCompile(disallowedPrefixes).MatchString
-	}
-
 	kvs := KeyValuesFromString(labels)
+
 	if equalCount := strings.Count(labels, "="); equalCount != len(kvs) {
 		return http.StatusBadRequest, apierrors.NewErrorV3(
 			apierrors.HTTP400InvalidParameterCode,
@@ -94,7 +102,7 @@ func ValidateInitialNodeLabels(labels, disallowedPrefixes string) (int, *apierro
 			return http.StatusBadRequest, apierrors.NewErrorV3(
 				apierrors.HTTP400InvalidParameterCode,
 				apierrors.HTTP400InvalidParameterMessageInitialNodeLabelsKeys)
-		} else if len(parts) > 1 { // kv.Key consists of prefix and name
+		} else if len(parts) > 1 { // kv.Key consists of prefix and name (Key: "prefix/name")
 			// disallow key prefix length greater than maxLabelKeyPrefixLength
 			if len(parts[0]) > maxLabelKeyPrefixLength {
 				return http.StatusBadRequest, apierrors.NewErrorV3(
@@ -115,7 +123,27 @@ func ValidateInitialNodeLabels(labels, disallowedPrefixes string) (int, *apierro
 					apierrors.HTTP400InvalidParameterCode,
 					apierrors.HTTP400InvalidParameterMessageInitialNodeLabelsKeys)
 			}
-		} else { // kv.Key consists of name only
+
+			// setup to disallow prefixes
+			var disallowedPrefixesRegex func(b string) bool
+			if len(disallowedPrefixes) > 0 {
+				for _, disallowedPrefix := range disallowedPrefixes {
+					disallowedPrefixesRegex = regexp.MustCompile(disallowedPrefix).MatchString
+					// disallow prefixes for each Key's prefix, barring the specific ones allowed
+					if disallowedPrefixesRegex != nil && disallowedPrefixesRegex(parts[0]) && !isAllowedSpecificPrefix(kv.Key) {
+						return http.StatusBadRequest, apierrors.NewErrorV3(
+							apierrors.HTTP400InvalidParameterCode,
+							apierrors.HTTP400InvalidParameterMessageInitialNodeLabelsPrefix)							
+					}
+				}
+			}
+			// disallow *node-restriction.kubernetes.io/ prefix
+			if strings.HasSuffix(parts[0], "node-restriction.kubernetes.io") {
+				return http.StatusBadRequest, apierrors.NewErrorV3(
+					apierrors.HTTP400InvalidParameterCode,
+					fmt.Sprintf(apierrors.HTTP400InvalidParameterMessageInitialNodeLabelsNodeRestrictionNotSupported, kv.Key))
+			}
+		} else { // kv.Key consists of name only (Key: "name")
 			// disallow key name length less than minLabelKeyNameLength
 			if len(kv.Key) < minLabelKeyNameLength {
 				return http.StatusBadRequest, apierrors.NewErrorV3(
@@ -137,18 +165,36 @@ func ValidateInitialNodeLabels(labels, disallowedPrefixes string) (int, *apierro
 				apierrors.HTTP400InvalidParameterCode,
 				apierrors.HTTP400InvalidParameterMessageInitialNodeLabelsValues)
 		}
-
-		// disallow prefixes
-		if disallowedPrefixesRegex != nil && disallowedPrefixesRegex(kv.Key) {
-			return http.StatusBadRequest, apierrors.NewErrorV3(
-				apierrors.HTTP400InvalidParameterCode,
-				apierrors.HTTP400InvalidParameterMessageInitialNodeLabelsPrefix)
-		}
 	}
 
 	// let kubernetes deal with other issues like needing labels to start with alpha, ...
 
 	return http.StatusOK, nil
+}
+
+// https://github.com/kubernetes/enhancements/blob/master/keps/sig-auth/0000-20170814-bounding-self-labeling-kubelets.md
+func isAllowedSpecificPrefix(key string) bool {
+
+	if (regexp.MustCompile("[.]kubelet.kubernetes.io/").MatchString(key) || regexp.MustCompile("[.]node.kubernetes.io/").MatchString(key)) {
+		return true
+	}
+
+	switch key {
+		case
+			"kubernetes.io/hostname",
+			"kubernetes.io/instance-type",
+			"kubernetes.io/os",
+			"kubernetes.io/arch",
+			"beta.kubernetes.io/instance-type",
+			"beta.kubernetes.io/os",
+			"beta.kubernetes.io/arch",
+			"failure-domain.beta.kubernetes.io/zone",
+			"failure-domain.beta.kubernetes.io/region",
+			"failure-domain.kubernetes.io/zone",
+			"failure-domain.kubernetes.io/region":
+			return true
+		}
+	return false
 }
 
 // ValidateSSHKey will return nil if the passed string is a valid

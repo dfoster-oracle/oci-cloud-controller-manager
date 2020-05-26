@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 package identity
@@ -8,16 +9,11 @@ import (
 	"net/http"
 )
 
-// CascadeDeleteRequest wrapper for the CascadeDelete operation
-type CascadeDeleteRequest struct {
+// BulkDeleteTagsRequest wrapper for the BulkDeleteTags operation
+type BulkDeleteTagsRequest struct {
 
-	// The OCID of the tag namespace.
-	TagNamespaceId *string `mandatory:"true" contributesTo:"path" name:"tagNamespaceId"`
-
-	// For optimistic concurrency control. In the PUT or DELETE call for a resource, set the `if-match`
-	// parameter to the value of the etag from a previous GET or POST response for that resource.  The resource
-	// will be updated or deleted only if the etag you provide matches the resource's current etag value.
-	IfMatch *string `mandatory:"false" contributesTo:"header" name:"if-match"`
+	// Request object for deleting tags in bulk.
+	BulkDeleteTagsDetails `contributesTo:"body"`
 
 	// Unique Oracle-assigned identifier for the request. If you need to contact Oracle about a
 	// particular request, please provide the request ID.
@@ -35,22 +31,22 @@ type CascadeDeleteRequest struct {
 	RequestMetadata common.RequestMetadata
 }
 
-func (request CascadeDeleteRequest) String() string {
+func (request BulkDeleteTagsRequest) String() string {
 	return common.PointerString(request)
 }
 
 // HTTPRequest implements the OCIRequest interface
-func (request CascadeDeleteRequest) HTTPRequest(method, path string) (http.Request, error) {
+func (request BulkDeleteTagsRequest) HTTPRequest(method, path string) (http.Request, error) {
 	return common.MakeDefaultHTTPRequestWithTaggedStruct(method, path, request)
 }
 
 // RetryPolicy implements the OCIRetryableRequest interface. This retrieves the specified retry policy.
-func (request CascadeDeleteRequest) RetryPolicy() *common.RetryPolicy {
+func (request BulkDeleteTagsRequest) RetryPolicy() *common.RetryPolicy {
 	return request.RequestMetadata.RetryPolicy
 }
 
-// CascadeDeleteResponse wrapper for the CascadeDelete operation
-type CascadeDeleteResponse struct {
+// BulkDeleteTagsResponse wrapper for the BulkDeleteTags operation
+type BulkDeleteTagsResponse struct {
 
 	// The underlying http response
 	RawResponse *http.Response
@@ -63,11 +59,11 @@ type CascadeDeleteResponse struct {
 	OpcWorkRequestId *string `presentIn:"header" name:"opc-work-request-id"`
 }
 
-func (response CascadeDeleteResponse) String() string {
+func (response BulkDeleteTagsResponse) String() string {
 	return common.PointerString(response)
 }
 
 // HTTPResponse implements the OCIResponse interface
-func (response CascadeDeleteResponse) HTTPResponse() *http.Response {
+func (response BulkDeleteTagsResponse) HTTPResponse() *http.Response {
 	return response.RawResponse
 }

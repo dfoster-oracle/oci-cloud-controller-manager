@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Core Services API
@@ -126,14 +127,6 @@ type LaunchInstanceDetails struct {
 	//  Cloud-Init to run custom scripts or provide custom Cloud-Init configuration. For
 	//  information about how to take advantage of user data, see the
 	//  Cloud-Init Documentation (http://cloudinit.readthedocs.org/en/latest/topics/format.html).
-	//  **Note:** Cloud-Init does not pull this data from the `http://169.254.169.254/opc/v1/instance/metadata/`
-	//  path. When the instance launches and either of these keys are provided, the key values are formatted as
-	//  OpenStack metadata and copied to the following locations, which are recognized by Cloud-Init:
-	//  `http://169.254.169.254/openstack/latest/meta_data.json` - This JSON blob
-	//  contains, among other things, the SSH keys that you provided for
-	//   **"ssh_authorized_keys"**.
-	//  `http://169.254.169.254/openstack/latest/user_data` - Contains the
-	//  base64-decoded data that you provided for **"user_data"**.
 	//  **Metadata Example**
 	//       "metadata" : {
 	//          "quake_bot_level" : "Severe",
@@ -143,9 +136,9 @@ type LaunchInstanceDetails struct {
 	//  **Getting Metadata on the Instance**
 	//  To get information about your instance, connect to the instance using SSH and issue any of the
 	//  following GET requests:
-	//      curl http://169.254.169.254/opc/v1/instance/
-	//      curl http://169.254.169.254/opc/v1/instance/metadata/
-	//      curl http://169.254.169.254/opc/v1/instance/metadata/<any-key-name>
+	//      curl -H "Authorization: Bearer Oracle" http://169.254.169.254/opc/v2/instance/
+	//      curl -H "Authorization: Bearer Oracle" http://169.254.169.254/opc/v2/instance/metadata/
+	//      curl -H "Authorization: Bearer Oracle" http://169.254.169.254/opc/v2/instance/metadata/<any-key-name>
 	//  You'll get back a response that includes all the instance information; only the metadata information; or
 	//  the metadata information for the specified key name, respectively.
 	Metadata map[string]string `mandatory:"false" json:"metadata"`

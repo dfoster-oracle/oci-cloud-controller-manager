@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Core Services API
@@ -26,6 +27,11 @@ import (
 // You can add *secondary private IPs* to a VNIC after it's created. For more
 // information, see CreatePrivateIp and
 // IP Addresses (https://docs.cloud.oracle.com/Content/Network/Tasks/managingIPaddresses.htm).
+//
+// If you are an Oracle Cloud VMware Solution customer, you will have secondary VNICs
+// that reside in a VLAN instead of a subnet. These VNICs have other differences, which
+// are called out in the descriptions of the relevant attributes in the `Vnic` object.
+// Also see Vlan.
 // To use any of the API operations, you must be authorized in an IAM policy. If you're not authorized,
 // talk to an administrator. If you're an administrator who needs to write policies to give users access, see
 // Getting Started with Policies (https://docs.cloud.oracle.com/Content/Identity/Concepts/policygetstarted.htm).
@@ -80,15 +86,23 @@ type Vnic struct {
 	IsPrimary *bool `mandatory:"false" json:"isPrimary"`
 
 	// The MAC address of the VNIC.
+	// If the VNIC belongs to a VLAN as part of the Oracle Cloud VMware Solution,
+	// the MAC address is learned. If the VNIC belongs to a subnet, the
+	// MAC address is a static, Oracle-provided value.
 	// Example: `00:00:00:00:00:01`
 	MacAddress *string `mandatory:"false" json:"macAddress"`
 
-	// A list of the OCIDs of the network security groups that the VNIC belongs to. For more
-	// information about NSGs, see
+	// A list of the OCIDs of the network security groups that the VNIC belongs to.
+	// If the VNIC belongs to a VLAN as part of the Oracle Cloud VMware Solution (instead of
+	// belonging to a subnet), the value of the `nsgIds` attribute is ignored. Instead, the
+	// VNIC belongs to the NSGs that are associated with the VLAN itself. See Vlan.
+	// For more information about NSGs, see
 	// NetworkSecurityGroup.
 	NsgIds []string `mandatory:"false" json:"nsgIds"`
 
-	// The OCID of the VNIC's VLAN.
+	// If the VNIC belongs to a VLAN as part of the Oracle Cloud VMware Solution (instead of
+	// belonging to a subnet), the `vlanId` is the OCID of the VLAN the VNIC is in. See
+	// Vlan. If the VNIC is instead in a subnet, `subnetId` has a value.
 	VlanId *string `mandatory:"false" json:"vlanId"`
 
 	// The private IP address of the primary `privateIp` object on the VNIC.
@@ -103,6 +117,10 @@ type Vnic struct {
 	// Defaults to `false`, which means the check is performed. For information
 	// about why you would skip the source/destination check, see
 	// Using a Private IP as a Route Target (https://docs.cloud.oracle.com/Content/Network/Tasks/managingroutetables.htm#privateip).
+	//
+	// If the VNIC belongs to a VLAN as part of the Oracle Cloud VMware Solution (instead of
+	// belonging to a subnet), the `skipSourceDestCheck` attribute is `true`.
+	// This is because the source/destination check is always disabled for VNICs in a VLAN.
 	// Example: `true`
 	SkipSourceDestCheck *bool `mandatory:"false" json:"skipSourceDestCheck"`
 

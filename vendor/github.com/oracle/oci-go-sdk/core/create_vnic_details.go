@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Core Services API
@@ -77,16 +78,23 @@ type CreateVnicDetails struct {
 	// A list of the OCIDs of the network security groups (NSGs) to add the VNIC to. For more
 	// information about NSGs, see
 	// NetworkSecurityGroup.
+	// If a `vlanId` is specified, the `nsgIds` is ignored. The `vlanId`
+	// indicates that the VNIC will belong to a VLAN instead of a subnet. With VLANs,
+	// all VNICs in the VLAN belong to the NSGs that are associated with the VLAN.
+	// See Vlan.
 	NsgIds []string `mandatory:"false" json:"nsgIds"`
 
-	// A private IP address of your choice to assign to the VNIC. Value is ignored
-	// if a `vlanId` value is specified. Must be an available IP address within
-	// the subnet's CIDR. If you don't specify a value, Oracle automatically assigns
-	// a private IP address from the subnet. This is the VNIC's *primary* private IP
-	// address. The value appears in the Vnic object and
-	// also the PrivateIp object returned by
+	// A private IP address of your choice to assign to the VNIC. Must be an
+	// available IP address within the subnet's CIDR. If you don't specify a
+	// value, Oracle automatically assigns a private IP address from the subnet.
+	// This is the VNIC's *primary* private IP address. The value appears in
+	// the Vnic object and also the
+	// PrivateIp object returned by
 	// ListPrivateIps and
 	// GetPrivateIp.
+	//
+	// If you specify a `vlanId`, the `privateIp` is ignored.
+	// See Vlan.
 	// Example: `10.0.3.3`
 	PrivateIp *string `mandatory:"false" json:"privateIp"`
 
@@ -94,6 +102,10 @@ type CreateVnicDetails struct {
 	// Defaults to `false`, which means the check is performed. For information
 	// about why you would skip the source/destination check, see
 	// Using a Private IP as a Route Target (https://docs.cloud.oracle.com/Content/Network/Tasks/managingroutetables.htm#privateip).
+	//
+	// If you specify a `vlanId`, the `skipSourceDestCheck` is ignored because the
+	// source/destination check is always disabled for VNICs in a VLAN. See
+	// Vlan.
 	// Example: `true`
 	SkipSourceDestCheck *bool `mandatory:"false" json:"skipSourceDestCheck"`
 
@@ -101,16 +113,16 @@ type CreateVnicDetails struct {
 	// use this `subnetId` instead of the deprecated `subnetId` in
 	// LaunchInstanceDetails.
 	// At least one of them is required; if you provide both, the values must match.
-	// Alternatively, the `vlanId` can be used instead of a `subnetId`.
-	// At least one `subnetId` value is required if this field is populated; if
-	// you provide both, the values must match. If both the `vlanId` and `subnetId`
-	// fields are provided, the launch will fail.
+	// If you are an Oracle Cloud VMware Solution customer and creating a secondary
+	// VNIC in a VLAN instead of a subnet, provide a `vlanId` instead of a `subnetId`.
+	// If you provide both a `vlanId` and `subnetId`, the request fails.
 	SubnetId *string `mandatory:"false" json:"subnetId"`
 
-	// The OCID of the Oracle VLAN to create the VNIC in. This field is only supported
-	// on a secondary vnic, supplying in a primary vnic is invalid. When launching an
-	// instance, use either this `vlanId` or the alternate `subnetId`. At most one of
-	// `vlanId` or `subnetId` is required; if you provide both, the launch will fail.
+	// Provide this attribute only if you are an Oracle Cloud VMware Solution
+	// customer and creating a secondary VNIC in a VLAN. The value is the OCID of the VLAN.
+	// See Vlan.
+	// Provide a `vlanId` instead of a `subnetId`. If you provide both a
+	// `vlanId` and `subnetId`, the request fails.
 	VlanId *string `mandatory:"false" json:"vlanId"`
 }
 

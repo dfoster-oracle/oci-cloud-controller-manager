@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // File Storage API
@@ -15,7 +16,7 @@ import (
 // ExportSetSummary Summary information for an export set.
 type ExportSetSummary struct {
 
-	// The OCID of the compartment that contains the export set.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the compartment that contains the export set.
 	CompartmentId *string `mandatory:"true" json:"compartmentId"`
 
 	// A user-friendly name. It does not have to be unique, and it is changeable.
@@ -23,7 +24,7 @@ type ExportSetSummary struct {
 	// Example: `My export set`
 	DisplayName *string `mandatory:"true" json:"displayName"`
 
-	// The OCID of the export set.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the export set.
 	Id *string `mandatory:"true" json:"id"`
 
 	// The current state of the export set.
@@ -34,7 +35,7 @@ type ExportSetSummary struct {
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
 
-	// The OCID of the virtual cloud network (VCN) the export set is in.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the virtual cloud network (VCN) the export set is in.
 	VcnId *string `mandatory:"true" json:"vcnId"`
 
 	// The availability domain the export set is in. May be unset

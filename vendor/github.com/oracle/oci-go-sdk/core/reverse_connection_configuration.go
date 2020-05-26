@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Core Services API
@@ -60,6 +61,25 @@ type ReverseConnectionConfiguration struct {
 	// For more information about NSGs, see
 	// NetworkSecurityGroup.
 	NsgIds []string `mandatory:"false" json:"nsgIds"`
+
+	// Number of customer endpoints that the service provider expects to establish connections to using this RCE. The default is 0.
+	// When non-zero value is specified, reverse connection configuration will be allocated with a list of CIDRs, from
+	// which NAT IP addresses will be allocated. These list of CIDRs will not be shared by other reverse
+	// connection enabled private endpoints.
+	// When zero is specified, reverse connection configuration will get NAT IP addresses from common pool of CIDRs,
+	// which will be shared with other reverse connection enabled private endpoints.
+	// If the private endpoint was enabled with reverse connection with 0 already, the field is not updatable.
+	// The size may not be updated with smaller number than previously specified value, but may be increased.
+	CustomerEndpointsSize *int `mandatory:"false" json:"customerEndpointsSize"`
+
+	// List of CIDRs that this reverse connection configuration will allocate the NAT IP addresses from.
+	// CIDRs on this list will not be shared by other reverse connection enabled private endpoints.
+	// When not specified, reverse connection configuration will get NAT IP addresses from common pool of CIDRs,
+	// which will be shared with other reverse connection enabled private endpoints.
+	ReverseConnectionNatIpCidrs []string `mandatory:"false" json:"reverseConnectionNatIpCidrs"`
+
+	// Layer 4 transport protocol to be used when resolving DNS queries within the default DNS resolution context.
+	DefaultDnsContextTransport ReverseConnectionConfigurationDefaultDnsContextTransportEnum `mandatory:"false" json:"defaultDnsContextTransport,omitempty"`
 }
 
 func (m ReverseConnectionConfiguration) String() string {
@@ -115,6 +135,29 @@ var mappingReverseConnectionConfigurationDefaultDnsResolutionContext = map[strin
 func GetReverseConnectionConfigurationDefaultDnsResolutionContextEnumValues() []ReverseConnectionConfigurationDefaultDnsResolutionContextEnum {
 	values := make([]ReverseConnectionConfigurationDefaultDnsResolutionContextEnum, 0)
 	for _, v := range mappingReverseConnectionConfigurationDefaultDnsResolutionContext {
+		values = append(values, v)
+	}
+	return values
+}
+
+// ReverseConnectionConfigurationDefaultDnsContextTransportEnum Enum with underlying type: string
+type ReverseConnectionConfigurationDefaultDnsContextTransportEnum string
+
+// Set of constants representing the allowable values for ReverseConnectionConfigurationDefaultDnsContextTransportEnum
+const (
+	ReverseConnectionConfigurationDefaultDnsContextTransportTcp ReverseConnectionConfigurationDefaultDnsContextTransportEnum = "TCP"
+	ReverseConnectionConfigurationDefaultDnsContextTransportUdp ReverseConnectionConfigurationDefaultDnsContextTransportEnum = "UDP"
+)
+
+var mappingReverseConnectionConfigurationDefaultDnsContextTransport = map[string]ReverseConnectionConfigurationDefaultDnsContextTransportEnum{
+	"TCP": ReverseConnectionConfigurationDefaultDnsContextTransportTcp,
+	"UDP": ReverseConnectionConfigurationDefaultDnsContextTransportUdp,
+}
+
+// GetReverseConnectionConfigurationDefaultDnsContextTransportEnumValues Enumerates the set of values for ReverseConnectionConfigurationDefaultDnsContextTransportEnum
+func GetReverseConnectionConfigurationDefaultDnsContextTransportEnumValues() []ReverseConnectionConfigurationDefaultDnsContextTransportEnum {
+	values := make([]ReverseConnectionConfigurationDefaultDnsContextTransportEnum, 0)
+	for _, v := range mappingReverseConnectionConfigurationDefaultDnsContextTransport {
 		values = append(values, v)
 	}
 	return values

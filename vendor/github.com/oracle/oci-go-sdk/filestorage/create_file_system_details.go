@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // File Storage API
@@ -19,7 +20,7 @@ type CreateFileSystemDetails struct {
 	// Example: `Uocm:PHX-AD-1`
 	AvailabilityDomain *string `mandatory:"true" json:"availabilityDomain"`
 
-	// The OCID of the compartment to create the file system in.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the compartment to create the file system in.
 	CompartmentId *string `mandatory:"true" json:"compartmentId"`
 
 	// A user-friendly name. It does not have to be unique, and it is changeable.
@@ -38,8 +39,12 @@ type CreateFileSystemDetails struct {
 	// Example: `{"Operations": {"CostCenter": "42"}}`
 	DefinedTags map[string]map[string]interface{} `mandatory:"false" json:"definedTags"`
 
-	// The OCID of KMS key used to encrypt the encryption keys associated with this file system.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the KMS key used to encrypt the encryption keys associated with this file system.
 	KmsKeyId *string `mandatory:"false" json:"kmsKeyId"`
+
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the snapshot used to create a cloned file system.
+	// See Cloning a File System (https://docs.cloud.oracle.com/iaas/Content/File/Tasks/cloningafilesystem.htm).
+	SourceSnapshotId *string `mandatory:"false" json:"sourceSnapshotId"`
 }
 
 func (m CreateFileSystemDetails) String() string {

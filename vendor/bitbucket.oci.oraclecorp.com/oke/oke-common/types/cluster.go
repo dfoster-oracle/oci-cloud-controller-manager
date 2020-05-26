@@ -1,6 +1,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -53,7 +54,7 @@ type ClusterV3 struct {
 }
 
 // ToSummaryV3 a K8Instance object to a ClusterSummaryV3 object understood by the higher layers
-func (src *K8Instance) ToSummaryV3() *ClusterSummaryV3 {
+func (src *K8Instance) ToSummaryV3(exposePSP bool) *ClusterSummaryV3 {
 	var dst ClusterSummaryV3
 	if src == nil {
 		return &dst
@@ -74,6 +75,11 @@ func (src *K8Instance) ToSummaryV3() *ClusterSummaryV3 {
 		dst.Options.AddOns = &AddOnOptionsV3{
 			Tiller:              src.InstallOptions.HasTiller,
 			KubernetesDashboard: src.InstallOptions.HasKubernetesDashboard,
+		}
+		if exposePSP {
+			dst.Options.AdmissionControllerOptions = &AdmissionControllersV3{
+				PodSecurityEnabled: src.InstallOptions.PodSecurityPolicy != PodSecurityPolicy_Disabled,
+			}
 		}
 	}
 	dst.Options.ServiceLBSubnetIDs = make([]string, len(src.NetworkConfig.ServiceLBSubnets))
@@ -97,7 +103,7 @@ func (src *K8Instance) ToSummaryV3() *ClusterSummaryV3 {
 }
 
 // ToV3 converts a K8Instance object to a ClusterV3 object understood by the higher layers
-func (src *K8Instance) ToV3() *ClusterV3 {
+func (src *K8Instance) ToV3(exposePSP bool) *ClusterV3 {
 	var dst ClusterV3
 	if src == nil {
 		return &dst
@@ -119,6 +125,13 @@ func (src *K8Instance) ToV3() *ClusterV3 {
 			KubernetesDashboard: src.InstallOptions.HasKubernetesDashboard,
 		},
 	}
+
+	if exposePSP {
+		dst.Options.AdmissionControllerOptions = &AdmissionControllersV3{
+			PodSecurityEnabled: src.InstallOptions.PodSecurityPolicy != PodSecurityPolicy_Disabled,
+		}
+	}
+
 	dst.Options.ServiceLBSubnetIDs = make([]string, len(src.NetworkConfig.ServiceLBSubnets))
 	for idx, sn := range src.NetworkConfig.ServiceLBSubnets {
 		dst.Options.ServiceLBSubnetIDs[idx] = sn
@@ -159,6 +172,26 @@ func (s TKMState) ToAPIV3() string {
 	}
 }
 
+func FromClusterLifeCycleState(lifecycle string) (TKMState, error) {
+
+	switch strings.ToUpper(lifecycle) {
+	case ClusterStateForAPICreating:
+		return TKMState_Initializing, nil
+	case ClusterStateForAPIActive:
+		return TKMState_Running, nil
+	case ClusterStateForAPIFailed:
+		return TKMState_Failed, nil
+	case ClusterStateForAPIDeleting:
+		return TKMState_Terminating, nil
+	case ClusterStateForAPIDeleted:
+		return TKMState_Terminated, nil
+	case ClusterStateForAPIUpdating:
+		return TKMState_Updating_Masters, nil
+	default:
+		return -1, errors.New(fmt.Sprintf("Unknown lifecycle %s", lifecycle))
+	}
+}
+
 // ClusterEndpointsV3 contains the endpoint URLs for the Kubernetes API server.
 type ClusterEndpointsV3 struct {
 	Kubernetes string `json:"kubernetes"`
@@ -176,9 +209,10 @@ type CreateClusterDetailsV3 struct {
 
 // ClusterCreateOptionsV3 defines the options that can modify how a cluster is created.
 type ClusterCreateOptionsV3 struct {
-	ServiceLBSubnetIDs      []string                   `json:"serviceLbSubnetIds" yaml:"serviceLbSubnetIds"`
-	KubernetesNetworkConfig *KubernetesNetworkConfigV3 `json:"kubernetesNetworkConfig,omitempty" yaml:"kubernetesNetworkConfig,omitempty"`
-	AddOns                  *AddOnOptionsV3            `json:"addOns,omitempty" yaml:"addOns,omitempty"`
+	ServiceLBSubnetIDs         []string                   `json:"serviceLbSubnetIds" yaml:"serviceLbSubnetIds"`
+	KubernetesNetworkConfig    *KubernetesNetworkConfigV3 `json:"kubernetesNetworkConfig,omitempty" yaml:"kubernetesNetworkConfig,omitempty"`
+	AddOns                     *AddOnOptionsV3            `json:"addOns,omitempty" yaml:"addOns,omitempty"`
+	AdmissionControllerOptions *AdmissionControllersV3    `json:"admissionControllerOptions,omitempty" yaml:"admissionControllerOptions,omitempty"`
 }
 
 // KubernetesNetworkConfigV3 defines the networking to use in creating a cluster
@@ -193,6 +227,11 @@ type AddOnOptionsV3 struct {
 	KubernetesDashboard bool `json:"isKubernetesDashboardEnabled" yaml:"isKubernetesDashboardEnabled"`
 }
 
+// AdmissionControllersV3 defines the extended admission controllers to use in creating/updating a cluster
+type AdmissionControllersV3 struct {
+	PodSecurityEnabled bool `json:"isPodSecurityPolicyEnabled" yaml:"isPodSecurityPolicyEnabled"`
+}
+
 // ClusterCreateCLIResponseV3 is used by the CLI when creating a cluster
 type ClusterCreateCLIResponseV3 struct {
 	WorkRequestID string `json:"workRequestId"`
@@ -200,8 +239,13 @@ type ClusterCreateCLIResponseV3 struct {
 
 // UpdateClusterDetailsV3 is the request body type for the UpdateCluster API operation.
 type UpdateClusterDetailsV3 struct {
-	Name              string `json:"name"`
-	KubernetesVersion string `json:"kubernetesVersion"`
+	Name              string                `json:"name"`
+	KubernetesVersion string                `json:"kubernetesVersion"`
+	Options           *ClusterUpdateOptions `json:"options,omitempty" yaml:"options,omitempty"`
+}
+
+type ClusterUpdateOptions struct {
+	AdmissionControllerOptions *AdmissionControllersV3 `json:"admissionControllerOptions,omitempty" yaml:"admissionControllerOptions,omitempty"`
 }
 
 func getK8SSemverNumbers(version string) ([]int64, error) {

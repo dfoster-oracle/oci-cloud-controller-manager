@@ -108,15 +108,9 @@ func (cp *resourcePrincipalConfigurationProvider) hasAuthnMaterial() bool {
 // refreshFromFilesystem reads the resource principal from the given filesystem
 // path and updates the cached token and key if the contents are fresher than
 func (cp *resourcePrincipalConfigurationProvider) refreshFromFilesystem() error {
-	b, err := ioutil.ReadFile(cp.path)
+	rp, err := readResourcePrincipalFromPath(cp.path)
 	if err != nil {
-		return errors.Wrapf(err, "reading %q", cp.path)
-	}
-
-	var rp types.ResourcePrincipal
-	err = json.Unmarshal(b, &rp)
-	if err != nil {
-		return errors.Wrap(err, "unmarshaling resource principal")
+		return err
 	}
 
 	rpst, err := newToken(rp.RPST)
@@ -154,4 +148,32 @@ func (cp *resourcePrincipalConfigurationProvider) KeyFingerprint() (string, erro
 
 func (cp *resourcePrincipalConfigurationProvider) Region() (string, error) {
 	return string(cp.region), nil
+}
+
+func readResourcePrincipalFromPath(path string) (*types.ResourcePrincipal, error) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, errors.Wrapf(err, "reading %q", path)
+	}
+
+	var rp types.ResourcePrincipal
+	err = json.Unmarshal(b, &rp)
+	if err != nil {
+		return nil, errors.Wrap(err, "unmarshaling resource principal")
+	}
+	return &rp, nil
+}
+
+func readTokenFromPath(path string) (securityToken, error) {
+	rp, err := readResourcePrincipalFromPath(path)
+	if err != nil{
+		return nil, err
+	}
+
+	rpst, err := newToken(rp.RPST)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing RPST")
+	}
+
+	return rpst, nil
 }

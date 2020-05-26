@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 package filestorage
@@ -11,7 +12,7 @@ import (
 // ListExportsRequest wrapper for the ListExports operation
 type ListExportsRequest struct {
 
-	// The OCID of the compartment.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the compartment.
 	CompartmentId *string `mandatory:"false" contributesTo:"query" name:"compartmentId"`
 
 	// For list pagination. The maximum number of results per page,
@@ -28,17 +29,17 @@ type ListExportsRequest struct {
 	// see List Pagination (https://docs.cloud.oracle.com/iaas/Content/API/Concepts/usingapi.htm#nine).
 	Page *string `mandatory:"false" contributesTo:"query" name:"page"`
 
-	// The OCID of the export set.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the export set.
 	ExportSetId *string `mandatory:"false" contributesTo:"query" name:"exportSetId"`
 
-	// The OCID of the file system.
+	// The OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm) of the file system.
 	FileSystemId *string `mandatory:"false" contributesTo:"query" name:"fileSystemId"`
 
 	// Filter results by the specified lifecycle state. Must be a valid
 	// state for the resource type.
 	LifecycleState ListExportsLifecycleStateEnum `mandatory:"false" contributesTo:"query" name:"lifecycleState" omitEmpty:"true"`
 
-	// Filter results by OCID. Must be an OCID of the correct type for
+	// Filter results by OCID (https://docs.cloud.oracle.com/Content/General/Concepts/identifiers.htm). Must be an OCID of the correct type for
 	// the resouce type.
 	Id *string `mandatory:"false" contributesTo:"query" name:"id"`
 

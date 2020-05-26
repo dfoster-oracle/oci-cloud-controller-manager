@@ -10,8 +10,10 @@ type NodeV3 struct {
 	Name               string             `json:"name"`
 	KubernetesVersion  string             `json:"kubernetesVersion"`
 	AvailabilityDomain string             `json:"availabilityDomain"`
+	FaultDomain        *string            `json:"faultDomain,omitempty"`
 	SubnetID           string             `json:"subnetId"`
 	NodePoolID         string             `json:"nodePoolId"`
+	PrivateIP          *string            `json:"privateIp,omitempty"`
 	PublicIP           string             `json:"publicIp"`
 	Error              *apierrors.ErrorV3 `json:"nodeError,omitempty"`
 	LifecycleState     string             `json:"lifecycleState"`
@@ -19,7 +21,7 @@ type NodeV3 struct {
 }
 
 // ToV3 converts a Node object to a NodeV3 object understood by the higher layers
-func (src *NodeState) ToV3() NodeV3 {
+func (src *NodeState) ToV3(exposeFaultDomainAndPrivateIp bool) NodeV3 {
 	dst := NodeV3{}
 	if src == nil {
 		return dst
@@ -31,6 +33,10 @@ func (src *NodeState) ToV3() NodeV3 {
 	dst.SubnetID = src.SubnetID
 	dst.NodePoolID = src.NodePoolID
 	dst.PublicIP = src.PublicIP
+	if exposeFaultDomainAndPrivateIp {
+		dst.FaultDomain = &src.FaultDomain
+		dst.PrivateIP = &src.PrivateIP
+	}
 
 	// if node contains ErrorOCI return that to user else return generic apierrors.ErrorV3
 	if src.ErrorOCI != nil {

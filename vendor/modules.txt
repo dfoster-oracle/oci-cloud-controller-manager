@@ -1,12 +1,13 @@
 # bitbucket.oci.oraclecorp.com/oke/bmc-go-sdk v0.0.0-20180119170638-a7c726955dd4
 bitbucket.oci.oraclecorp.com/oke/bmc-go-sdk
-# bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20190917222423-ba5e028f261d => bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20190917222423-ba5e028f261d
+# bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20190917222423-ba5e028f261d => bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20200526005007-e8edec800a78
 bitbucket.oci.oraclecorp.com/oke/oke-common/resourceprincipals
 bitbucket.oci.oraclecorp.com/oke/oke-common/types
 bitbucket.oci.oraclecorp.com/oke/oke-common/protobuf
 bitbucket.oci.oraclecorp.com/oke/oke-common/types/lists
 bitbucket.oci.oraclecorp.com/oke/oke-common/types/nodepools
 bitbucket.oci.oraclecorp.com/oke/oke-common/types/nodes
+bitbucket.oci.oraclecorp.com/oke/oke-common/types/versions
 bitbucket.oci.oraclecorp.com/oke/oke-common/types/apierrors
 # github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
 github.com/Azure/go-ansiterm/winterm
@@ -30,6 +31,8 @@ github.com/coreos/etcd/etcdserver/etcdserverpb
 github.com/coreos/etcd/mvcc/mvccpb
 github.com/coreos/etcd/pkg/types
 github.com/coreos/etcd/pkg/tlsutil
+# github.com/coreos/go-semver v0.2.0
+github.com/coreos/go-semver/semver
 # github.com/coreos/go-systemd v0.0.0-20180511133405-39ca1b05acc7
 github.com/coreos/go-systemd/daemon
 # github.com/davecgh/go-spew v1.1.1
@@ -200,7 +203,7 @@ github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 # github.com/opencontainers/go-digest v1.0.0-rc1
 github.com/opencontainers/go-digest
-# github.com/oracle/oci-go-sdk v0.0.0-00010101000000-000000000000 => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk v1.0.1-0.20200331033925-42acda14d09a
+# github.com/oracle/oci-go-sdk v0.0.0-00010101000000-000000000000 => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk v1.0.1-0.20200522010431-885df7973894
 github.com/oracle/oci-go-sdk/common
 github.com/oracle/oci-go-sdk/core
 github.com/oracle/oci-go-sdk/loadbalancer
