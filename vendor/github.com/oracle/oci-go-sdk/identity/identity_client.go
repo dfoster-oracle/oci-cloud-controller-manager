@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Identity and Access Management Service API
@@ -89,8 +90,12 @@ func (client IdentityClient) ActivateMfaTotpDevice(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.activateMfaTotpDevice, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ActivateMfaTotpDeviceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ActivateMfaTotpDeviceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ActivateMfaTotpDeviceResponse{}
+			}
 		}
 		return
 	}
@@ -139,8 +144,12 @@ func (client IdentityClient) AddUserToGroup(ctx context.Context, request AddUser
 	ociResponse, err = common.Retry(ctx, request, client.addUserToGroup, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = AddUserToGroupResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = AddUserToGroupResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = AddUserToGroupResponse{}
+			}
 		}
 		return
 	}
@@ -185,8 +194,12 @@ func (client IdentityClient) AssembleEffectiveTagSet(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.assembleEffectiveTagSet, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = AssembleEffectiveTagSetResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = AssembleEffectiveTagSetResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = AssembleEffectiveTagSetResponse{}
+			}
 		}
 		return
 	}
@@ -218,68 +231,6 @@ func (client IdentityClient) assembleEffectiveTagSet(ctx context.Context, reques
 	return response, err
 }
 
-// BulkDelete Deletes the specified tag key definitions. This operation triggers a process that removes the
-// tags from all resources in your tenancy.
-// These things happen immediately:
-//
-//   * If the tag was a cost-tracking tag, it no longer counts against your 10 cost-tracking
-//   tags limit, whether you first disabled it or not.
-//   * If the tag was used with dynamic groups, none of the rules that contain the tag will
-//   be evaluated against the tag.
-// Once you start the delete operation, the state of the tag changes to DELETING and tag removal
-// from resources begins. This can take up to 48 hours depending on the number of resources that
-// were tagged as well as the regions in which those resources reside. When all tags have been
-// removed, the state changes to DELETED. You cannot restore a deleted tag. Once the deleted tag
-// changes its state to DELETED, you can use the same tag name again.
-// To delete the tags, you must first retire them. Use UpdateTag
-// to retire a tag.
-func (client IdentityClient) BulkDelete(ctx context.Context, request BulkDeleteRequest) (response BulkDeleteResponse, err error) {
-	var ociResponse common.OCIResponse
-	policy := common.NoRetryPolicy()
-	if request.RetryPolicy() != nil {
-		policy = *request.RetryPolicy()
-	}
-
-	if !(request.OpcRetryToken != nil && *request.OpcRetryToken != "") {
-		request.OpcRetryToken = common.String(common.RetryToken())
-	}
-
-	ociResponse, err = common.Retry(ctx, request, client.bulkDelete, policy)
-	if err != nil {
-		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = BulkDeleteResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
-		}
-		return
-	}
-	if convertedResponse, ok := ociResponse.(BulkDeleteResponse); ok {
-		response = convertedResponse
-	} else {
-		err = fmt.Errorf("failed to convert OCIResponse into BulkDeleteResponse")
-	}
-	return
-}
-
-// bulkDelete implements the OCIOperation interface (enables retrying operations)
-func (client IdentityClient) bulkDelete(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
-	httpRequest, err := request.HTTPRequest(http.MethodPost, "/tags/actions/bulkDelete")
-	if err != nil {
-		return nil, err
-	}
-
-	var response BulkDeleteResponse
-	var httpResponse *http.Response
-	httpResponse, err = client.Call(ctx, &httpRequest)
-	defer common.CloseBodyIfValid(httpResponse)
-	response.RawResponse = httpResponse
-	if err != nil {
-		return response, err
-	}
-
-	err = common.UnmarshalResponse(httpResponse, &response)
-	return response, err
-}
-
 // BulkDeleteResources Bulk delete resources in the compartment. All resources must be in the same compartment.
 // This API can only be invoked from tenancy's home region.
 func (client IdentityClient) BulkDeleteResources(ctx context.Context, request BulkDeleteResourcesRequest) (response BulkDeleteResourcesResponse, err error) {
@@ -296,8 +247,12 @@ func (client IdentityClient) BulkDeleteResources(ctx context.Context, request Bu
 	ociResponse, err = common.Retry(ctx, request, client.bulkDeleteResources, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = BulkDeleteResourcesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = BulkDeleteResourcesResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = BulkDeleteResourcesResponse{}
+			}
 		}
 		return
 	}
@@ -329,6 +284,73 @@ func (client IdentityClient) bulkDeleteResources(ctx context.Context, request co
 	return response, err
 }
 
+// BulkDeleteTags Deletes the specified tag key definitions. This operation triggers a process that removes the
+// tags from all resources in your tenancy.
+// The following actions happen immediately:
+//
+//   * If the tag is a cost-tracking tag, the tag no longer counts against your
+//   10 cost-tracking tags limit, even if you do not disable the tag before running this operation.
+//   * If the tag is used with dynamic groups, the rules that contain the tag are no longer
+//   evaluated against the tag.
+// After you start this operation, the state of the tag changes to DELETING, and tag removal
+// from resources begins. This process can take up to 48 hours depending on the number of resources that
+// are tagged and the regions in which those resources reside.
+// When all tags have been removed, the state changes to DELETED. You cannot restore a deleted tag. After the tag state
+// changes to DELETED, you can use the same tag name again.
+// After you start this operation, you cannot start either the DeleteTag or the CascadeDeleteTagNamespace operation until this process completes.
+// In order to delete tags, you must first retire the tags. Use UpdateTag
+// to retire a tag.
+func (client IdentityClient) BulkDeleteTags(ctx context.Context, request BulkDeleteTagsRequest) (response BulkDeleteTagsResponse, err error) {
+	var ociResponse common.OCIResponse
+	policy := common.NoRetryPolicy()
+	if request.RetryPolicy() != nil {
+		policy = *request.RetryPolicy()
+	}
+
+	if !(request.OpcRetryToken != nil && *request.OpcRetryToken != "") {
+		request.OpcRetryToken = common.String(common.RetryToken())
+	}
+
+	ociResponse, err = common.Retry(ctx, request, client.bulkDeleteTags, policy)
+	if err != nil {
+		if ociResponse != nil {
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = BulkDeleteTagsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = BulkDeleteTagsResponse{}
+			}
+		}
+		return
+	}
+	if convertedResponse, ok := ociResponse.(BulkDeleteTagsResponse); ok {
+		response = convertedResponse
+	} else {
+		err = fmt.Errorf("failed to convert OCIResponse into BulkDeleteTagsResponse")
+	}
+	return
+}
+
+// bulkDeleteTags implements the OCIOperation interface (enables retrying operations)
+func (client IdentityClient) bulkDeleteTags(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
+	httpRequest, err := request.HTTPRequest(http.MethodPost, "/tags/actions/bulkDelete")
+	if err != nil {
+		return nil, err
+	}
+
+	var response BulkDeleteTagsResponse
+	var httpResponse *http.Response
+	httpResponse, err = client.Call(ctx, &httpRequest)
+	defer common.CloseBodyIfValid(httpResponse)
+	response.RawResponse = httpResponse
+	if err != nil {
+		return response, err
+	}
+
+	err = common.UnmarshalResponse(httpResponse, &response)
+	return response, err
+}
+
 // BulkMoveResources Bulk move resources in the compartment. All resources must be in the same compartment.
 // This API can only be invoked from tenancy's home region.
 func (client IdentityClient) BulkMoveResources(ctx context.Context, request BulkMoveResourcesRequest) (response BulkMoveResourcesResponse, err error) {
@@ -345,8 +367,12 @@ func (client IdentityClient) BulkMoveResources(ctx context.Context, request Bulk
 	ociResponse, err = common.Retry(ctx, request, client.bulkMoveResources, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = BulkMoveResourcesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = BulkMoveResourcesResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = BulkMoveResourcesResponse{}
+			}
 		}
 		return
 	}
@@ -378,17 +404,20 @@ func (client IdentityClient) bulkMoveResources(ctx context.Context, request comm
 	return response, err
 }
 
-// CascadeDelete Deletes the specified tag namespace. This operation triggers a process that removes all the tags
-// defined in the specified tag namespace from all resources in your tenancy.
-// Once you start the delete operation, new tag key definitions can not be created under the namespace,
-// the state of the tag namespace changes to DELETING and tag removal from the resources begin. This can
-// take up to 48 hours depending on the number of tag definitions in the namespace, number of resources
-// that were tagged as well as the regions in which those resources reside. When all tags have been removed,
-// the state changes to DELETED. You cannot restore a deleted tag namespace. Once the deleted tag namespace
-// changes its state to DELETED, you can use the same tag namespace name again.
+// CascadeDeleteTagNamespace Deletes the specified tag namespace. This operation triggers a process that removes all of the tags
+// defined in the specified tag namespace from all resources in your tenancy and then deletes the tag namespace.
+// After you start the delete operation:
+//   * New tag key definitions cannot be created under the namespace.
+//   * The state of the tag namespace changes to DELETING.
+//   * Tag removal from the resources begins.
+// This process can take up to 48 hours depending on the number of tag definitions in the namespace, the number of resources
+// that are tagged, and the locations of the regions in which those resources reside.
+// After all tags are removed, the state changes to DELETED. You cannot restore a deleted tag namespace. After the deleted tag namespace
+// changes its state to DELETED, you can use the name of the deleted tag namespace again.
+// After you start this operation, you cannot start either the DeleteTag or the BulkDeleteTags operation until this process completes.
 // To delete a tag namespace, you must first retire it. Use UpdateTagNamespace
 // to retire a tag namespace.
-func (client IdentityClient) CascadeDelete(ctx context.Context, request CascadeDeleteRequest) (response CascadeDeleteResponse, err error) {
+func (client IdentityClient) CascadeDeleteTagNamespace(ctx context.Context, request CascadeDeleteTagNamespaceRequest) (response CascadeDeleteTagNamespaceResponse, err error) {
 	var ociResponse common.OCIResponse
 	policy := common.NoRetryPolicy()
 	if request.RetryPolicy() != nil {
@@ -399,30 +428,34 @@ func (client IdentityClient) CascadeDelete(ctx context.Context, request CascadeD
 		request.OpcRetryToken = common.String(common.RetryToken())
 	}
 
-	ociResponse, err = common.Retry(ctx, request, client.cascadeDelete, policy)
+	ociResponse, err = common.Retry(ctx, request, client.cascadeDeleteTagNamespace, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CascadeDeleteResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CascadeDeleteTagNamespaceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CascadeDeleteTagNamespaceResponse{}
+			}
 		}
 		return
 	}
-	if convertedResponse, ok := ociResponse.(CascadeDeleteResponse); ok {
+	if convertedResponse, ok := ociResponse.(CascadeDeleteTagNamespaceResponse); ok {
 		response = convertedResponse
 	} else {
-		err = fmt.Errorf("failed to convert OCIResponse into CascadeDeleteResponse")
+		err = fmt.Errorf("failed to convert OCIResponse into CascadeDeleteTagNamespaceResponse")
 	}
 	return
 }
 
-// cascadeDelete implements the OCIOperation interface (enables retrying operations)
-func (client IdentityClient) cascadeDelete(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
+// cascadeDeleteTagNamespace implements the OCIOperation interface (enables retrying operations)
+func (client IdentityClient) cascadeDeleteTagNamespace(ctx context.Context, request common.OCIRequest) (common.OCIResponse, error) {
 	httpRequest, err := request.HTTPRequest(http.MethodPost, "/tagNamespaces/{tagNamespaceId}/actions/cascadeDelete")
 	if err != nil {
 		return nil, err
 	}
 
-	var response CascadeDeleteResponse
+	var response CascadeDeleteTagNamespaceResponse
 	var httpResponse *http.Response
 	httpResponse, err = client.Call(ctx, &httpRequest)
 	defer common.CloseBodyIfValid(httpResponse)
@@ -453,8 +486,12 @@ func (client IdentityClient) ChangeTagNamespaceCompartment(ctx context.Context, 
 	ociResponse, err = common.Retry(ctx, request, client.changeTagNamespaceCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ChangeTagNamespaceCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ChangeTagNamespaceCompartmentResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ChangeTagNamespaceCompartmentResponse{}
+			}
 		}
 		return
 	}
@@ -508,8 +545,12 @@ func (client IdentityClient) CreateAuthToken(ctx context.Context, request Create
 	ociResponse, err = common.Retry(ctx, request, client.createAuthToken, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateAuthTokenResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateAuthTokenResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateAuthTokenResponse{}
+			}
 		}
 		return
 	}
@@ -569,8 +610,12 @@ func (client IdentityClient) CreateCompartment(ctx context.Context, request Crea
 	ociResponse, err = common.Retry(ctx, request, client.createCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateCompartmentResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateCompartmentResponse{}
+			}
 		}
 		return
 	}
@@ -625,8 +670,12 @@ func (client IdentityClient) CreateCustomerSecretKey(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.createCustomerSecretKey, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateCustomerSecretKeyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateCustomerSecretKeyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateCustomerSecretKeyResponse{}
+			}
 		}
 		return
 	}
@@ -686,8 +735,12 @@ func (client IdentityClient) CreateDynamicGroup(ctx context.Context, request Cre
 	ociResponse, err = common.Retry(ctx, request, client.createDynamicGroup, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateDynamicGroupResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateDynamicGroupResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateDynamicGroupResponse{}
+			}
 		}
 		return
 	}
@@ -749,8 +802,12 @@ func (client IdentityClient) CreateGroup(ctx context.Context, request CreateGrou
 	ociResponse, err = common.Retry(ctx, request, client.createGroup, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateGroupResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateGroupResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateGroupResponse{}
+			}
 		}
 		return
 	}
@@ -810,8 +867,12 @@ func (client IdentityClient) CreateIdentityProvider(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.createIdentityProvider, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateIdentityProviderResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateIdentityProviderResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateIdentityProviderResponse{}
+			}
 		}
 		return
 	}
@@ -859,8 +920,12 @@ func (client IdentityClient) CreateIdpGroupMapping(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.createIdpGroupMapping, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateIdpGroupMappingResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateIdpGroupMappingResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateIdpGroupMappingResponse{}
+			}
 		}
 		return
 	}
@@ -912,8 +977,12 @@ func (client IdentityClient) CreateManagedCompartment(ctx context.Context, reque
 	ociResponse, err = common.Retry(ctx, request, client.createManagedCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateManagedCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateManagedCompartmentResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateManagedCompartmentResponse{}
+			}
 		}
 		return
 	}
@@ -960,8 +1029,12 @@ func (client IdentityClient) CreateMfaTotpDevice(ctx context.Context, request Cr
 	ociResponse, err = common.Retry(ctx, request, client.createMfaTotpDevice, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateMfaTotpDeviceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateMfaTotpDeviceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateMfaTotpDeviceResponse{}
+			}
 		}
 		return
 	}
@@ -1023,8 +1096,12 @@ func (client IdentityClient) CreateNetworkSource(ctx context.Context, request Cr
 	ociResponse, err = common.Retry(ctx, request, client.createNetworkSource, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateNetworkSourceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateNetworkSourceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateNetworkSourceResponse{}
+			}
 		}
 		return
 	}
@@ -1071,8 +1148,12 @@ func (client IdentityClient) CreateOAuthClientCredential(ctx context.Context, re
 	ociResponse, err = common.Retry(ctx, request, client.createOAuthClientCredential, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateOAuthClientCredentialResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateOAuthClientCredentialResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateOAuthClientCredentialResponse{}
+			}
 		}
 		return
 	}
@@ -1127,8 +1208,12 @@ func (client IdentityClient) CreateOrResetUIPassword(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.createOrResetUIPassword, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateOrResetUIPasswordResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateOrResetUIPasswordResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateOrResetUIPasswordResponse{}
+			}
 		}
 		return
 	}
@@ -1186,8 +1271,12 @@ func (client IdentityClient) CreatePolicy(ctx context.Context, request CreatePol
 	ociResponse, err = common.Retry(ctx, request, client.createPolicy, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreatePolicyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreatePolicyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreatePolicyResponse{}
+			}
 		}
 		return
 	}
@@ -1234,8 +1323,12 @@ func (client IdentityClient) CreateRegionSubscription(ctx context.Context, reque
 	ociResponse, err = common.Retry(ctx, request, client.createRegionSubscription, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateRegionSubscriptionResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateRegionSubscriptionResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateRegionSubscriptionResponse{}
+			}
 		}
 		return
 	}
@@ -1285,8 +1378,12 @@ func (client IdentityClient) CreateSmtpCredential(ctx context.Context, request C
 	ociResponse, err = common.Retry(ctx, request, client.createSmtpCredential, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateSmtpCredentialResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateSmtpCredentialResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateSmtpCredentialResponse{}
+			}
 		}
 		return
 	}
@@ -1341,8 +1438,12 @@ func (client IdentityClient) CreateSwiftPassword(ctx context.Context, request Cr
 	ociResponse, err = common.Retry(ctx, request, client.createSwiftPassword, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateSwiftPasswordResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateSwiftPasswordResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateSwiftPasswordResponse{}
+			}
 		}
 		return
 	}
@@ -1405,8 +1506,12 @@ func (client IdentityClient) CreateTag(ctx context.Context, request CreateTagReq
 	ociResponse, err = common.Retry(ctx, request, client.createTag, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateTagResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateTagResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateTagResponse{}
+			}
 		}
 		return
 	}
@@ -1458,8 +1563,12 @@ func (client IdentityClient) CreateTagDefault(ctx context.Context, request Creat
 	ociResponse, err = common.Retry(ctx, request, client.createTagDefault, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateTagDefaultResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateTagDefaultResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateTagDefaultResponse{}
+			}
 		}
 		return
 	}
@@ -1516,8 +1625,12 @@ func (client IdentityClient) CreateTagNamespace(ctx context.Context, request Cre
 	ociResponse, err = common.Retry(ctx, request, client.createTagNamespace, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateTagNamespaceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateTagNamespaceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateTagNamespaceResponse{}
+			}
 		}
 		return
 	}
@@ -1572,8 +1685,12 @@ func (client IdentityClient) CreateTagRule(ctx context.Context, request CreateTa
 	ociResponse, err = common.Retry(ctx, request, client.createTagRule, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateTagRuleResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateTagRuleResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateTagRuleResponse{}
+			}
 		}
 		return
 	}
@@ -1648,8 +1765,12 @@ func (client IdentityClient) CreateUser(ctx context.Context, request CreateUserR
 	ociResponse, err = common.Retry(ctx, request, client.createUser, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = CreateUserResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = CreateUserResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = CreateUserResponse{}
+			}
 		}
 		return
 	}
@@ -1695,8 +1816,12 @@ func (client IdentityClient) DeleteApiKey(ctx context.Context, request DeleteApi
 	ociResponse, err = common.Retry(ctx, request, client.deleteApiKey, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteApiKeyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteApiKeyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteApiKeyResponse{}
+			}
 		}
 		return
 	}
@@ -1738,8 +1863,12 @@ func (client IdentityClient) DeleteAuthToken(ctx context.Context, request Delete
 	ociResponse, err = common.Retry(ctx, request, client.deleteAuthToken, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteAuthTokenResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteAuthTokenResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteAuthTokenResponse{}
+			}
 		}
 		return
 	}
@@ -1781,8 +1910,12 @@ func (client IdentityClient) DeleteCompartment(ctx context.Context, request Dele
 	ociResponse, err = common.Retry(ctx, request, client.deleteCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteCompartmentResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteCompartmentResponse{}
+			}
 		}
 		return
 	}
@@ -1824,8 +1957,12 @@ func (client IdentityClient) DeleteCustomerSecretKey(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.deleteCustomerSecretKey, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteCustomerSecretKeyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteCustomerSecretKeyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteCustomerSecretKeyResponse{}
+			}
 		}
 		return
 	}
@@ -1867,8 +2004,12 @@ func (client IdentityClient) DeleteDynamicGroup(ctx context.Context, request Del
 	ociResponse, err = common.Retry(ctx, request, client.deleteDynamicGroup, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteDynamicGroupResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteDynamicGroupResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteDynamicGroupResponse{}
+			}
 		}
 		return
 	}
@@ -1910,8 +2051,12 @@ func (client IdentityClient) DeleteGroup(ctx context.Context, request DeleteGrou
 	ociResponse, err = common.Retry(ctx, request, client.deleteGroup, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteGroupResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteGroupResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteGroupResponse{}
+			}
 		}
 		return
 	}
@@ -1954,8 +2099,12 @@ func (client IdentityClient) DeleteIdentityProvider(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.deleteIdentityProvider, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteIdentityProviderResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteIdentityProviderResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteIdentityProviderResponse{}
+			}
 		}
 		return
 	}
@@ -1997,8 +2146,12 @@ func (client IdentityClient) DeleteIdpGroupMapping(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.deleteIdpGroupMapping, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteIdpGroupMappingResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteIdpGroupMappingResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteIdpGroupMappingResponse{}
+			}
 		}
 		return
 	}
@@ -2040,8 +2193,12 @@ func (client IdentityClient) DeleteMfaTotpDevice(ctx context.Context, request De
 	ociResponse, err = common.Retry(ctx, request, client.deleteMfaTotpDevice, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteMfaTotpDeviceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteMfaTotpDeviceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteMfaTotpDeviceResponse{}
+			}
 		}
 		return
 	}
@@ -2083,8 +2240,12 @@ func (client IdentityClient) DeleteNetworkSource(ctx context.Context, request De
 	ociResponse, err = common.Retry(ctx, request, client.deleteNetworkSource, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteNetworkSourceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteNetworkSourceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteNetworkSourceResponse{}
+			}
 		}
 		return
 	}
@@ -2126,8 +2287,12 @@ func (client IdentityClient) DeleteOAuthClientCredential(ctx context.Context, re
 	ociResponse, err = common.Retry(ctx, request, client.deleteOAuthClientCredential, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteOAuthClientCredentialResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteOAuthClientCredentialResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteOAuthClientCredentialResponse{}
+			}
 		}
 		return
 	}
@@ -2169,8 +2334,12 @@ func (client IdentityClient) DeletePolicy(ctx context.Context, request DeletePol
 	ociResponse, err = common.Retry(ctx, request, client.deletePolicy, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeletePolicyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeletePolicyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeletePolicyResponse{}
+			}
 		}
 		return
 	}
@@ -2212,8 +2381,12 @@ func (client IdentityClient) DeleteSmtpCredential(ctx context.Context, request D
 	ociResponse, err = common.Retry(ctx, request, client.deleteSmtpCredential, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteSmtpCredentialResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteSmtpCredentialResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteSmtpCredentialResponse{}
+			}
 		}
 		return
 	}
@@ -2256,8 +2429,12 @@ func (client IdentityClient) DeleteSwiftPassword(ctx context.Context, request De
 	ociResponse, err = common.Retry(ctx, request, client.deleteSwiftPassword, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteSwiftPasswordResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteSwiftPasswordResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteSwiftPasswordResponse{}
+			}
 		}
 		return
 	}
@@ -2297,11 +2474,12 @@ func (client IdentityClient) deleteSwiftPassword(ctx context.Context, request co
 //   tags limit, whether you first disabled it or not.
 //   * If the tag was used with dynamic groups, none of the rules that contain the tag will
 //   be evaluated against the tag.
-// Once you start the delete operation, the state of the tag changes to DELETING and tag removal
+// When you start the delete operation, the state of the tag changes to DELETING and tag removal
 // from resources begins. This can take up to 48 hours depending on the number of resources that
-// were tagged as well as the regions in which those resources reside. When all tags have been
-// removed, the state changes to DELETED. You cannot restore a deleted tag. Once the deleted tag
+// were tagged as well as the regions in which those resources reside.
+// When all tags have been removed, the state changes to DELETED. You cannot restore a deleted tag. Once the deleted tag
 // changes its state to DELETED, you can use the same tag name again.
+// After you start this operation, you cannot start either the BulkDeleteTags or the CascadeDeleteTagNamespace operation until this process completes.
 // To delete a tag, you must first retire it. Use UpdateTag
 // to retire a tag.
 func (client IdentityClient) DeleteTag(ctx context.Context, request DeleteTagRequest) (response DeleteTagResponse, err error) {
@@ -2313,8 +2491,12 @@ func (client IdentityClient) DeleteTag(ctx context.Context, request DeleteTagReq
 	ociResponse, err = common.Retry(ctx, request, client.deleteTag, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteTagResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteTagResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteTagResponse{}
+			}
 		}
 		return
 	}
@@ -2356,8 +2538,12 @@ func (client IdentityClient) DeleteTagDefault(ctx context.Context, request Delet
 	ociResponse, err = common.Retry(ctx, request, client.deleteTagDefault, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteTagDefaultResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteTagDefaultResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteTagDefaultResponse{}
+			}
 		}
 		return
 	}
@@ -2389,8 +2575,10 @@ func (client IdentityClient) deleteTagDefault(ctx context.Context, request commo
 	return response, err
 }
 
-// DeleteTagNamespace Deletes the specified tag namespace. Only an empty tag namespace can be deleted. To delete
-// a tag namespace, first delete all its tag definitions.
+// DeleteTagNamespace Deletes the specified tag namespace. Only an empty tag namespace can be deleted with this operation. To use this operation
+// to delete a tag namespace that contains tag definitions, first delete all of its tag definitions.
+// Use CascadeDeleteTagNamespace to delete a tag namespace along with all of
+// the tag definitions contained within that namespace.
 // Use DeleteTag to delete a tag definition.
 func (client IdentityClient) DeleteTagNamespace(ctx context.Context, request DeleteTagNamespaceRequest) (response DeleteTagNamespaceResponse, err error) {
 	var ociResponse common.OCIResponse
@@ -2401,8 +2589,12 @@ func (client IdentityClient) DeleteTagNamespace(ctx context.Context, request Del
 	ociResponse, err = common.Retry(ctx, request, client.deleteTagNamespace, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteTagNamespaceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteTagNamespaceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteTagNamespaceResponse{}
+			}
 		}
 		return
 	}
@@ -2444,8 +2636,12 @@ func (client IdentityClient) DeleteTagRule(ctx context.Context, request DeleteTa
 	ociResponse, err = common.Retry(ctx, request, client.deleteTagRule, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteTagRuleResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteTagRuleResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteTagRuleResponse{}
+			}
 		}
 		return
 	}
@@ -2487,8 +2683,12 @@ func (client IdentityClient) DeleteUser(ctx context.Context, request DeleteUserR
 	ociResponse, err = common.Retry(ctx, request, client.deleteUser, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = DeleteUserResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = DeleteUserResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = DeleteUserResponse{}
+			}
 		}
 		return
 	}
@@ -2530,8 +2730,12 @@ func (client IdentityClient) GenerateTotpSeed(ctx context.Context, request Gener
 	ociResponse, err = common.Retry(ctx, request, client.generateTotpSeed, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GenerateTotpSeedResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GenerateTotpSeedResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GenerateTotpSeedResponse{}
+			}
 		}
 		return
 	}
@@ -2573,8 +2777,12 @@ func (client IdentityClient) GetAccountByEntitlementId(ctx context.Context, requ
 	ociResponse, err = common.Retry(ctx, request, client.getAccountByEntitlementId, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetAccountByEntitlementIdResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetAccountByEntitlementIdResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetAccountByEntitlementIdResponse{}
+			}
 		}
 		return
 	}
@@ -2617,8 +2825,12 @@ func (client IdentityClient) GetAuthenticationPolicy(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.getAuthenticationPolicy, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetAuthenticationPolicyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetAuthenticationPolicyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetAuthenticationPolicyResponse{}
+			}
 		}
 		return
 	}
@@ -2666,8 +2878,12 @@ func (client IdentityClient) GetCompartment(ctx context.Context, request GetComp
 	ociResponse, err = common.Retry(ctx, request, client.getCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetCompartmentResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetCompartmentResponse{}
+			}
 		}
 		return
 	}
@@ -2709,8 +2925,12 @@ func (client IdentityClient) GetDynamicGroup(ctx context.Context, request GetDyn
 	ociResponse, err = common.Retry(ctx, request, client.getDynamicGroup, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetDynamicGroupResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetDynamicGroupResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetDynamicGroupResponse{}
+			}
 		}
 		return
 	}
@@ -2755,8 +2975,12 @@ func (client IdentityClient) GetGroup(ctx context.Context, request GetGroupReque
 	ociResponse, err = common.Retry(ctx, request, client.getGroup, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetGroupResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetGroupResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetGroupResponse{}
+			}
 		}
 		return
 	}
@@ -2798,8 +3022,12 @@ func (client IdentityClient) GetIdentityProvider(ctx context.Context, request Ge
 	ociResponse, err = common.Retry(ctx, request, client.getIdentityProvider, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetIdentityProviderResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetIdentityProviderResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetIdentityProviderResponse{}
+			}
 		}
 		return
 	}
@@ -2841,8 +3069,12 @@ func (client IdentityClient) GetIdpGroupMapping(ctx context.Context, request Get
 	ociResponse, err = common.Retry(ctx, request, client.getIdpGroupMapping, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetIdpGroupMappingResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetIdpGroupMappingResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetIdpGroupMappingResponse{}
+			}
 		}
 		return
 	}
@@ -2884,8 +3116,12 @@ func (client IdentityClient) GetMfaTotpDevice(ctx context.Context, request GetMf
 	ociResponse, err = common.Retry(ctx, request, client.getMfaTotpDevice, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetMfaTotpDeviceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetMfaTotpDeviceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetMfaTotpDeviceResponse{}
+			}
 		}
 		return
 	}
@@ -2927,8 +3163,12 @@ func (client IdentityClient) GetNetworkSource(ctx context.Context, request GetNe
 	ociResponse, err = common.Retry(ctx, request, client.getNetworkSource, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetNetworkSourceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetNetworkSourceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetNetworkSourceResponse{}
+			}
 		}
 		return
 	}
@@ -2970,8 +3210,12 @@ func (client IdentityClient) GetPolicy(ctx context.Context, request GetPolicyReq
 	ociResponse, err = common.Retry(ctx, request, client.getPolicy, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetPolicyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetPolicyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetPolicyResponse{}
+			}
 		}
 		return
 	}
@@ -3013,8 +3257,12 @@ func (client IdentityClient) GetTag(ctx context.Context, request GetTagRequest) 
 	ociResponse, err = common.Retry(ctx, request, client.getTag, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetTagResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetTagResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetTagResponse{}
+			}
 		}
 		return
 	}
@@ -3056,8 +3304,12 @@ func (client IdentityClient) GetTagDefault(ctx context.Context, request GetTagDe
 	ociResponse, err = common.Retry(ctx, request, client.getTagDefault, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetTagDefaultResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetTagDefaultResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetTagDefaultResponse{}
+			}
 		}
 		return
 	}
@@ -3099,8 +3351,12 @@ func (client IdentityClient) GetTagNamespace(ctx context.Context, request GetTag
 	ociResponse, err = common.Retry(ctx, request, client.getTagNamespace, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetTagNamespaceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetTagNamespaceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetTagNamespaceResponse{}
+			}
 		}
 		return
 	}
@@ -3142,8 +3398,12 @@ func (client IdentityClient) GetTagRule(ctx context.Context, request GetTagRuleR
 	ociResponse, err = common.Retry(ctx, request, client.getTagRule, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetTagRuleResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetTagRuleResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetTagRuleResponse{}
+			}
 		}
 		return
 	}
@@ -3186,8 +3446,12 @@ func (client IdentityClient) GetTaggingWorkRequest(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.getTaggingWorkRequest, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetTaggingWorkRequestResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetTaggingWorkRequestResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetTaggingWorkRequestResponse{}
+			}
 		}
 		return
 	}
@@ -3229,8 +3493,12 @@ func (client IdentityClient) GetTenancy(ctx context.Context, request GetTenancyR
 	ociResponse, err = common.Retry(ctx, request, client.getTenancy, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetTenancyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetTenancyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetTenancyResponse{}
+			}
 		}
 		return
 	}
@@ -3272,8 +3540,12 @@ func (client IdentityClient) GetUser(ctx context.Context, request GetUserRequest
 	ociResponse, err = common.Retry(ctx, request, client.getUser, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetUserResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetUserResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetUserResponse{}
+			}
 		}
 		return
 	}
@@ -3315,8 +3587,12 @@ func (client IdentityClient) GetUserGroupMembership(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.getUserGroupMembership, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetUserGroupMembershipResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetUserGroupMembershipResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetUserGroupMembershipResponse{}
+			}
 		}
 		return
 	}
@@ -3359,8 +3635,12 @@ func (client IdentityClient) GetUserUIPasswordInformation(ctx context.Context, r
 	ociResponse, err = common.Retry(ctx, request, client.getUserUIPasswordInformation, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetUserUIPasswordInformationResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetUserUIPasswordInformationResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetUserUIPasswordInformationResponse{}
+			}
 		}
 		return
 	}
@@ -3403,8 +3683,12 @@ func (client IdentityClient) GetWorkRequest(ctx context.Context, request GetWork
 	ociResponse, err = common.Retry(ctx, request, client.getWorkRequest, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = GetWorkRequestResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = GetWorkRequestResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = GetWorkRequestResponse{}
+			}
 		}
 		return
 	}
@@ -3448,8 +3732,12 @@ func (client IdentityClient) ListApiKeys(ctx context.Context, request ListApiKey
 	ociResponse, err = common.Retry(ctx, request, client.listApiKeys, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListApiKeysResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListApiKeysResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListApiKeysResponse{}
+			}
 		}
 		return
 	}
@@ -3492,8 +3780,12 @@ func (client IdentityClient) ListAuthTokens(ctx context.Context, request ListAut
 	ociResponse, err = common.Retry(ctx, request, client.listAuthTokens, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListAuthTokensResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListAuthTokensResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListAuthTokensResponse{}
+			}
 		}
 		return
 	}
@@ -3539,8 +3831,12 @@ func (client IdentityClient) ListAvailabilityDomains(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.listAvailabilityDomains, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListAvailabilityDomainsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListAvailabilityDomainsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListAvailabilityDomainsResponse{}
+			}
 		}
 		return
 	}
@@ -3582,8 +3878,12 @@ func (client IdentityClient) ListBulkActionResourceTypes(ctx context.Context, re
 	ociResponse, err = common.Retry(ctx, request, client.listBulkActionResourceTypes, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListBulkActionResourceTypesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListBulkActionResourceTypesResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListBulkActionResourceTypesResponse{}
+			}
 		}
 		return
 	}
@@ -3638,8 +3938,12 @@ func (client IdentityClient) ListCompartments(ctx context.Context, request ListC
 	ociResponse, err = common.Retry(ctx, request, client.listCompartments, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListCompartmentsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListCompartmentsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListCompartmentsResponse{}
+			}
 		}
 		return
 	}
@@ -3682,8 +3986,12 @@ func (client IdentityClient) ListCostTrackingTags(ctx context.Context, request L
 	ociResponse, err = common.Retry(ctx, request, client.listCostTrackingTags, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListCostTrackingTagsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListCostTrackingTagsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListCostTrackingTagsResponse{}
+			}
 		}
 		return
 	}
@@ -3726,8 +4034,12 @@ func (client IdentityClient) ListCustomerSecretKeys(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.listCustomerSecretKeys, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListCustomerSecretKeysResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListCustomerSecretKeysResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListCustomerSecretKeysResponse{}
+			}
 		}
 		return
 	}
@@ -3771,8 +4083,12 @@ func (client IdentityClient) ListDynamicGroups(ctx context.Context, request List
 	ociResponse, err = common.Retry(ctx, request, client.listDynamicGroups, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListDynamicGroupsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListDynamicGroupsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListDynamicGroupsResponse{}
+			}
 		}
 		return
 	}
@@ -3816,8 +4132,12 @@ func (client IdentityClient) ListFaultDomains(ctx context.Context, request ListF
 	ociResponse, err = common.Retry(ctx, request, client.listFaultDomains, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListFaultDomainsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListFaultDomainsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListFaultDomainsResponse{}
+			}
 		}
 		return
 	}
@@ -3861,8 +4181,12 @@ func (client IdentityClient) ListGroups(ctx context.Context, request ListGroupsR
 	ociResponse, err = common.Retry(ctx, request, client.listGroups, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListGroupsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListGroupsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListGroupsResponse{}
+			}
 		}
 		return
 	}
@@ -3904,8 +4228,12 @@ func (client IdentityClient) ListIdentityProviderGroups(ctx context.Context, req
 	ociResponse, err = common.Retry(ctx, request, client.listIdentityProviderGroups, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListIdentityProviderGroupsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListIdentityProviderGroupsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListIdentityProviderGroupsResponse{}
+			}
 		}
 		return
 	}
@@ -3966,8 +4294,12 @@ func (client IdentityClient) ListIdentityProviders(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.listIdentityProviders, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListIdentityProvidersResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListIdentityProvidersResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListIdentityProvidersResponse{}
+			}
 		}
 		return
 	}
@@ -4009,8 +4341,12 @@ func (client IdentityClient) ListIdpGroupMappings(ctx context.Context, request L
 	ociResponse, err = common.Retry(ctx, request, client.listIdpGroupMappings, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListIdpGroupMappingsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListIdpGroupMappingsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListIdpGroupMappingsResponse{}
+			}
 		}
 		return
 	}
@@ -4053,8 +4389,12 @@ func (client IdentityClient) ListManagedCompartments(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.listManagedCompartments, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListManagedCompartmentsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListManagedCompartmentsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListManagedCompartmentsResponse{}
+			}
 		}
 		return
 	}
@@ -4097,8 +4437,12 @@ func (client IdentityClient) ListMfaTotpDevices(ctx context.Context, request Lis
 	ociResponse, err = common.Retry(ctx, request, client.listMfaTotpDevices, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListMfaTotpDevicesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListMfaTotpDevicesResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListMfaTotpDevicesResponse{}
+			}
 		}
 		return
 	}
@@ -4142,8 +4486,12 @@ func (client IdentityClient) ListNetworkSources(ctx context.Context, request Lis
 	ociResponse, err = common.Retry(ctx, request, client.listNetworkSources, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListNetworkSourcesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListNetworkSourcesResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListNetworkSourcesResponse{}
+			}
 		}
 		return
 	}
@@ -4185,8 +4533,12 @@ func (client IdentityClient) ListOAuthClientCredentials(ctx context.Context, req
 	ociResponse, err = common.Retry(ctx, request, client.listOAuthClientCredentials, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListOAuthClientCredentialsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListOAuthClientCredentialsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListOAuthClientCredentialsResponse{}
+			}
 		}
 		return
 	}
@@ -4231,8 +4583,12 @@ func (client IdentityClient) ListPolicies(ctx context.Context, request ListPolic
 	ociResponse, err = common.Retry(ctx, request, client.listPolicies, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListPoliciesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListPoliciesResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListPoliciesResponse{}
+			}
 		}
 		return
 	}
@@ -4274,8 +4630,12 @@ func (client IdentityClient) ListRegionSubscriptions(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.listRegionSubscriptions, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListRegionSubscriptionsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListRegionSubscriptionsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListRegionSubscriptionsResponse{}
+			}
 		}
 		return
 	}
@@ -4313,8 +4673,12 @@ func (client IdentityClient) ListRegions(ctx context.Context) (response ListRegi
 	ociResponse, err = client.listRegions(ctx)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListRegionsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListRegionsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListRegionsResponse{}
+			}
 		}
 		return
 	}
@@ -4355,8 +4719,12 @@ func (client IdentityClient) ListSmtpCredentials(ctx context.Context, request Li
 	ociResponse, err = common.Retry(ctx, request, client.listSmtpCredentials, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListSmtpCredentialsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListSmtpCredentialsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListSmtpCredentialsResponse{}
+			}
 		}
 		return
 	}
@@ -4400,8 +4768,12 @@ func (client IdentityClient) ListSwiftPasswords(ctx context.Context, request Lis
 	ociResponse, err = common.Retry(ctx, request, client.listSwiftPasswords, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListSwiftPasswordsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListSwiftPasswordsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListSwiftPasswordsResponse{}
+			}
 		}
 		return
 	}
@@ -4443,8 +4815,12 @@ func (client IdentityClient) ListTagDefaults(ctx context.Context, request ListTa
 	ociResponse, err = common.Retry(ctx, request, client.listTagDefaults, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListTagDefaultsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListTagDefaultsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListTagDefaultsResponse{}
+			}
 		}
 		return
 	}
@@ -4486,8 +4862,12 @@ func (client IdentityClient) ListTagNamespaces(ctx context.Context, request List
 	ociResponse, err = common.Retry(ctx, request, client.listTagNamespaces, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListTagNamespacesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListTagNamespacesResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListTagNamespacesResponse{}
+			}
 		}
 		return
 	}
@@ -4533,8 +4913,12 @@ func (client IdentityClient) ListTagRules(ctx context.Context, request ListTagRu
 	ociResponse, err = common.Retry(ctx, request, client.listTagRules, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListTagRulesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListTagRulesResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListTagRulesResponse{}
+			}
 		}
 		return
 	}
@@ -4576,8 +4960,12 @@ func (client IdentityClient) ListTaggingWorkRequestErrors(ctx context.Context, r
 	ociResponse, err = common.Retry(ctx, request, client.listTaggingWorkRequestErrors, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListTaggingWorkRequestErrorsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListTaggingWorkRequestErrorsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListTaggingWorkRequestErrorsResponse{}
+			}
 		}
 		return
 	}
@@ -4619,8 +5007,12 @@ func (client IdentityClient) ListTaggingWorkRequestLogs(ctx context.Context, req
 	ociResponse, err = common.Retry(ctx, request, client.listTaggingWorkRequestLogs, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListTaggingWorkRequestLogsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListTaggingWorkRequestLogsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListTaggingWorkRequestLogsResponse{}
+			}
 		}
 		return
 	}
@@ -4662,8 +5054,12 @@ func (client IdentityClient) ListTaggingWorkRequests(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.listTaggingWorkRequests, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListTaggingWorkRequestsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListTaggingWorkRequestsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListTaggingWorkRequestsResponse{}
+			}
 		}
 		return
 	}
@@ -4705,8 +5101,12 @@ func (client IdentityClient) ListTags(ctx context.Context, request ListTagsReque
 	ociResponse, err = common.Retry(ctx, request, client.listTags, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListTagsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListTagsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListTagsResponse{}
+			}
 		}
 		return
 	}
@@ -4748,8 +5148,12 @@ func (client IdentityClient) ListTenancies(ctx context.Context, request ListTena
 	ociResponse, err = common.Retry(ctx, request, client.listTenancies, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListTenanciesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListTenanciesResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListTenanciesResponse{}
+			}
 		}
 		return
 	}
@@ -4799,8 +5203,12 @@ func (client IdentityClient) ListUserGroupMemberships(ctx context.Context, reque
 	ociResponse, err = common.Retry(ctx, request, client.listUserGroupMemberships, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListUserGroupMembershipsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListUserGroupMembershipsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListUserGroupMembershipsResponse{}
+			}
 		}
 		return
 	}
@@ -4844,8 +5252,12 @@ func (client IdentityClient) ListUsers(ctx context.Context, request ListUsersReq
 	ociResponse, err = common.Retry(ctx, request, client.listUsers, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListUsersResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListUsersResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListUsersResponse{}
+			}
 		}
 		return
 	}
@@ -4887,8 +5299,12 @@ func (client IdentityClient) ListWorkRequests(ctx context.Context, request ListW
 	ociResponse, err = common.Retry(ctx, request, client.listWorkRequests, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ListWorkRequestsResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ListWorkRequestsResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ListWorkRequestsResponse{}
+			}
 		}
 		return
 	}
@@ -4941,8 +5357,12 @@ func (client IdentityClient) MoveCompartment(ctx context.Context, request MoveCo
 	ociResponse, err = common.Retry(ctx, request, client.moveCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = MoveCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = MoveCompartmentResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = MoveCompartmentResponse{}
+			}
 		}
 		return
 	}
@@ -4984,8 +5404,12 @@ func (client IdentityClient) RecoverCompartment(ctx context.Context, request Rec
 	ociResponse, err = common.Retry(ctx, request, client.recoverCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = RecoverCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = RecoverCompartmentResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = RecoverCompartmentResponse{}
+			}
 		}
 		return
 	}
@@ -5027,8 +5451,12 @@ func (client IdentityClient) RemoveUserFromGroup(ctx context.Context, request Re
 	ociResponse, err = common.Retry(ctx, request, client.removeUserFromGroup, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = RemoveUserFromGroupResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = RemoveUserFromGroupResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = RemoveUserFromGroupResponse{}
+			}
 		}
 		return
 	}
@@ -5070,8 +5498,12 @@ func (client IdentityClient) ResetIdpScimClient(ctx context.Context, request Res
 	ociResponse, err = common.Retry(ctx, request, client.resetIdpScimClient, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = ResetIdpScimClientResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = ResetIdpScimClientResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = ResetIdpScimClientResponse{}
+			}
 		}
 		return
 	}
@@ -5113,8 +5545,12 @@ func (client IdentityClient) UpdateAuthToken(ctx context.Context, request Update
 	ociResponse, err = common.Retry(ctx, request, client.updateAuthToken, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateAuthTokenResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateAuthTokenResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateAuthTokenResponse{}
+			}
 		}
 		return
 	}
@@ -5156,8 +5592,12 @@ func (client IdentityClient) UpdateAuthenticationPolicy(ctx context.Context, req
 	ociResponse, err = common.Retry(ctx, request, client.updateAuthenticationPolicy, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateAuthenticationPolicyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateAuthenticationPolicyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateAuthenticationPolicyResponse{}
+			}
 		}
 		return
 	}
@@ -5199,8 +5639,12 @@ func (client IdentityClient) UpdateCompartment(ctx context.Context, request Upda
 	ociResponse, err = common.Retry(ctx, request, client.updateCompartment, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateCompartmentResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateCompartmentResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateCompartmentResponse{}
+			}
 		}
 		return
 	}
@@ -5242,8 +5686,12 @@ func (client IdentityClient) UpdateCustomerSecretKey(ctx context.Context, reques
 	ociResponse, err = common.Retry(ctx, request, client.updateCustomerSecretKey, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateCustomerSecretKeyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateCustomerSecretKeyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateCustomerSecretKeyResponse{}
+			}
 		}
 		return
 	}
@@ -5285,8 +5733,12 @@ func (client IdentityClient) UpdateDynamicGroup(ctx context.Context, request Upd
 	ociResponse, err = common.Retry(ctx, request, client.updateDynamicGroup, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateDynamicGroupResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateDynamicGroupResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateDynamicGroupResponse{}
+			}
 		}
 		return
 	}
@@ -5328,8 +5780,12 @@ func (client IdentityClient) UpdateGroup(ctx context.Context, request UpdateGrou
 	ociResponse, err = common.Retry(ctx, request, client.updateGroup, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateGroupResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateGroupResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateGroupResponse{}
+			}
 		}
 		return
 	}
@@ -5371,8 +5827,12 @@ func (client IdentityClient) UpdateIdentityProvider(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.updateIdentityProvider, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateIdentityProviderResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateIdentityProviderResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateIdentityProviderResponse{}
+			}
 		}
 		return
 	}
@@ -5414,8 +5874,12 @@ func (client IdentityClient) UpdateIdpGroupMapping(ctx context.Context, request 
 	ociResponse, err = common.Retry(ctx, request, client.updateIdpGroupMapping, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateIdpGroupMappingResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateIdpGroupMappingResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateIdpGroupMappingResponse{}
+			}
 		}
 		return
 	}
@@ -5457,8 +5921,12 @@ func (client IdentityClient) UpdateNetworkSource(ctx context.Context, request Up
 	ociResponse, err = common.Retry(ctx, request, client.updateNetworkSource, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateNetworkSourceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateNetworkSourceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateNetworkSourceResponse{}
+			}
 		}
 		return
 	}
@@ -5500,8 +5968,12 @@ func (client IdentityClient) UpdateOAuthClientCredential(ctx context.Context, re
 	ociResponse, err = common.Retry(ctx, request, client.updateOAuthClientCredential, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateOAuthClientCredentialResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateOAuthClientCredentialResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateOAuthClientCredentialResponse{}
+			}
 		}
 		return
 	}
@@ -5544,8 +6016,12 @@ func (client IdentityClient) UpdatePolicy(ctx context.Context, request UpdatePol
 	ociResponse, err = common.Retry(ctx, request, client.updatePolicy, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdatePolicyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdatePolicyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdatePolicyResponse{}
+			}
 		}
 		return
 	}
@@ -5587,8 +6063,12 @@ func (client IdentityClient) UpdateSmtpCredential(ctx context.Context, request U
 	ociResponse, err = common.Retry(ctx, request, client.updateSmtpCredential, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateSmtpCredentialResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateSmtpCredentialResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateSmtpCredentialResponse{}
+			}
 		}
 		return
 	}
@@ -5631,8 +6111,12 @@ func (client IdentityClient) UpdateSwiftPassword(ctx context.Context, request Up
 	ociResponse, err = common.Retry(ctx, request, client.updateSwiftPassword, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateSwiftPasswordResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateSwiftPasswordResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateSwiftPasswordResponse{}
+			}
 		}
 		return
 	}
@@ -5681,8 +6165,12 @@ func (client IdentityClient) UpdateTag(ctx context.Context, request UpdateTagReq
 	ociResponse, err = common.Retry(ctx, request, client.updateTag, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateTagResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateTagResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateTagResponse{}
+			}
 		}
 		return
 	}
@@ -5728,8 +6216,12 @@ func (client IdentityClient) UpdateTagDefault(ctx context.Context, request Updat
 	ociResponse, err = common.Retry(ctx, request, client.updateTagDefault, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateTagDefaultResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateTagDefaultResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateTagDefaultResponse{}
+			}
 		}
 		return
 	}
@@ -5777,8 +6269,12 @@ func (client IdentityClient) UpdateTagNamespace(ctx context.Context, request Upd
 	ociResponse, err = common.Retry(ctx, request, client.updateTagNamespace, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateTagNamespaceResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateTagNamespaceResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateTagNamespaceResponse{}
+			}
 		}
 		return
 	}
@@ -5821,8 +6317,12 @@ func (client IdentityClient) UpdateTagRule(ctx context.Context, request UpdateTa
 	ociResponse, err = common.Retry(ctx, request, client.updateTagRule, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateTagRuleResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateTagRuleResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateTagRuleResponse{}
+			}
 		}
 		return
 	}
@@ -5864,8 +6364,12 @@ func (client IdentityClient) UpdateUser(ctx context.Context, request UpdateUserR
 	ociResponse, err = common.Retry(ctx, request, client.updateUser, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateUserResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateUserResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateUserResponse{}
+			}
 		}
 		return
 	}
@@ -5907,8 +6411,12 @@ func (client IdentityClient) UpdateUserCapabilities(ctx context.Context, request
 	ociResponse, err = common.Retry(ctx, request, client.updateUserCapabilities, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateUserCapabilitiesResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateUserCapabilitiesResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateUserCapabilitiesResponse{}
+			}
 		}
 		return
 	}
@@ -5950,8 +6458,12 @@ func (client IdentityClient) UpdateUserState(ctx context.Context, request Update
 	ociResponse, err = common.Retry(ctx, request, client.updateUserState, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UpdateUserStateResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UpdateUserStateResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UpdateUserStateResponse{}
+			}
 		}
 		return
 	}
@@ -6009,8 +6521,12 @@ func (client IdentityClient) UploadApiKey(ctx context.Context, request UploadApi
 	ociResponse, err = common.Retry(ctx, request, client.uploadApiKey, policy)
 	if err != nil {
 		if ociResponse != nil {
-			opcRequestId := ociResponse.HTTPResponse().Header.Get("opc-request-id")
-			response = UploadApiKeyResponse{RawResponse: ociResponse.HTTPResponse(), OpcRequestId: &opcRequestId}
+			if httpResponse := ociResponse.HTTPResponse(); httpResponse != nil {
+				opcRequestId := httpResponse.Header.Get("opc-request-id")
+				response = UploadApiKeyResponse{RawResponse: httpResponse, OpcRequestId: &opcRequestId}
+			} else {
+				response = UploadApiKeyResponse{}
+			}
 		}
 		return
 	}

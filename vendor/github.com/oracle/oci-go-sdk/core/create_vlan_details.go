@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Core Services API
@@ -16,14 +17,15 @@ import (
 	"github.com/oracle/oci-go-sdk/common"
 )
 
-// CreateVlanDetails The request object which provides details about the VLAN to be created
+// CreateVlanDetails The representation of CreateVlanDetails
 type CreateVlanDetails struct {
 
 	// The availability domain of the VLAN.
 	// Example: `Uocm:PHX-AD-1`
 	AvailabilityDomain *string `mandatory:"true" json:"availabilityDomain"`
 
-	// The CIDR IP address range of the VLAN.
+	// The range of IPv4 addresses that will be used for layer 3 communication with
+	// hosts outside the VLAN.
 	// Example: `192.0.2.0/24`
 	CidrBlock *string `mandatory:"true" json:"cidrBlock"`
 
@@ -38,7 +40,7 @@ type CreateVlanDetails struct {
 	// Example: `{"Operations": {"CostCenter": "42"}}`
 	DefinedTags map[string]map[string]interface{} `mandatory:"false" json:"definedTags"`
 
-	// A user-friendly name. Does not have to be unique, and it's changeable. Avoid entering confidential information.
+	// A descriptive name. Does not have to be unique, and it's changeable. Avoid entering confidential information.
 	DisplayName *string `mandatory:"false" json:"displayName"`
 
 	// Free-form tags for this resource. Each tag is a simple key-value pair with no
@@ -55,8 +57,9 @@ type CreateVlanDetails struct {
 	// the VLAN uses the VCN's default route table.
 	RouteTableId *string `mandatory:"false" json:"routeTableId"`
 
-	// The tag for this VLAN.
-	// VLAN tags 0 is restricted for use by Oracle's bare metal primary vnics
+	// The IEEE 802.1Q VLAN tag for this VLAN. The value must be unique across all
+	// VLANs in the VCN. If you don't provide a value, Oracle assigns one.
+	// You cannot change the value later. VLAN tag 0 is reserved for use by Oracle.
 	VlanTag *int `mandatory:"false" json:"vlanTag"`
 }
 

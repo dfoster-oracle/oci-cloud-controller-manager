@@ -108,10 +108,14 @@ func (s *Server) SetResourcePrincipal(ctx context.Context, req *types.SetResourc
 
 	s.securityToken = token
 
-	resourcePrincipalExpiryTimestampSeconds.With(prometheus.Labels{"tkc_id": s.clusterShortID}).
-		Set(float64(token.ExpiresAt().UnixNano()) / 1e9)
+	s.recordExpiryTimestampMetric(token)
 
 	return &types.SetResourcePrincipalResponse{}, nil
+}
+
+func (s *Server) recordExpiryTimestampMetric(token securityToken) {
+	resourcePrincipalExpiryTimestampSeconds.With(prometheus.Labels{"tkc_id": s.clusterShortID}).
+		Set(float64(token.ExpiresAt().UnixNano()) / 1e9)
 }
 
 func (s *Server) writeToFilesystem(rp *types.ResourcePrincipal) error {
@@ -153,6 +157,15 @@ func (s *Server) Run(ctx context.Context) error {
 
 	s.Server = grpc.NewServer(opts...)
 	types.RegisterResourcePrincipalRecipientServer(s.Server, s)
+
+	// We may have an initial resource principal token already delivered. We
+	// still want to emit the metric in this case.
+	token, err := readTokenFromPath(s.path)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to read initial resource principal from disk")
+	} else {
+		s.recordExpiryTimestampMetric(token)
+	}
 
 	errCh := make(chan error, 1)
 	go func() {

@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Core Services API
@@ -26,6 +27,15 @@ type InstanceConfigurationIscsiAttachVolumeDetails struct {
 	// Whether the attachment should be created in read-only mode.
 	IsReadOnly *bool `mandatory:"false" json:"isReadOnly"`
 
+	// The device name.
+	Device *string `mandatory:"false" json:"device"`
+
+	// Whether the attachment should be created in shareable mode. If an attachment
+	// is created in shareable mode, then other instances can attach the same volume, provided
+	// that they also create their attachments in shareable mode. Only certain volume types can
+	// be attached in shareable mode. Defaults to false if not specified.
+	IsShareable *bool `mandatory:"false" json:"isShareable"`
+
 	// Whether to use CHAP authentication for the volume attachment. Defaults to false.
 	UseChap *bool `mandatory:"false" json:"useChap"`
 }
@@ -38,6 +48,16 @@ func (m InstanceConfigurationIscsiAttachVolumeDetails) GetDisplayName() *string 
 //GetIsReadOnly returns IsReadOnly
 func (m InstanceConfigurationIscsiAttachVolumeDetails) GetIsReadOnly() *bool {
 	return m.IsReadOnly
+}
+
+//GetDevice returns Device
+func (m InstanceConfigurationIscsiAttachVolumeDetails) GetDevice() *string {
+	return m.Device
+}
+
+//GetIsShareable returns IsShareable
+func (m InstanceConfigurationIscsiAttachVolumeDetails) GetIsShareable() *bool {
+	return m.IsShareable
 }
 
 func (m InstanceConfigurationIscsiAttachVolumeDetails) String() string {

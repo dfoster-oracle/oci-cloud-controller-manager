@@ -5,7 +5,20 @@ import (
 
 	duration "github.com/golang/protobuf/ptypes/duration"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	wrappers "github.com/golang/protobuf/ptypes/wrappers"
 )
+
+func ToUint32Value(val uint32) wrappers.UInt32Value {
+	return wrappers.UInt32Value{Value: val}
+}
+
+// Specifically does not return a default uint32 value of 0
+func ToUint32(val *wrappers.UInt32Value) *uint32 {
+	if val != nil {
+		return &val.Value
+	}
+	return nil
+}
 
 func FromTime(src time.Time) *timestamp.Timestamp {
 	return &timestamp.Timestamp{

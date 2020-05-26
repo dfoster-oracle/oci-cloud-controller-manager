@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Core Services API
@@ -36,7 +37,8 @@ type VolumeBackupPolicy struct {
 	// The date and time the volume backup policy was created. Format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	TimeCreated *common.SDKTime `mandatory:"true" json:"timeCreated"`
 
-	// The paired destination region (pre-defined by oracle) for scheduled cross region backup calls. Example `us-ashburn-1`
+	// The paired destination region for copying scheduled backups to. Example `us-ashburn-1`.
+	// See Region Pairs (https://docs.cloud.oracle.com/iaas/Content/Block/Tasks/schedulingvolumebackups.htm#RegionPairs) for details about paired regions.
 	DestinationRegion *string `mandatory:"false" json:"destinationRegion"`
 
 	// The OCID of the compartment that contains the volume backup.

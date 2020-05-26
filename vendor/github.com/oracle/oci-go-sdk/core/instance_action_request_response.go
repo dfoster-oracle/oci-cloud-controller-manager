@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 package core
@@ -83,21 +84,23 @@ type InstanceActionActionEnum string
 
 // Set of constants representing the allowable values for InstanceActionActionEnum
 const (
-	InstanceActionActionStop                InstanceActionActionEnum = "STOP"
-	InstanceActionActionStart               InstanceActionActionEnum = "START"
-	InstanceActionActionSoftreset           InstanceActionActionEnum = "SOFTRESET"
-	InstanceActionActionReset               InstanceActionActionEnum = "RESET"
-	InstanceActionActionSoftstop            InstanceActionActionEnum = "SOFTSTOP"
-	InstanceActionActionValidatelivemigrate InstanceActionActionEnum = "VALIDATELIVEMIGRATE"
+	InstanceActionActionStop                    InstanceActionActionEnum = "STOP"
+	InstanceActionActionStart                   InstanceActionActionEnum = "START"
+	InstanceActionActionSoftreset               InstanceActionActionEnum = "SOFTRESET"
+	InstanceActionActionReset                   InstanceActionActionEnum = "RESET"
+	InstanceActionActionSoftstop                InstanceActionActionEnum = "SOFTSTOP"
+	InstanceActionActionValidatelivemigrate     InstanceActionActionEnum = "VALIDATELIVEMIGRATE"
+	InstanceActionActionSenddiagnosticinterrupt InstanceActionActionEnum = "SENDDIAGNOSTICINTERRUPT"
 )
 
 var mappingInstanceActionAction = map[string]InstanceActionActionEnum{
-	"STOP":                InstanceActionActionStop,
-	"START":               InstanceActionActionStart,
-	"SOFTRESET":           InstanceActionActionSoftreset,
-	"RESET":               InstanceActionActionReset,
-	"SOFTSTOP":            InstanceActionActionSoftstop,
-	"VALIDATELIVEMIGRATE": InstanceActionActionValidatelivemigrate,
+	"STOP":                    InstanceActionActionStop,
+	"START":                   InstanceActionActionStart,
+	"SOFTRESET":               InstanceActionActionSoftreset,
+	"RESET":                   InstanceActionActionReset,
+	"SOFTSTOP":                InstanceActionActionSoftstop,
+	"VALIDATELIVEMIGRATE":     InstanceActionActionValidatelivemigrate,
+	"SENDDIAGNOSTICINTERRUPT": InstanceActionActionSenddiagnosticinterrupt,
 }
 
 // GetInstanceActionActionEnumValues Enumerates the set of values for InstanceActionActionEnum

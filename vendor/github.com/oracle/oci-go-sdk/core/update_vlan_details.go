@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Core Services API
@@ -16,7 +17,7 @@ import (
 	"github.com/oracle/oci-go-sdk/common"
 )
 
-// UpdateVlanDetails The request object which provides details about the VLAN to be updated
+// UpdateVlanDetails The representation of UpdateVlanDetails
 type UpdateVlanDetails struct {
 
 	// Defined tags for this resource. Each key is predefined and scoped to a
@@ -24,7 +25,7 @@ type UpdateVlanDetails struct {
 	// Example: `{"Operations": {"CostCenter": "42"}}`
 	DefinedTags map[string]map[string]interface{} `mandatory:"false" json:"definedTags"`
 
-	// A user-friendly name. Does not have to be unique, and it's changeable.
+	// A descriptive name. Does not have to be unique, and it's changeable.
 	// Avoid entering confidential information.
 	DisplayName *string `mandatory:"false" json:"displayName"`
 
@@ -33,12 +34,13 @@ type UpdateVlanDetails struct {
 	// Example: `{"Department": "Finance"}`
 	FreeformTags map[string]string `mandatory:"false" json:"freeformTags"`
 
-	// A list of the OCIDs of the network security groups (NSGs) to add the VNIC to. For more
+	// A list of the OCIDs of the network security groups (NSGs) to use with
+	// this VLAN. All VNICs in the VLAN will belong to these NSGs. For more
 	// information about NSGs, see
 	// NetworkSecurityGroup.
 	NsgIds []string `mandatory:"false" json:"nsgIds"`
 
-	// The OCID of the route table the subnet will use.
+	// The OCID of the route table the VLAN will use.
 	RouteTableId *string `mandatory:"false" json:"routeTableId"`
 }
 

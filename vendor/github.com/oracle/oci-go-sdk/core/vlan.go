@@ -1,4 +1,5 @@
-// Copyright (c) 2016, 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2016, 2018, 2020, Oracle and/or its affiliates.  All rights reserved.
+// This software is dual-licensed to you under the Universal Permissive License (UPL) 1.0 as shown at https://oss.oracle.com/licenses/upl or Apache License 2.0 as shown at http://www.apache.org/licenses/LICENSE-2.0. You may choose either license.
 // Code generated. DO NOT EDIT.
 
 // Core Services API
@@ -16,19 +17,22 @@ import (
 	"github.com/oracle/oci-go-sdk/common"
 )
 
-// Vlan For use with Oracle Cloud Infrastructure VCN.
-// A virtual LAN (VLAN) is a broadcast domain that is created by partitioning and isolating a network at the data
-// link layer more commonly referred to as layer 2 network. It is similar to a subnet which partitions a network
-// at the IP layer ( Layer 3).
-// VLAN's work by using vlan tags. These vlan tags are applied to network packets and the network switches route
-// these packets based on the vlan tags
+// Vlan A resource to be used only with the Oracle Cloud VMware Solution.
+// Conceptually, a virtual LAN (VLAN) is a broadcast domain that is created
+// by partitioning and isolating a network at the data link layer (a *layer 2 network*).
+// VLANs work by using IEEE 802.1Q VLAN tags. Layer 2 traffic is forwarded within the
+// VLAN based on MAC learning.
+// In the Networking service, a VLAN is an object within a VCN. You use VLANs to
+// partition the VCN at the data link layer (layer 2). A VLAN is analagous to a subnet,
+// which is an object for partitioning the VCN at the IP layer (layer 3).
 type Vlan struct {
 
-	// The VLAN's CIDR block.
+	// The range of IPv4 addresses that will be used for layer 3 communication with
+	// hosts outside the VLAN.
 	// Example: `192.168.1.0/24`
 	CidrBlock *string `mandatory:"true" json:"cidrBlock"`
 
-	// The OCID of the compartment containing the subnet.
+	// The OCID of the compartment containing the VLAN.
 	CompartmentId *string `mandatory:"true" json:"compartmentId"`
 
 	// The VLAN's Oracle ID (OCID).
@@ -37,7 +41,7 @@ type Vlan struct {
 	// The VLAN's current state.
 	LifecycleState VlanLifecycleStateEnum `mandatory:"true" json:"lifecycleState"`
 
-	// The OCID of the VCN the subnet is in.
+	// The OCID of the VCN the VLAN is in.
 	VcnId *string `mandatory:"true" json:"vcnId"`
 
 	// The availability domain of the VLAN.
@@ -58,19 +62,20 @@ type Vlan struct {
 	// Example: `{"Department": "Finance"}`
 	FreeformTags map[string]string `mandatory:"false" json:"freeformTags"`
 
-	// A list of the OCIDs of the network security groups (NSGs) to add the VNIC to. For more
+	// A list of the OCIDs of the network security groups (NSGs) to use with this VLAN.
+	// All VNICs in the VLAN belong to these NSGs. For more
 	// information about NSGs, see
 	// NetworkSecurityGroup.
 	NsgIds []string `mandatory:"false" json:"nsgIds"`
 
-	// The VLAN tag of this VLAN
+	// The IEEE 802.1Q VLAN tag of this VLAN.
 	// Example: `100`
 	VlanTag *int `mandatory:"false" json:"vlanTag"`
 
-	// The OCID of the route table that the subnet uses.
+	// The OCID of the route table that the VLAN uses.
 	RouteTableId *string `mandatory:"false" json:"routeTableId"`
 
-	// The date and time the subnet was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
+	// The date and time the VLAN was created, in the format defined by RFC3339 (https://tools.ietf.org/html/rfc3339).
 	// Example: `2016-08-25T21:10:29.600Z`
 	TimeCreated *common.SDKTime `mandatory:"false" json:"timeCreated"`
 }

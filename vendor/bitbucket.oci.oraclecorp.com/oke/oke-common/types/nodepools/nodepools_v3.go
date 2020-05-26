@@ -1,11 +1,19 @@
 package nodepools
 
 import (
+	"github.com/golang/protobuf/ptypes/wrappers"
+	"encoding/json"
 	"fmt"
+	"github.com/oracle/oci-go-sdk/common"
 	"sort"
 	"strings"
 
 	nodes "bitbucket.oci.oraclecorp.com/oke/oke-common/types/nodes"
+)
+
+// Set of constants representing the allowable values for NodeSource
+const (
+	NodeSourceTypeImage string = "IMAGE"
 )
 
 // GetResponseV3 is the response type for the NodePoolList CLI API operation.
@@ -15,11 +23,11 @@ type GetResponseV3 struct {
 }
 
 // ToV3 converts a nodepools.GetResponse object to a NodePoolGetResponseV3 object understood by the higher layers
-func (src *GetResponse) ToGetResponseV3(supportRegionalSubnet bool) GetResponseV3 {
-	return toV3(src, supportRegionalSubnet)
+func (src *GetResponse) ToGetResponseV3(exposeFaultDomainAndPrivateIp bool, enableNodePoolEnhancements bool) GetResponseV3 {
+	return toV3(src, exposeFaultDomainAndPrivateIp, enableNodePoolEnhancements)
 }
 
-func toV3(src *GetResponse, supportRegionalSubnet bool) GetResponseV3 {
+func toV3(src *GetResponse, exposeFaultDomainAndPrivateIp bool, enableNodePoolEnhancements bool) GetResponseV3 {
 	dst := GetResponseV3{
 		NodePools: make([]NodePoolV3, 0),
 	}
@@ -27,7 +35,7 @@ func toV3(src *GetResponse, supportRegionalSubnet bool) GetResponseV3 {
 		return dst
 	}
 	for _, np := range src.NodePools {
-		dst.NodePools = append(dst.NodePools, np.ToNodePoolV3(supportRegionalSubnet))
+		dst.NodePools = append(dst.NodePools, np.ToNodePoolV3(exposeFaultDomainAndPrivateIp, enableNodePoolEnhancements))
 	}
 	return dst
 }
@@ -41,6 +49,8 @@ type NodePoolSummaryV3 struct {
 	KubernetesVersion string                     `json:"kubernetesVersion"`
 	NodeImageID       string                     `json:"nodeImageId"`
 	NodeImageName     string                     `json:"nodeImageName"`
+	NodeSource        NodeSourceOption           `json:"nodeSource,omitempty"`
+	NodeSourceDetails NodeSourceDetails          `json:"nodeSourceDetails,omitempty"`
 	NodeShape         string                     `json:"nodeShape"`
 	InitialNodeLabels *[]KeyValueV3              `json:"initialNodeLabels,omitempty"`
 	SSHPublicKey      string                     `json:"sshPublicKey"`
@@ -50,25 +60,56 @@ type NodePoolSummaryV3 struct {
 	NodeConfigDetails *NodePoolNodeConfigDetails `json:"nodeConfigDetails,omitempty"`
 }
 
-// ToNodePoolSummaryV3s converts a nodepools.GetResponse to a NodePoolSummaryV3 object understood by the higher layers
-func (src *GetResponse) ToNodePoolSummaryV3s(supportRegionalSubnet bool) []NodePoolSummaryV3 {
-	return toSummaryV3(src, supportRegionalSubnet)
+type NodeSourceOption interface {
+	GetSourceName() *string
 }
 
-func toSummaryV3(src *GetResponse, supportRegionalSubnet bool) []NodePoolSummaryV3 {
+type NodeSourceViaImageOption struct {
+	SourceName *string `mandatory:"false" json:"sourceName"`
+	ImageId    *string `mandatory:"false" json:"imageId"`
+}
+
+//GetSourceName returns SourceName
+func (m NodeSourceViaImageOption) GetSourceName() *string {
+	return m.SourceName
+}
+
+func (m NodeSourceViaImageOption) ToInterface() interface{} {
+	return m
+}
+
+func (m NodeSourceViaImageOption) MarshalJSON() (buff []byte, e error) {
+	type MarshalTypeNodeSourceViaImageOption NodeSourceViaImageOption
+	s := struct {
+		DiscriminatorParam string `json:"sourceType"`
+		MarshalTypeNodeSourceViaImageOption
+	}{
+		"IMAGE",
+		(MarshalTypeNodeSourceViaImageOption)(m),
+	}
+
+	return json.Marshal(&s)
+}
+
+// ToNodePoolSummaryV3s converts a nodepools.GetResponse to a NodePoolSummaryV3 object understood by the higher layers
+func (src *GetResponse) ToNodePoolSummaryV3s(enableNodePoolEnhancements bool) []NodePoolSummaryV3 {
+	return toSummaryV3(src, enableNodePoolEnhancements)
+}
+
+func toSummaryV3(src *GetResponse, enableNodePoolEnhancements bool) []NodePoolSummaryV3 {
 	resp := []NodePoolSummaryV3{}
 	if src == nil {
 		return resp
 	}
 
 	for _, np := range src.NodePools {
-		resp = append(resp, np.toSummaryV3(supportRegionalSubnet))
+		resp = append(resp, np.toSummaryV3(enableNodePoolEnhancements))
 	}
 	return resp
 }
 
 // ToSummaryV3 converts a nodepools.GetResponse to a NodePoolSummaryV3 object understood by the higher layers
-func (src *NodePool) toSummaryV3(supportRegionalSubnet bool) NodePoolSummaryV3 {
+func (src *NodePool) toSummaryV3(enableNodePoolEnhancements bool) NodePoolSummaryV3 {
 	dst := NodePoolSummaryV3{}
 
 	if src == nil {
@@ -87,6 +128,28 @@ func (src *NodePool) toSummaryV3(supportRegionalSubnet bool) NodePoolSummaryV3 {
 	dst.InitialNodeLabels = &initialNodeLabels
 	dst.SSHPublicKey = src.SSHPublicKey
 
+	if src.NodeImageID != "" {
+		nodeSourceImageOption := NodeSourceViaImageOption{
+			SourceName: common.String(src.NodeImageName),
+			ImageId:    common.String(src.NodeImageID),
+		}.ToInterface()
+		dst.NodeSource = nodeSourceImageOption.(NodeSourceOption)
+
+		if enableNodePoolEnhancements {
+			nodeSourceDetails := NodeSourceViaImageDetails{
+				SourceType: NodeSourceTypeImage,
+				ImageId: common.String(src.NodeImageID),
+			}
+			if src.NodeBootVolumeSizeInGBs != nil {
+				nodeSourceDetails.BootVolumeSizeInGBs = &src.NodeBootVolumeSizeInGBs.Value
+			}
+			dst.NodeSourceDetails = nodeSourceDetails.ToInterface().(NodeSourceDetails)
+		}
+	} else {
+		dst.NodeSource = nil
+		dst.NodeSourceDetails = nil
+	}
+
 	// fill in Size/placementConfigs/SubnetIDs all the time
 	// fill in QuantityPerSubnet if QuantityPerSubnet > 0
 	dst.NodeConfigDetails = &NodePoolNodeConfigDetails{
@@ -98,11 +161,6 @@ func (src *NodePool) toSummaryV3(supportRegionalSubnet bool) NodePoolSummaryV3 {
 	} else { // QuantityPerSubnet > 0
 		dst.NodeConfigDetails.Size = src.QuantityPerSubnet * uint32(len(src.SubnetsInfo))
 		dst.QuantityPerSubnet = src.QuantityPerSubnet
-	}
-
-	// Do not show NodeConfigDetails if regional subnet is not whitelisted
-	if !supportRegionalSubnet {
-		dst.NodeConfigDetails = nil
 	}
 
 	dst.NodeMetadata = make(map[string]string)
@@ -122,6 +180,8 @@ type NodePoolV3 struct {
 	KubernetesVersion string                     `json:"kubernetesVersion"`
 	NodeImageID       string                     `json:"nodeImageId"`
 	NodeImageName     string                     `json:"nodeImageName"`
+	NodeSource        NodeSourceOption           `json:"nodeSource,omitempty"`
+	NodeSourceDetails NodeSourceDetails          `json:"nodeSourceDetails,omitempty"`
 	NodeShape         string                     `json:"nodeShape"`
 	InitialNodeLabels *[]KeyValueV3              `json:"initialNodeLabels,omitempty"`
 	SSHPublicKey      string                     `json:"sshPublicKey"`
@@ -133,12 +193,12 @@ type NodePoolV3 struct {
 }
 
 // ToV3 converts a NodePool object to a NodePoolV3 object understood by the higher layers
-// supportRegionalSubnet is a whitelist flag
-func (np *NodePool) ToNodePoolV3(supportRegionalSubnet bool) NodePoolV3 {
-	return toNodePoolV3(np, supportRegionalSubnet)
+// exposeFaultDomainAndPrivateIp is a whitelist flag
+func (np *NodePool) ToNodePoolV3(exposeFaultDomainAndPrivateIp bool, enableNodePoolEnhancements bool) NodePoolV3 {
+	return toNodePoolV3(np, exposeFaultDomainAndPrivateIp, enableNodePoolEnhancements)
 }
 
-func toNodePoolV3(src *NodePool, supportRegionalSubnet bool) NodePoolV3 {
+func toNodePoolV3(src *NodePool, exposeFaultDomainAndPrivateIp bool, enableNodePoolEnhancements bool) NodePoolV3 {
 	dst := NodePoolV3{}
 	if src == nil {
 		return dst
@@ -155,6 +215,28 @@ func toNodePoolV3(src *NodePool, supportRegionalSubnet bool) NodePoolV3 {
 	dst.InitialNodeLabels = &initialNodeLabels
 	dst.SSHPublicKey = src.SSHPublicKey
 
+	if src.NodeImageID != "" {
+		nodeSourceImageOption := NodeSourceViaImageOption{
+			SourceName: common.String(src.NodeImageName),
+			ImageId:    common.String(src.NodeImageID),
+		}.ToInterface()
+
+		dst.NodeSource = nodeSourceImageOption.(NodeSourceOption)
+		if enableNodePoolEnhancements {
+			nodeSourceDetails := NodeSourceViaImageDetails{
+				SourceType: NodeSourceTypeImage,
+				ImageId: common.String(src.NodeImageID),
+			}
+			if src.NodeBootVolumeSizeInGBs != nil {
+				nodeSourceDetails.BootVolumeSizeInGBs = &src.NodeBootVolumeSizeInGBs.Value
+			}
+			dst.NodeSourceDetails = nodeSourceDetails.ToInterface().(NodeSourceDetails)
+		}
+	} else {
+		dst.NodeSource = nil
+		dst.NodeSourceDetails = nil
+	}
+
 	// fill in SubnetIDs all the time
 	// fill in QuantityPerSubnet if QuantityPerSubnet exists
 	dst.NodeConfigDetails = &NodePoolNodeConfigDetails{
@@ -168,13 +250,8 @@ func toNodePoolV3(src *NodePool, supportRegionalSubnet bool) NodePoolV3 {
 		dst.QuantityPerSubnet = src.QuantityPerSubnet
 	}
 
-	// Do not show NodeConfigDetails if regional subnet is not whitelisted
-	if !supportRegionalSubnet {
-		dst.NodeConfigDetails = nil
-	}
-
 	for _, nd := range src.NodeStates {
-		dst.Nodes = append(dst.Nodes, nd.ToV3())
+		dst.Nodes = append(dst.Nodes, nd.ToV3(exposeFaultDomainAndPrivateIp))
 	}
 
 	dst.NodeMetadata = make(map[string]string)
@@ -192,6 +269,7 @@ type CreateNodePoolDetailsV3 struct {
 	ClusterID         string                    `json:"clusterId"`
 	KubernetesVersion string                    `json:"kubernetesVersion"`
 	NodeImageName     string                    `json:"nodeImageName"`
+	NodeSourceDetails CreateNodeSourceDetails   `json:"nodeSourceDetails,omitempty"`
 	NodeShape         string                    `json:"nodeShape"`
 	NodeMetadata      map[string]string         `json:"nodeMetadata"`
 	InitialNodeLabels []KeyValueV3              `json:"initialNodeLabels,omitempty"`
@@ -199,6 +277,62 @@ type CreateNodePoolDetailsV3 struct {
 	QuantityPerSubnet uint32                    `json:"quantityPerSubnet"`
 	SubnetIDs         []string                  `json:"subnetIds"`
 	NodeConfigDetails NodePoolNodeConfigDetails `json:"nodeConfigDetails,omitempty"`
+}
+
+// Use CreateNodeSourceDetails to enable polymorphic unmarshaling on Create/Update
+type CreateNodeSourceDetails struct {
+	JsonData   []byte
+	SourceType string `json:"sourceType"`
+}
+
+type CreateNodeSourceViaImageDetails struct {
+	ImageId *string `mandatory:"true" json:"imageId"`
+	BootVolumeSizeInGBs *uint32 `json:"bootVolumeSizeInGBs,omitempty"`
+}
+
+func (m *CreateNodeSourceDetails) UnmarshalJSON(data []byte) error {
+	m.JsonData = data
+	type Unmarshalernodesourcedetails CreateNodeSourceDetails
+	s := struct {
+		Model Unmarshalernodesourcedetails
+	}{}
+	err := json.Unmarshal(data, &s.Model)
+	if err != nil {
+		return err
+	}
+	m.SourceType = s.Model.SourceType
+
+	return err
+}
+
+func (m *CreateNodeSourceDetails) UnmarshalPolymorphicJSON(data []byte) (interface{}, error) {
+	if data == nil || string(data) == "null" {
+		return nil, nil
+	}
+
+	var err error
+	switch m.SourceType {
+	case NodeSourceTypeImage:
+		mm := CreateNodeSourceViaImageDetails{}
+		err = json.Unmarshal(data, &mm)
+		return mm, err
+	default:
+		return *m, nil
+	}
+}
+
+// Use NodeSourceDetails on NodePool GET requests
+type NodeSourceDetails interface {
+}
+
+type NodeSourceViaImageDetails struct {
+	SourceType string `mandatory:"true" json:"sourceType"`
+	ImageId *string `mandatory:"true" json:"imageId"`
+	BootVolumeSizeInGBs *uint32 `json:"bootVolumeSizeInGBs,omitempty"`
+}
+
+func (m NodeSourceViaImageDetails) ToInterface() interface{} {
+	return m
 }
 
 // UpdateNodePoolDetailsV3 is the request body for a UpdateNodePool operation.
@@ -209,14 +343,19 @@ type UpdateNodePoolDetailsV3 struct {
 	InitialNodeLabels []KeyValueV3              `json:"initialNodeLabels,omitempty"`
 	SubnetIDs         []string                  `json:"subnetIds"`
 	NodeConfigDetails NodePoolNodeConfigDetails `json:"nodeConfigDetails,omitempty"`
+	NodeMetadata      map[string]string         `json:"nodeMetadata,omitempty"`
+	NodeShape         string                    `json:"nodeShape"`
+	NodeSourceDetails CreateNodeSourceDetails    `json:"nodeSourceDetails,omitempty"`
+	SSHPublicKey      string                    `json:"sshPublicKey,omitempty"`
 }
 
 // NodePoolOptionsV3 contains the options available for specific fields that can be submitted
 // to the CreateNodePool operation. Used by the
 type NodePoolOptionsV3 struct {
-	KubernetesVersions []string `json:"kubernetesVersions"`
-	Images             []string `json:"images"`
-	Shapes             []string `json:"shapes"`
+	KubernetesVersions []string           `json:"kubernetesVersions"`
+	Images             []string           `json:"images"`
+	Shapes             []string           `json:"shapes"`
+	Sources            []NodeSourceOption `json:"sources"`
 }
 
 // NodePoolNodeConfigDetails Contains the size and placement configuration of
@@ -234,7 +373,7 @@ type NodePoolPlacementConfigDetails struct {
 }
 
 // ToProto converts a CreateNodePoolDetailsV3 to a NodePoolNewRequest object understood by grpc
-func (v3 *CreateNodePoolDetailsV3) ToProto() *NewRequest {
+func (v3 *CreateNodePoolDetailsV3) ToProto(enableNodePoolEnhancements bool) *NewRequest {
 	var dst NewRequest
 	if v3 != nil {
 		dst.Name = v3.Name
@@ -243,6 +382,16 @@ func (v3 *CreateNodePoolDetailsV3) ToProto() *NewRequest {
 		dst.K8SVersion = v3.KubernetesVersion
 		dst.NodeImageName = v3.NodeImageName
 		dst.NodeShape = v3.NodeShape
+
+		if nn, e := v3.NodeSourceDetails.UnmarshalPolymorphicJSON(v3.NodeSourceDetails.JsonData); e == nil && nn != nil {
+			if nodeSrcImgDetails, ok := nn.(CreateNodeSourceViaImageDetails); ok {
+				dst.NodeImageID = *nodeSrcImgDetails.ImageId
+				if enableNodePoolEnhancements && nodeSrcImgDetails.BootVolumeSizeInGBs != nil {
+					value := wrappers.UInt32Value{Value: *nodeSrcImgDetails.BootVolumeSizeInGBs}
+					dst.NodeBootVolumeSizeInGBs = &value
+				}
+			}
+		}
 
 		initialNodeLabels := KeyValuesToString(v3.InitialNodeLabels)
 		dst.InitialNodeLabels = initialNodeLabels

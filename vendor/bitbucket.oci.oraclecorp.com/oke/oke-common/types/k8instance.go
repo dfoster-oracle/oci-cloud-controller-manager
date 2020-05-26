@@ -1,14 +1,12 @@
 package types
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"bitbucket.oci.oraclecorp.com/oke/oke-common/protobuf"
+	"bitbucket.oci.oraclecorp.com/oke/oke-common/types/versions"
 )
 
 const (
@@ -67,6 +65,8 @@ const (
 	K8InstanceUpdateFieldName = "Name"
 	// K8InstanceUpdateFieldK8SVersion is the affected fields key to indicate that the K8SVersion needs updating
 	K8InstanceUpdateFieldK8SVersion = "K8SVersion"
+	// K8InstanceUpdateFieldPSPEnabled is the affected fields key to indicate that the Pod Security Policy needs updating
+	K8InstanceUpdateFieldPSPEnabled = "PSPEnabled"
 	// K8InstanceUpdateFieldUpdateForce is the affected fields key to indicate forced cluster update
 	K8InstanceUpdateFieldUpdateForce = "UpdateForce"
 	// K8InstanceUpdateFieldTKWVersion is the affected fields key to indicate that the TKWVersion needs updating
@@ -75,12 +75,6 @@ const (
 	// TKMAdminTokenKey is the key name for the TKM admin token
 	TKMAdminTokenKey = "admin-token"
 )
-
-// List of supported master and worker kubernetes versions
-type K8sVersionsV1 struct {
-	MastersK8sVersions []string `json:"masters" yaml:"masters"`
-	NodesK8sVersions   []string `json:"nodes" yaml:"nodes"`
-}
 
 // K8sVersionsRequest gets list of all supported kubernetes versions
 type K8sVersionsRequestV1 struct {
@@ -287,7 +281,7 @@ type K8InstanceUpdateTKMRequestV1 struct {
 	K8SVersion string `json:"k8sVersion"`
 }
 
-func (r K8InstanceUpdateTKMRequestV1) Validate(currentVersion string, f func() *K8sVersionsV1) error {
+func (r K8InstanceUpdateTKMRequestV1) Validate(currentVersion string, f func() *versions.K8sV1) error {
 	if currentVersion == r.K8SVersion {
 		return fmt.Errorf("current k8s version is already the same as the requested version")
 	}
@@ -394,57 +388,4 @@ func (src *K8InstanceDeleteResponse) ToV1() K8InstanceDeleteResponseV1 {
 type K8InstanceDeleteJobInfo struct {
 	Request    K8InstanceDeleteRequest
 	K8Instance K8Instance
-}
-
-type KubernetesVersionsGetter interface {
-	GetMasterKubernetesVersions(ctx context.Context, tenancyID string) ([]string, error)
-	GetWorkerKubernetesVersions(ctx context.Context, tenancyID string) ([]string, error)
-}
-
-// GetSupportedK8sVersions returns lists of supported master and worker kubernetes versions
-func GetSupportedK8sVersions(ctx context.Context, tenancyID string, versionsGetter KubernetesVersionsGetter) (*K8sVersionsV1, error) {
-	masterVersions, err := versionsGetter.GetMasterKubernetesVersions(ctx, tenancyID)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting master versions")
-	}
-	workerVersions, err := versionsGetter.GetWorkerKubernetesVersions(ctx, tenancyID)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting worker versions")
-	}
-
-	return &K8sVersionsV1{
-		MastersK8sVersions: masterVersions,
-		NodesK8sVersions:   workerVersions,
-	}, nil
-}
-
-func validateMasterK8Version(ctx context.Context, tenancyID string, versionsGetter KubernetesVersionsGetter, v string) error {
-	versions, err := GetSupportedK8sVersions(ctx, tenancyID, versionsGetter)
-	if err != nil {
-		return errors.Wrap(err, "unable to validate master kubernetes version")
-	}
-	if err := validateK8Version(v, versions.MastersK8sVersions); err != nil {
-		return errors.Wrap(err, "unsupported master kubernetes version")
-	}
-	return nil
-}
-
-func validateWorkerK8Version(ctx context.Context, tenancyID string, versionsGetter KubernetesVersionsGetter, pool, v string) error {
-	versions, err := GetSupportedK8sVersions(ctx, tenancyID, versionsGetter)
-	if err != nil {
-		return errors.Wrap(err, "unable to validate worker kubernetes version")
-	}
-	if err := validateK8Version(v, versions.NodesK8sVersions); err != nil {
-		return errors.Wrapf(err, "unsupported kubernetes version on pool '%s'", pool)
-	}
-	return nil
-}
-
-func validateK8Version(v string, versions []string) error {
-	for _, version := range versions {
-		if v == version {
-			return nil
-		}
-	}
-	return fmt.Errorf("Unknown version, %s not one of %s", v, strings.Join(versions, ", "))
 }
