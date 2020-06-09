@@ -13,7 +13,7 @@
 # limitations under the License.
 
 PKG := github.com/oracle/oci-cloud-controller-manager
-REGISTRY ?= odo-docker-local.artifactory.oci.oraclecorp.com
+REGISTRY ?= odo-docker-signed-local.artifactory.oci.oraclecorp.com
 IMAGE ?= $(REGISTRY)/oke-public-cloud-provider-oci
 COMPONENT ?= oci-cloud-controller-manager oci-volume-provisioner oci-flexvolume-driver cloud-provider-oci oci-csi-controller-driver oci-csi-node-driver
 
