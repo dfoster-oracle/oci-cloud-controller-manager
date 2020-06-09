@@ -43,6 +43,9 @@ github.com/docker/distribution/digestset
 # github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0 => github.com/docker/engine v0.0.0-20181106193140-f5749085e9cb
 github.com/docker/docker/pkg/term
 github.com/docker/docker/pkg/term/windows
+# github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
+github.com/docker/spdystream
+github.com/docker/spdystream/spdy
 # github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
@@ -210,6 +213,7 @@ github.com/oracle/oci-go-sdk/loadbalancer
 github.com/oracle/oci-go-sdk/common/auth
 github.com/oracle/oci-go-sdk/filestorage
 github.com/oracle/oci-go-sdk/identity
+github.com/oracle/oci-go-sdk/containerengine
 # github.com/pborman/uuid v1.2.0
 github.com/pborman/uuid
 # github.com/pelletier/go-toml v1.2.0
@@ -456,25 +460,29 @@ k8s.io/apimachinery/pkg/util/cache
 k8s.io/apimachinery/pkg/util/diff
 k8s.io/apimachinery/pkg/util/naming
 k8s.io/apimachinery/pkg/conversion/queryparams
+k8s.io/apimachinery/pkg/runtime/serializer
+k8s.io/apimachinery/pkg/util/strategicpatch
+k8s.io/apimachinery/pkg/util/httpstream
+k8s.io/apimachinery/pkg/util/remotecommand
 k8s.io/apimachinery/pkg/runtime/serializer/recognizer
 k8s.io/apimachinery/pkg/apis/meta/internalversion
 k8s.io/apimachinery/pkg/util/rand
-k8s.io/apimachinery/pkg/util/strategicpatch
-k8s.io/apimachinery/pkg/runtime/serializer
 k8s.io/apimachinery/pkg/util/waitgroup
 k8s.io/apimachinery/pkg/runtime/serializer/json
 k8s.io/apimachinery/pkg/runtime/serializer/versioning
 k8s.io/apimachinery/third_party/forked/golang/reflect
-k8s.io/apimachinery/pkg/apis/meta/v1beta1
+k8s.io/apimachinery/pkg/runtime/serializer/protobuf
 k8s.io/apimachinery/pkg/apis/meta/v1/unstructured
 k8s.io/apimachinery/pkg/util/mergepatch
 k8s.io/apimachinery/third_party/forked/golang/json
+k8s.io/apimachinery/pkg/util/httpstream/spdy
+k8s.io/apimachinery/pkg/apis/meta/v1beta1
 k8s.io/apimachinery/pkg/api/validation
 k8s.io/apimachinery/pkg/apis/meta/v1/validation
-k8s.io/apimachinery/pkg/runtime/serializer/protobuf
 k8s.io/apimachinery/pkg/api/validation/path
 k8s.io/apimachinery/pkg/util/framer
 k8s.io/apimachinery/pkg/util/yaml
+k8s.io/apimachinery/third_party/forked/golang/netutil
 k8s.io/apimachinery/pkg/util/duration
 k8s.io/apimachinery/pkg/apis/meta/v1beta1/validation
 k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme
@@ -599,11 +607,12 @@ k8s.io/client-go/informers/core/v1
 k8s.io/client-go/listers/core/v1
 k8s.io/client-go/tools/cache
 k8s.io/client-go/util/flowcontrol
-k8s.io/client-go/util/retry
 k8s.io/client-go/kubernetes/scheme
 k8s.io/client-go/tools/leaderelection
 k8s.io/client-go/tools/leaderelection/resourcelock
 k8s.io/client-go/tools/record
+k8s.io/client-go/tools/remotecommand
+k8s.io/client-go/util/retry
 k8s.io/client-go/kubernetes/typed/core/v1
 k8s.io/client-go/tools/metrics
 k8s.io/client-go/informers/storage/v1beta1
@@ -673,6 +682,9 @@ k8s.io/client-go/tools/clientcmd/api/latest
 k8s.io/client-go/util/homedir
 k8s.io/client-go/tools/reference
 k8s.io/client-go/tools/pager
+k8s.io/client-go/tools/record/util
+k8s.io/client-go/transport/spdy
+k8s.io/client-go/util/exec
 k8s.io/client-go/dynamic/dynamicinformer
 k8s.io/client-go/tools/watch
 k8s.io/client-go/informers/apps/v1
@@ -681,7 +693,6 @@ k8s.io/client-go/listers/apps/v1
 k8s.io/client-go/listers/coordination/v1beta1
 k8s.io/client-go/listers/storage/v1
 k8s.io/client-go/scale
-k8s.io/client-go/tools/record/util
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/informers/admissionregistration/v1beta1
 k8s.io/client-go/informers/apps/v1beta1

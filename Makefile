@@ -12,6 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# temp directory for which we pull repos to.
+export TMP_DEP_DIR		:= ${PWD}/temp_repos
+
+# ioke/screts repository settings (clone-secrets))
+SECRETS_REPO	:= ssh://git@bitbucket.oci.oraclecorp.com:7999/okei/secrets.git
+
+ifeq ($(TC_BUILD),0)
+export SECRETS_LOCAL	?= ${TMP_DEP_DIR}/secrets
+export SECRETS_DIR		:= ${SECRETS_LOCAL}/k8-infra/${REGION_SECRETS}
+export KUBECONFIG		:= ${SECRETS_DIR}/kubeconfig.TNL
+else
+export SECRETS_LOCAL	:= /secrets
+export SECRETS_DIR      := ${SECRETS_LOCAL}/k8-infra/${REGION_SECRETS}
+export KUBECONFIG		:= ${SECRETS_DIR}/kubeconfig.TNL
+endif
+
 PKG := github.com/oracle/oci-cloud-controller-manager
 REGISTRY ?= odo-docker-signed-local.artifactory.oci.oraclecorp.com
 IMAGE ?= $(REGISTRY)/oke-public-cloud-provider-oci
@@ -153,8 +169,39 @@ build-local: build-dirs
 				echo building $$component && GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
 			 done'
 
-.PHONY: run-ccm-e2e-tests
-run-ccm-e2e-tests:
-	ginkgo -v -progress test/e2e/cloud-controller-manager -- \
-        --kubeconfig=$(KUBECONFIG) \
-        --cloud-config=$(CLOUDCONFIG)
+.PHONY: run-ccm-e2e-tests-local
+run-ccm-e2e-tests-local:
+	./hack/run_e2e_test.sh
+
+# make temporary depenancy base dir
+create-deps-dir:
+	@if [ ! -d $(TMP_DEP_DIR) ]; then \
+		mkdir $(TMP_DEP_DIR); \
+	fi
+
+# clone or update the secrets repository
+clone-secrets: create-deps-dir
+	@if [ ! -d ${SECRETS_LOCAL} ]; then \
+		git clone ${SECRETS_REPO} ${SECRETS_LOCAL}; \
+	else \
+		cd ${SECRETS_LOCAL}; \
+		git pull; \
+		cd ..; \
+	fi
+
+images/oke-ccm-e2e-tests-pop-image.tar.gz:
+	mkdir -p images/e2e-tests
+	rm -rf ${TMP_DEP_DIR}/secrets.tar.gz
+	tar zcf ${TMP_DEP_DIR}/secrets.tar.gz -C ${SECRETS_LOCAL} .
+	sops -i -e --oci-kms https://avnzdivwaadfa-crypto.kms.us-phoenix-1.oraclecloud.com/ocid1.key.oc1.phx.avnzdivwaadfa.abyhqljrlxrkhc2g3wokrgishtxzt7ztxilatsvmshwk6w2yr75pfgadenlq --oci-profile SOPS ${TMP_DEP_DIR}/secrets.tar.gz
+	docker build --rm --build-arg https_proxy="$$https_proxy" -t oke-ccm-e2e-tests-pop -f images/e2e-tests/Dockerfile .
+	rm -rf ${TMP_DEP_DIR}/secrets.tar.gz
+	docker save oke-ccm-e2e-tests-pop | gzip > images/oke-ccm-e2e-tests-pop-image.tar.gz
+
+out/oke-ccm-tests-pop-$(BUILD_NUMBER).tar.gz: run-command/validate/* images/oke-ccm-e2e-tests-pop-image.tar.gz
+	mkdir -p out
+	rm -f out/*
+	tar -czvf out/oke-ccm-e2e-tests-pop-$(BUILD_NUMBER).tar.gz images/oke-ccm-e2e-tests-pop-image.tar.gz run-command
+
+.PHONY: create-pop
+create-pop: clone-secrets out/oke-ccm-tests-pop-$(BUILD_NUMBER).tar.gz
