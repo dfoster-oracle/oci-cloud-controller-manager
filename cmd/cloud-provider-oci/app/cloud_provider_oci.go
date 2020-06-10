@@ -216,7 +216,7 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 
 	if enableCSI == true {
 		wg.Add(1)
-		logger := logger.With(zap.String("component", "CSI controller driver"))
+		logger := logger.With(zap.String("component", "csi-controller"))
 		logger.Info("CSI is enabled.")
 		go func() {
 			defer wg.Done()
@@ -226,7 +226,7 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 			cancelFunc()
 		}()
 	} else {
-		logger := logger.With(zap.String("component", "CSI controller driver"))
+		logger := logger.With(zap.String("component", "csi-controller"))
 		logger.Info("CSI is disabled.")
 	}
 
