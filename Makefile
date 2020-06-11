@@ -32,6 +32,8 @@ PKG := github.com/oracle/oci-cloud-controller-manager
 REGISTRY ?= odo-docker-signed-local.artifactory.oci.oraclecorp.com
 IMAGE ?= $(REGISTRY)/oke-public-cloud-provider-oci
 COMPONENT ?= oci-cloud-controller-manager oci-volume-provisioner oci-flexvolume-driver cloud-provider-oci oci-csi-controller-driver oci-csi-node-driver
+OCI_CLI_VERSION ?= v2.11.0
+KUBECTL_VERSION ?= v1.11.0
 
 GIT_COMMIT := $(shell GCOMMIT=`git rev-parse --short HEAD`; if [ -n "`git status . --porcelain`" ]; then echo "$$GCOMMIT-dirty"; else echo $$GCOMMIT; fi)
 DOCKER_REPO_ROOT?=/go/src/github.com/oracle/oci-cloud-controller-manager
@@ -194,7 +196,7 @@ images/oke-ccm-e2e-tests-pop-image.tar.gz:
 	rm -rf ${TMP_DEP_DIR}/secrets.tar.gz
 	tar zcf ${TMP_DEP_DIR}/secrets.tar.gz -C ${SECRETS_LOCAL} .
 	sops -i -e --oci-kms https://avnzdivwaadfa-crypto.kms.us-phoenix-1.oraclecloud.com/ocid1.key.oc1.phx.avnzdivwaadfa.abyhqljrlxrkhc2g3wokrgishtxzt7ztxilatsvmshwk6w2yr75pfgadenlq --oci-profile SOPS ${TMP_DEP_DIR}/secrets.tar.gz
-	docker build --rm --build-arg https_proxy="$$https_proxy" -t oke-ccm-e2e-tests-pop -f images/e2e-tests/Dockerfile .
+	docker build --rm --build-arg https_proxy="$$https_proxy" --build-arg OCI_CLI_VERSION="$(OCI_CLI_VERSION)" --build-arg KUBECTL_VERSION="$(KUBECTL_VERSION)" -t oke-ccm-e2e-tests-pop -f images/e2e-tests/Dockerfile .
 	rm -rf ${TMP_DEP_DIR}/secrets.tar.gz
 	docker save oke-ccm-e2e-tests-pop | gzip > images/oke-ccm-e2e-tests-pop-image.tar.gz
 
