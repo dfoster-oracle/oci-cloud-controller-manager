@@ -79,7 +79,6 @@ run_tests() {
           -e KMS_SECRETS_KEY \
           -e OKE_TEST_COMMAND \
           oke-ccm-e2e-tests-pop /bin/bash -c "./images/e2e-tests/e2e_pop_run.sh" 2>&1
-    echo "Ending OKE E2E validation scripts"
 }
 
 cleanup() {
