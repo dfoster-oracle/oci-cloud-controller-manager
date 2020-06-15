@@ -58,7 +58,6 @@ const (
 )
 
 var (
-	BusyBoxImage = "iad.ocir.io/okedev/e2e-tests/busybox:latest"
 	// SSL CAData is a CA certificate not being used anywhere else; it only is utilised to check the load
 	// balancer SSL connection during tests
 	SSLCAData = `-----BEGIN CERTIFICATE-----
@@ -651,7 +650,7 @@ func newExecPodSpec(ns, generateName string) *v1.Pod {
 			Containers: []v1.Container{
 				{
 					Name:    "exec",
-					Image:   BusyBoxImage,
+					Image:   busyBoxImage,
 					Command: []string{"sh", "-c", "while true; do sleep 5; done"},
 				},
 			},

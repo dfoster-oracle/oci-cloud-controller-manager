@@ -34,12 +34,12 @@ func (j *PVCTestJig) CheckVolumeReadWrite(namespace string, pvcParam *v1.Persist
 		Failf("Failed to get persistent volume %q: %v", pvc.Spec.VolumeName, err)
 	}
 	By("checking the created volume is writable and has the PV's mount options")
-	command := "echo 'hello world' > /usr/share/nginx/html/"
+	command := "while true; do echo 'hello world' >> /usr/share/nginx/html/out.txt; sleep 5; done"
 	// We give the first pod the secondary responsibility of checking the volume has
 	// been mounted with the PV's mount options, if the PV was provisioned with any
 	for _, option := range pv.Spec.MountOptions {
 		// Get entry, get mount options at 6th word, replace brackets with commas
-		command += fmt.Sprintf(" && ( mount | grep 'on /usr/share/nginx/html/' | awk '{print $6}' | sed 's/^(/,/; s/)$/,/' | grep -q ,%s, )", option)
+		command += fmt.Sprintf(" && ( mount | grep 'on /usr/share/nginx/html/out.txt' | awk '{print $6}' | sed 's/^(/,/; s/)$/,/' | grep -q ,%s, )", option)
 	}
 	j.CreateAndAwaitNginxPodOrFail(pvc.Namespace, pvc, command)
 
@@ -49,7 +49,7 @@ func (j *PVCTestJig) CheckVolumeReadWrite(namespace string, pvcParam *v1.Persist
 
 // CreateAndAwaitNginxPodOrFail returns a pod definition based on the namespace using nginx image
 func (j *PVCTestJig) CreateAndAwaitNginxPodOrFail(ns string, pvc *v1.PersistentVolumeClaim, command string) {
-	By("Creating a pod with the dynmically provisioned volume")
+	By("Creating a pod with the dynamically provisioned volume")
 	pod, err := j.KubeClient.CoreV1().Pods(ns).Create(&v1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
@@ -63,7 +63,7 @@ func (j *PVCTestJig) CreateAndAwaitNginxPodOrFail(ns string, pvc *v1.PersistentV
 			Containers: []v1.Container{
 				{
 					Name:  "write-pod",
-					Image: "nginx",
+					Image: nginx,
 					Ports: []v1.ContainerPort{
 						{
 							Name:          "http-server",

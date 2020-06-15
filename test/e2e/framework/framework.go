@@ -6,31 +6,17 @@ import (
 	"fmt"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"io/ioutil"
-	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/leaderelection"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"k8s.io/client-go/tools/record"
+	imageutils "k8s.io/kubernetes/test/utils/image"
 	"math/rand"
 	"os"
-	"os/exec"
-	"path"
-	"runtime"
 	"strings"
 	"time"
 
 	. "github.com/onsi/gomega"
 	"github.com/oracle/oci-go-sdk/common"
-	"github.com/oracle/oci-go-sdk/common/auth"
 	oke "github.com/oracle/oci-go-sdk/containerengine"
 	"github.com/oracle/oci-go-sdk/core"
 	"github.com/oracle/oci-go-sdk/identity"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -39,8 +25,27 @@ const (
 	Poll = 15 * time.Second
 	// Poll defines how regularly to poll kubernetes resources.
 	K8sResourcePoll = 2 * time.Second
+	// DefaultTimeout is how long we wait for long-running operations in the
+	// test suite before giving up.
+	DefaultTimeout = 10 * time.Minute
+	// Some pods can take much longer to get ready due to volume attach/detach latency.
+	slowPodStartTimeout = 15 * time.Minute
+
     DefaultClusterKubeconfig = "/tmp/clusterkubeconfig"
 	DefaultCloudConfig = "/tmp/cloudconfig"
+
+	ClassOCI          = "oci"
+	ClassOCICSI       = "oci-bv"
+	ClassOCIExt3      = "oci-ext3"
+	ClassOCIMntFss    = "oci-fss-mnt"
+	ClassOCISubnetFss = "oci-fss-subnet"
+	MinVolumeBlock    = "50Gi"
+	MaxVolumeBlock    = "100Gi"
+	VolumeFss         = "1Gi"
+	Netexec           = "netexec:1.1"
+	BusyBoxImage      = "busybox:latest"
+	Nginx             = "nginx:stable-alpine"
+	Centos            = "centos:latest"
 )
 
 var (
@@ -80,6 +85,12 @@ var (
 	nodePortTest                 bool   // whether or not to test the connectivity of node ports.
 	ccmSeclistID                 string // The ocid of the loadbalancer subnet seclist. Optional.
 	k8sSeclistID                 string // The ocid of the k8s worker subnet seclist. Optional.
+	mntTargetOCID                string // Mount Target ID is specified to identify the mount target to be attached to the volumes. Optional.
+	nginx						 string // Image for nginx
+	netexec                      string // Image for netexec
+	busyBoxImage                 string // Image for busyBoxImage
+	centos                       string // Image for centos
+	imagePullRepo                string // Repo to pull images from. Will pull public images if not specified.
 )
 
 func init() {
@@ -114,7 +125,7 @@ func init() {
 
 	flag.StringVar(&kmsKeyID, "kms-key-id", "ocid1.key.oc1.iad.annnb3f4aacuu.abuwcljsj6vlwxrtm2bzjmre3ynqfnhkfmcayia3mq47opjp5f2joozrrdaa", "The KMS Key OCID used for testing KMS integration")
 
-	flag.StringVar(&adlocation, "adlocation", "zkJl:US-ASHBURN-AD-1", "Default Ad Location.")
+	flag.StringVar(&adlocation, "adlocation", "", "Default Ad Location.")
 
 	//Below two flags need to be provided if test cluster already exists.
 	flag.StringVar(&clusterkubeconfig, "cluster-kubeconfig", DefaultClusterKubeconfig, "Path to Cluster's Kubeconfig file with authorization and master location information. Only provide if test cluster exists.")
@@ -125,6 +136,9 @@ func init() {
 	flag.StringVar(&k8sSeclistID, "k8s-seclist-id", "", "The ocid of the k8s worker subnet seclist. Enables additional seclist rule tests. If specified the 'ccm-seclist-id parameter' is also required.")
 	flag.BoolVar(&deleteNamespace, "delete-namespace", true, "If true tests will delete namespace after completion. It is only designed to make debugging easier, DO NOT turn it off by default.")
 
+	flag.StringVar(&mntTargetOCID, "mnt-target-id", "", "Mount Target ID is specified to identify the mount target to be attached to the volumes")
+
+	flag.StringVar(&imagePullRepo, "image-pull-repo", "", "Repo to pull images from. Will pull public images if not specified.")
 	flag.Parse()
 }
 
@@ -151,7 +165,6 @@ type AuthType string
 const (
 	UserAuth      AuthType = "user"
 	ServiceAuth   AuthType = "service"
-	DelegatedAuth AuthType = "delegated"
 )
 
 // Framework is the context of the text execution.
@@ -230,14 +243,6 @@ type Framework struct {
 	// OKEEndpoint is the endpoint url for the TM API we'll be performing tests against.
 	OKEEndpoint string
 
-	// Temporary variable to denote which version of the flexvolume driver tests to use.
-	// TODO: Dynamically determine which version of the tests to run based on the OKE environment.
-	//       Which release version of the oci-flex-volume-driver is runnning in the OKE environment?
-	FlexVolumeDriverTestVersion string
-	// Temporary variable to denote which version of the volume provisioner tests to use.
-	// TODO: Dynamically determine which version of the tests to run based on the OKE environment.
-	//       Which release version of the oci-volume-provisioner is runnning in the OKE environment?
-	VolumeProvisionerTestVersion string
 	//DynamicGroup for auth delegation testing
 	DynamicGroup       string
 	instanceConfigFile string
@@ -247,6 +252,9 @@ type Framework struct {
 	// Default adLocation
 	AdLocation string
 
+	// Default adLocation
+	AdLabel string
+
 	//is cluster creation required
 	EnableCreateCluster bool
 
@@ -254,13 +262,13 @@ type Framework struct {
 
 	CloudConfigPath string
 
+	MntTargetOcid string
 }
 
 // New creates a new a framework that holds the context of the test
 // execution.
 func New() *Framework {
 	return NewWithConfig(&FrameworkConfig{})
-
 }
 
 //FrameworkConfig helps in passing the configuration options while creating a Framework instance.
@@ -272,10 +280,6 @@ type FrameworkConfig struct {
 
 	// InstanceConfigFile specifies the framework's  InstanceConfigFile to be used before initialization.
 	InstanceConfigFile string
-	// True, for a cross tenancy test
-	CrossTenancy bool
-	// Used as target services to obtain a delegation token.
-	DelegationTargetServices string
 }
 
 // OCIUser contains details about an OCI user along with their API key details.
@@ -325,6 +329,8 @@ func NewWithConfig(config *FrameworkConfig) *Framework {
 		Rgnsubnet:                  rgnsubnet,
 		NodeShape:                  nodeshape,
 		DelegationTargetServices:   "oke",
+		AdLocation:                 adlocation,
+		MntTargetOcid:              mntTargetOCID,
 	}
 
 	f.EnableCreateCluster = enableCreateCluster
@@ -342,17 +348,11 @@ func NewWithConfig(config *FrameworkConfig) *Framework {
 			f.User = *config.User
 		}
 
-		if config.CrossTenancy {
-			f.requestHeaders["x-cross-tenancy-request"] = f.Tenancy
-		}
-
 		f.OKEEndpoint = okeendpoint
 		if !strings.HasPrefix(okeendpoint, "https://") {
 			f.OKEEndpoint = "https://" + okeendpoint
 		}
 
-		f.FlexVolumeDriverTestVersion = flexvolumedrivertestversion
-		f.VolumeProvisionerTestVersion = volumeprovisionertestversion
 	}
 
 	f.CloudConfigPath = cloudConfigFile
@@ -368,16 +368,6 @@ func (f *Framework) AddRequestHeader(name string, value string) *Framework {
 	return f
 }
 
-// NewInstancePrincipalKubeClient creates a new kubernetes client that points to the
-// primordial dev cluster. This is only to run the instance principal pod tests against
-// the OKE endpoint specified for the e2e test so it really doesn't matter which cluster it runs in.
-func (f *Framework) NewInstancePrincipalKubeClient() *KubeClient {
-	b, err := ioutil.ReadFile(f.RegionalKubeConfig)
-	Expect(err).To(BeNil())
-
-	return NewKubeClient(string(b))
-}
-
 func (f *Framework) newOCIRequestSigner(authType AuthType) (common.HTTPRequestSigner, error) {
 
 	switch authType {
@@ -391,27 +381,6 @@ func (f *Framework) newOCIRequestSigner(authType AuthType) (common.HTTPRequestSi
 			&f.User.PrivateKeyPassPhrase,
 		)
 		return common.DefaultRequestSigner(cfgProvider), nil
-	case DelegatedAuth:
-		if instanceCfg == nil {
-			cfgBytes, err := ioutil.ReadFile(f.instanceConfigFile)
-			if err != nil {
-				return nil, err
-			}
-
-			var cfg SecretValuesConfig
-
-			if err := yaml.Unmarshal(cfgBytes, &cfg); err != nil {
-				return nil, err
-			}
-
-			instanceCfg = &cfg.BMCSCredentials.DelegationPrincipalConfig
-		}
-		// We use the test Instance Principal certificates from https://confluence.oci.oraclecorp.com/pages/viewpage.action?pageId=56468176#HowtotestyourservicewithOBO/Delegation?-Certificates
-		cfgProvider, err := auth.InstancePrincipalConfigurationWithCerts(common.Region(instanceCfg.Region), []byte(instanceCfg.Cert), []byte(instanceCfg.KeyPassphrase), []byte(instanceCfg.Key), [][]byte{[]byte(instanceCfg.Intermediate)})
-		if err != nil {
-			return nil, err
-		}
-		return common.RequestSigner(cfgProvider, append(common.DefaultGenericHeaders(), "opc-obo-token"), common.DefaultBodyHeaders()), nil
 	default:
 		return nil, fmt.Errorf("unknown auth type %q: cannot construct signing client", f.authType)
 	}
@@ -419,20 +388,36 @@ func (f *Framework) newOCIRequestSigner(authType AuthType) (common.HTTPRequestSi
 
 // BeforeEach will be executed before each Ginkgo test is executed.
 func (f *Framework) Initialize() {
+	Logf("initializing framework")
 	f.EnableCreateCluster = enableCreateCluster
+	f.AdLocation = adlocation
+	Logf("OCI AdLocation: %s", f.AdLocation)
+	if adlocation != "" {
+		splitString := strings.Split(adlocation, ":")
+		if len(splitString) == 2 {
+			f.AdLabel = splitString[1]
+		} else {
+			Failf("Invalid Availability Domain %s. Expecting format: `Uocm:PHX-AD-1`", adlocation)
+		}
+	}
+	Logf("OCI AdLabel: %s", f.AdLabel)
+	f.MntTargetOcid = mntTargetOCID
+	Logf("OCI Mount Target OCID: %s", f.MntTargetOcid)
+	f.Compartment1 = compartment1
+	Logf("OCI compartment1 OCID: %s", f.Compartment1)
+	f.setImages()
 	if !enableCreateCluster {
+		Logf("Cluster Creation Disabled")
 		f.ClusterKubeconfigPath = clusterkubeconfig
 		f.CloudConfigPath = cloudConfigFile
 		return
 	}
-	Logf("initializing framework")
+	Logf("Cluster Creation Enabled")
 	Logf("Auth Type: %v", f.authType)
 	f.PubSSHKey = pubsshkey
 	Logf("Public SSHKey : %s", f.PubSSHKey)
-	f.Compartment1 = compartment1
-	Logf("OCI compartment1 OCID: %s", f.Compartment1)
 	f.Compartment2 = compartment2
-	Logf("OCI compartment1 OCID: %s", f.Compartment2)
+	Logf("OCI compartment2 OCID: %s", f.Compartment2)
 	f.Vcn = vcn
 	Logf("OCI VCN OCID: %s", f.Vcn)
 	f.LbSubnet1 = lbsubnet1
@@ -456,9 +441,6 @@ func (f *Framework) Initialize() {
 	if !strings.HasPrefix(okeendpoint, "https://") {
 		f.OKEEndpoint = "https://" + okeendpoint
 	}
-
-	f.FlexVolumeDriverTestVersion = flexvolumedrivertestversion
-	f.VolumeProvisionerTestVersion = volumeprovisionertestversion
 
 	Logf("OCI User: %v", f.User.OCID)
 	Logf("OCI finger print: %v", f.User.Fingerprint)
@@ -621,39 +603,6 @@ func (f *Framework) CleanAll(waitForDeleted bool) {
 	}
 }
 
-// CreateKubeClient creates a kubeClient for the specified cluster.
-func (f *Framework) CreateKubeClient(clusterID string) *KubeClient {
-	Logf("Creating kube client, clusterID: %s", clusterID)
-	kubeConfig := f.CreateClusterKubeconfigContent(clusterID)
-	return NewKubeClient(kubeConfig)
-}
-
-func (f *Framework) RunKuberang(clusterID string) {
-	// clever trick to get kuberang based on where we are running from. Since we package everything
-	// into the repository and don't build a binary this works fine.
-	_, filename, _, _ := runtime.Caller(0)
-	kuberangBinary := path.Join(path.Dir(filename), fmt.Sprintf("../kuberang/%s/%s/kuberang", runtime.GOOS, runtime.GOARCH))
-
-	Logf(kuberangBinary)
-	kubeConfig := f.CreateClusterKubeconfigContent(clusterID)
-	Expect(kubeConfig).ToNot(BeEmpty())
-
-	kubeconfigFile := "/tmp/" + clusterID
-	err := ioutil.WriteFile(kubeconfigFile, []byte(kubeConfig), 0644)
-	Expect(err).To(BeNil())
-
-	defer func() {
-		Expect(os.Remove(kubeconfigFile)).To(BeNil())
-	}()
-
-	cmd := exec.Command(kuberangBinary, "--kubeconfig", kubeconfigFile, "--registry-url", "iad.ocir.io/odx-oke/oke-public")
-	cmd.Env = os.Environ()
-	output, err := cmd.CombinedOutput()
-
-	Logf("Kuberang output:\n", string(output))
-	Expect(err).To(BeNil())
-}
-
 // CreateClusterKubeconfigContent gets a valid 'kubeconfig' file for the target
 // cluster.
 func (f *Framework) CreateClusterKubeconfigContent(clusterID string) string {
@@ -688,27 +637,6 @@ func (f *Framework) CreateClusterKubeconfigContent(clusterID string) string {
 	return string(content)
 }
 
-// CreateClusterKubeconfigContentWithKubeconfigRequest gets a valid 'kubeconfig' file for the target
-// cluster using the kubeconfig request passed in by the caller.
-func (f *Framework) CreateClusterKubeconfigContentWithKubeconfigRequest(clusterID string, kubeconfigRequest oke.CreateKubeconfigRequest) string {
-	Logf("Getting cluster kubeconfig, id: %s", clusterID)
-
-	ctx, cancel := context.WithTimeout(f.context, f.timeout)
-	defer cancel()
-
-	response, err := f.clustersClient.CreateKubeconfig(ctx, kubeconfigRequest)
-	if err != nil {
-		Logf("CreateKubeconfig error:  %s; continuing", err)
-	}
-
-	content, err := ioutil.ReadAll(response.Content)
-	if err != nil {
-		Logf("ReadContent error:  %s; continuing", err)
-	}
-
-	return string(content)
-}
-
 // GetWorkRequest gets the specified WorkRequest for an initialising cluster.
 // Retries added to catch rare connectivity errors
 func (f *Framework) GetWorkRequest(id string) oke.GetWorkRequestResponse {
@@ -739,147 +667,6 @@ func (f *Framework) GetWorkRequest(id string) oke.GetWorkRequestResponse {
 	}
 	Failf("Timeout waiting for get workRequest '%s'", id)
 	return response
-}
-
-// AquireRunLock blocks until the test run lock is required or a timeout
-// elapses. A lock is required as only one test run can safely be executed on
-// the same cluster at any given time.
-func AquireRunLock(client clientset.Interface, lockName string) error {
-	lec, err := makeLeaderElectionConfig(client, lockName)
-	if err != nil {
-		return err
-	}
-
-	readyCh := make(chan struct{})
-	lec.Callbacks = leaderelection.LeaderCallbacks{
-		OnStartedLeading: func(ctx context.Context) {
-			Logf("Test run lock aquired")
-			readyCh <- struct{}{}
-		},
-		OnStoppedLeading: func() {
-			Failf("Lost test run lock unexpectedly")
-		},
-	}
-
-	le, err := leaderelection.NewLeaderElector(*lec)
-	if err != nil {
-		return err
-	}
-
-	go le.Run(context.Background())
-
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-readyCh:
-			return nil
-		case <-ticker.C:
-			Logf("Waiting to aquire test run lock. %q currently has it.", le.GetLeader())
-		case <-time.After(2 * time.Minute):
-			return errors.New("timed out trying to aquire test run lock")
-		}
-	}
-	panic("unreachable")
-}
-
-func makeLeaderElectionConfig(client clientset.Interface, lockName string) (*leaderelection.LeaderElectionConfig, error) {
-	eventBroadcaster := record.NewBroadcaster()
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: lockName})
-
-	id := os.Getenv("WERCKER_STEP_ID")
-	if id == "" {
-		id = UniqueID()
-	}
-
-	Logf("Test run lock id: %q", id)
-
-	rl, err := resourcelock.New(
-		resourcelock.ConfigMapsResourceLock,
-		"kube-system",
-		lockName,
-		client.CoreV1(),
-		client.CoordinationV1(),
-		resourcelock.ResourceLockConfig{
-			Identity:      id,
-			EventRecorder: recorder,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't create resource lock: %v", err)
-	}
-
-	return &leaderelection.LeaderElectionConfig{
-		Lock:          rl,
-		LeaseDuration: 60 * time.Second,
-		RenewDeadline: 15 * time.Second,
-		RetryPeriod:   2 * time.Second,
-	}, nil
-}
-
-// CreateAndAwaitDaemonSet creates/updates the given DaemonSet and waits for it
-// to be ready.
-func CreateAndAwaitDaemonSet(client clientset.Interface, desired *appsv1.DaemonSet) error {
-	actual, err := client.AppsV1().DaemonSets(desired.Namespace).Create(desired)
-	if err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return errors.Wrapf(err, "failed to create %q DaemonSet", desired.Name)
-		}
-		Logf("%q DaemonSet already exists. Updating.", desired.Name)
-		actual, err = client.AppsV1().DaemonSets(desired.Namespace).Update(desired)
-		if err != nil {
-			return errors.Wrapf(err, "updating DaemonSet %q", desired.Name)
-		}
-	} else {
-		Logf("Created DaemonSet %q in namespace %q", actual.Name, actual.Namespace)
-	}
-
-	return wait.PollImmediate(5*time.Second, 5*time.Minute, func() (bool, error) {
-		actual, err := client.AppsV1().DaemonSets(actual.Namespace).Get(actual.Name, metav1.GetOptions{})
-		if err != nil {
-			return false, errors.Wrap(err, "waiting for DaemonSet to be ready")
-		}
-
-		if actual.Status.DesiredNumberScheduled != 0 && actual.Status.NumberReady == actual.Status.DesiredNumberScheduled {
-			return true, nil
-		}
-
-		Logf("%q DaemonSet not yet ready (desired=%d, ready=%d). Waiting...",
-			actual.Name, actual.Status.DesiredNumberScheduled, actual.Status.NumberReady)
-		return false, nil
-	})
-}
-
-// CreateAndAwaitDeployment creates/updates the given Deployment and waits for
-// it to be ready.
-func CreateAndAwaitDeployment(client clientset.Interface, desired *appsv1.Deployment) error {
-	actual, err := client.AppsV1().Deployments(desired.Namespace).Create(desired)
-	if err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return errors.Wrapf(err, "failed to create Deployment %q", desired.Name)
-		}
-		Logf("Deployment %q already exists. Updating.", desired.Name)
-		actual, err = client.AppsV1().Deployments(desired.Namespace).Update(desired)
-		if err != nil {
-			return errors.Wrapf(err, "updating Deployment %q", desired.Name)
-		}
-	} else {
-		Logf("Created Deployment %q in namespace %q", actual.Name, actual.Namespace)
-	}
-
-	return wait.PollImmediate(5*time.Second, 5*time.Minute, func() (bool, error) {
-		actual, err := client.AppsV1().Deployments(actual.Namespace).Get(actual.Name, metav1.GetOptions{})
-		if err != nil {
-			return false, errors.Wrap(err, "waiting for Deployment to be ready")
-		}
-		if actual.Status.Replicas != 0 && actual.Status.Replicas == actual.Status.ReadyReplicas {
-			return true, nil
-		}
-		Logf("%s Deployment not yet ready (replicas=%d, readyReplicas=%d). Waiting...",
-			actual.Name, actual.Status.Replicas, actual.Status.ReadyReplicas)
-		return false, nil
-	})
 }
 
 func (f *Framework) CreateCloudConfig() config.Config {
@@ -942,3 +729,18 @@ func (f *Framework) SaveKubeConfig(kubeconfig string) error {
 	Logf("Kubeconfig File bytes written %d at location %s", bytesWritten, f.ClusterKubeconfigPath)
 	return nil
 }
+
+func (f *Framework) setImages() {
+	if imagePullRepo != "" {
+		netexec = fmt.Sprintf("%s%s", imagePullRepo, Netexec)
+		busyBoxImage = fmt.Sprintf("%s%s", imagePullRepo, BusyBoxImage)
+		nginx = fmt.Sprintf("%s%s", imagePullRepo, Nginx)
+		centos = fmt.Sprintf("%s%s", imagePullRepo, Centos)
+	} else {
+		netexec = imageutils.GetE2EImage(imageutils.Netexec)
+		busyBoxImage = BusyBoxImage
+		nginx = Nginx
+		centos = Centos
+	}
+}
+

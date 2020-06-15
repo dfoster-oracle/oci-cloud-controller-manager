@@ -35,6 +35,8 @@ Define the following environment variables in your shell environment -
 export LOCAL_RUN=1
 export TC_BUILD=0
 export ENABLE_CREATE_CLUSTER=false
+# ADLOCATION example is IqDk:US-ASHBURN-AD-1
+export ADLOCATION=<adlocation>
 export CLUSTER_KUBECONFIG=<file path to your cluster's kubeconfig>
 export CLOUD_CONFIG=<path that points to cloud-provider.yaml for your cluster>
 ```
@@ -48,6 +50,22 @@ For accessing you cluster's kubeconfig refer [organize-cluster-access-kubeconfig
 
 NOTE: Test suite will fail if executed behind a `$HTTP_PROXY` that returns a
 200 OK response upon failure to connect.
+
+## Additional option to specify test image pull repo
+
+The tests use below images - 
+*   nginx:stable-alpine
+*   netexec:1.1
+*   centos:latest
+*   busybox:latest
+
+By default, public images are used. But if your Cluster's environment cannot access above public images then below option can be used to specify an accessible repo.
+
+```bash
+IMAGE_PULL_REPO="accessiblerepo.com/repo/path/" make run-ccm-e2e-tests-local
+```
+
+Note: Above listed <IMAGE>:<TAG> should be available in the provider repo path and should be accessible.
 
 ## Additional Debug Options when running tests on existing cluster
 
@@ -65,6 +83,7 @@ $ ginkgo -v -progress test/e2e/cloud-provider-oci -- \
     --clusterkubeconfig=$CLUSTER_KUBECONFIG \
     --delete-namespace=false \
     --cloud-config=$CLOUD_CONFIG \
+    --adlocation=$ADLOCATION \
     --ccm-seclist-id=ocid1.securitylist.$ccmloadblancerid \
     --k8s-seclist-id=ocid1.securitylist.$k8sworkerid
 ```
@@ -76,14 +95,15 @@ $ ginkgo -v -progress test/e2e/cloud-provider-oci -- \
 You can run a subset of the tests manually by setting the 'FOCUS' environment variable to be the regular expressions matching the 'Ginkgo' descriptions of the test you want to run.
 
 Please see 'test/e2e/cloud-provider-oci' to see what description tags are available.
+The broad category of tags is "ccm" and "storage" look at [list of tests](ListOfTests.md)
 
 ```bash
-export FOCUS=\[ccm\]
+export FOCUS=\[cloudprovider\]
 ```
 They can be passed directly to the make target as well:
 
 ```bash
-FOCUS="\[ccm\]" make run-ccm-e2e-tests-local
+FOCUS="\[cloudprovider\]" make run-ccm-e2e-tests-local
 ```
 
 Another way you can run a subset of the tests manually is by setting the 'FOCUS' environment variable

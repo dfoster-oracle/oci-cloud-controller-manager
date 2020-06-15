@@ -38,7 +38,7 @@ var _ = Describe("Service [Slow]", func() {
 	baseName := "service"
 	f := sharedfw.NewDefaultFramework(baseName)
 
-	Context("[ccm]", func() {
+	Context("[cloudprovider][ccm]", func() {
 		It("should be possible to create and mutate a Service type:LoadBalancer [Canary]", func() {
 			serviceName := "basic-lb-test"
 			ns := f.Namespace.Name
@@ -192,7 +192,7 @@ var _ = Describe("ESIPP [Slow]", func() {
 	BeforeEach(func() {
 		cs = f.ClientSet
 	})
-	Context("[ccm]", func() {
+	Context("[cloudprovider][ccm]", func() {
 		It("should only target nodes with endpoints", func() {
 			namespace := f.Namespace.Name
 			serviceName := "external-local"
@@ -311,7 +311,7 @@ var _ = Describe("ESIPP [Slow]", func() {
 var _ = Describe("End to end TLS", func() {
 	baseName := "endtoendtls-service"
 	f := sharedfw.NewDefaultFramework(baseName)
-	Context("[ccm]", func() {
+	Context("[cloudprovider][ccm]", func() {
 		It("should be possible to create and mutate a Service type:LoadBalancer [Canary]", func() {
 			serviceName := "e2e-tls-lb-test"
 			ns := f.Namespace.Name
@@ -393,7 +393,7 @@ var _ = Describe("BackendSet only enabled TLS", func() {
 	baseName := "backendset-service"
 	f := sharedfw.NewDefaultFramework(baseName)
 
-	Context("[ccm]", func() {
+	Context("[cloudprovider][ccm]", func() {
 		It("should be possible to create and mutate a Service type:LoadBalancer [Canary]", func() {
 			serviceName := "backendset-tls-lb-test"
 			ns := f.Namespace.Name
@@ -472,7 +472,7 @@ var _ = Describe("Listener only enabled TLS", func() {
 	baseName := "listener-service"
 	f := sharedfw.NewDefaultFramework(baseName)
 
-	Context("[ccm]", func() {
+	Context("[cloudprovider][ccm]", func() {
 		It("should be possible to create and mutate a Service type:LoadBalancer [Canary]", func() {
 			serviceName := "listener-tls-lb-test"
 			ns := f.Namespace.Name
@@ -550,7 +550,7 @@ var _ = Describe("End to end enabled TLS - different certificates", func() {
 	baseName := "e2e-diff-certs"
 	f := sharedfw.NewDefaultFramework(baseName)
 
-	Context("[ccm]", func() {
+	Context("[cloudprovider][ccm]", func() {
 		It("should be possible to create and mutate a Service type:LoadBalancer [Canary]", func() {
 			serviceName := "e2e-diff-certs-service"
 			ns := f.Namespace.Name

@@ -12,7 +12,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 
 	setupF = sharedfw.New()
 
-	sharedfw.Logf("CcmFramework Setup")
+	sharedfw.Logf("CloudProviderFramework Setup")
 
 	if setupF.EnableCreateCluster {
 		sharedfw.Logf("Creating the cluster...")

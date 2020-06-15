@@ -23,7 +23,7 @@ import (
 // NewStorageClassTemplate returns the default template for this jig, but
 // does not actually create the storage class. The default storage class has the same name
 // as the jig
-func (f *Framework) newStorageClassTemplate(name string, provisionerType string, parameters map[string]string, testLabels map[string]string) *storagev1beta1.StorageClass {
+func (f *CloudProviderFramework) newStorageClassTemplate(name string, provisionerType string, parameters map[string]string, testLabels map[string]string) *storagev1beta1.StorageClass {
 	return &storagev1beta1.StorageClass{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StorageClass",
@@ -39,13 +39,13 @@ func (f *Framework) newStorageClassTemplate(name string, provisionerType string,
 }
 
 // CreateStorageClassOrFail creates a new storage class based on the jig's defaults.
-func (f *Framework) CreateStorageClassOrFail(name string, provisionerType string, parameters map[string]string, testLabels map[string]string) string {
+func (f *CloudProviderFramework) CreateStorageClassOrFail(name string, provisionerType string, parameters map[string]string, testLabels map[string]string) string {
 	classTemp := f.newStorageClassTemplate(name, provisionerType, parameters, testLabels)
 
 	class, err := f.ClientSet.StorageV1beta1().StorageClasses().Create(classTemp)
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			Logf("Storage Class already exists. Updating exisiting storage class.")
+			Logf("Storage Class already exists. Updating existing storage class.")
 			f.ClientSet.StorageV1beta1().StorageClasses().Update(f.newStorageClassTemplate(name, provisionerType, parameters, testLabels))
 			return name
 		}

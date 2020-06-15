@@ -17,7 +17,9 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"fmt"
+	ocicore "github.com/oracle/oci-go-sdk/core"
 	"os"
 	"strings"
 	"time"
@@ -39,8 +41,8 @@ import (
 	"k8s.io/cloud-provider"
 )
 
-// CcmFramework is used in the execution of e2e tests.
-type CcmFramework struct {
+// CloudProviderFramework is used in the execution of e2e tests.
+type CloudProviderFramework struct {
 	BaseName string
 
 	InitCloudProvider bool                    // Whether to initialise a cloud provider interface for testing
@@ -59,6 +61,11 @@ type CcmFramework struct {
 	Secret                *v1.Secret      // Every test has at least one namespace unless creation is skipped
 	namespacesToDelete    []*v1.Namespace // Some tests have more than one.
 
+	BlockStorageClient ocicore.BlockstorageClient
+	IsBackup           bool
+	BackupIDs          []string
+	StorageClasses     []string
+
 	// To make sure that this framework cleans up after itself, no matter what,
 	// we install a Cleanup action before each test and clear it after.  If we
 	// should abort, the AfterSuite hook should run all Cleanup actions.
@@ -67,32 +74,33 @@ type CcmFramework struct {
 	cleanupHandle CleanupActionHandle
 }
 
-// NewDefaultFramework constructs a new e2e test CcmFramework with default options.
-func NewDefaultFramework(baseName string) *CcmFramework {
-	f := NewCcmFramework(baseName, nil)
+// NewDefaultFramework constructs a new e2e test CloudProviderFramework with default options.
+func NewDefaultFramework(baseName string) *CloudProviderFramework {
+	f := NewCcmFramework(baseName, nil, false)
 	return f
 }
 
-// NewFrameworkWithCloudProvider constructs a new e2e test CcmFramework for testing
+// NewFrameworkWithCloudProvider constructs a new e2e test CloudProviderFramework for testing
 // cloudprovider.Interface directly.
-func NewFrameworkWithCloudProvider(baseName string) *CcmFramework {
-	f := NewCcmFramework(baseName, nil)
+func NewFrameworkWithCloudProvider(baseName string) *CloudProviderFramework {
+	f := NewCcmFramework(baseName, nil, false)
 	f.SkipNamespaceCreation = true
 	f.InitCloudProvider = true
 	return f
 }
 
 // NewBackupFramework constructs a new e2e test Framework initialising a storage client used to create a backup
-func NewBackupFramework(baseName string) *CcmFramework {
-	f := NewCcmFramework(baseName, nil)
+func NewBackupFramework(baseName string) *CloudProviderFramework {
+	f := NewCcmFramework(baseName, nil, true)
 	return f
 }
 
-// NewCcmFramework constructs a new e2e test CcmFramework.
-func NewCcmFramework(baseName string, client clientset.Interface) *CcmFramework {
-	f := &CcmFramework{
+// NewCcmFramework constructs a new e2e test CloudProviderFramework.
+func NewCcmFramework(baseName string, client clientset.Interface, backup bool) *CloudProviderFramework {
+	f := &CloudProviderFramework{
 		BaseName:  baseName,
 		ClientSet: client,
+		IsBackup:  backup,
 	}
 	f.NodePortTest = nodePortTest
 	if ccmSeclistID != "" {
@@ -108,7 +116,7 @@ func NewCcmFramework(baseName string, client clientset.Interface) *CcmFramework 
 }
 
 // CreateNamespace creates a e2e test namespace.
-func (f *CcmFramework) CreateNamespace(baseName string, labels map[string]string) (*v1.Namespace, error) {
+func (f *CloudProviderFramework) CreateNamespace(baseName string, labels map[string]string) (*v1.Namespace, error) {
 	if labels == nil {
 		labels = map[string]string{}
 	}
@@ -145,7 +153,7 @@ func (f *CcmFramework) CreateNamespace(baseName string, labels map[string]string
 
 // DeleteNamespace deletes a given namespace and waits until its contents are
 // deleted.
-func (f *CcmFramework) DeleteNamespace(namespace string, timeout time.Duration) error {
+func (f *CloudProviderFramework) DeleteNamespace(namespace string, timeout time.Duration) error {
 	startTime := time.Now()
 	if err := f.ClientSet.CoreV1().Namespaces().Delete(namespace, nil); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -177,7 +185,7 @@ func (f *CcmFramework) DeleteNamespace(namespace string, timeout time.Duration) 
 }
 
 // BeforeEach gets a client and makes a namespace.
-func (f *CcmFramework) BeforeEach() {
+func (f *CloudProviderFramework) BeforeEach() {
 	// The fact that we need this feels like a bug in ginkgo.
 	// https://github.com/onsi/ginkgo/issues/222
 	f.cleanupHandle = AddCleanupAction(f.AfterEach)
@@ -216,10 +224,13 @@ func (f *CcmFramework) BeforeEach() {
 		f.Namespace = namespace
 	}
 
+	if f.IsBackup {
+		f.BlockStorageClient = f.createStorageClient()
+	}
 }
 
 // AfterEach deletes the namespace(s).
-func (f *CcmFramework) AfterEach() {
+func (f *CloudProviderFramework) AfterEach() {
 	RemoveCleanupAction(f.cleanupHandle)
 
 	nsDeletionErrors := map[string]error{}
@@ -229,6 +240,23 @@ func (f *CcmFramework) AfterEach() {
 			if err := f.DeleteNamespace(ns.Name, 5*time.Minute); err != nil {
 				nsDeletionErrors[ns.Name] = err
 			}
+		}
+	}
+
+	for _, storageClass := range f.StorageClasses {
+		By(fmt.Sprintf("Deleting storage class %q", storageClass))
+		err := f.ClientSet.StorageV1beta1().StorageClasses().Delete(storageClass, nil)
+		if err != nil && !apierrors.IsNotFound(err) {
+			Logf("Storage Class Delete API error: %v", err)
+		}
+	}
+
+	for _, backupID := range f.BackupIDs {
+		By(fmt.Sprintf("Deleting backups %q", backupID))
+		ctx := context.TODO()
+		_, err := f.BlockStorageClient.DeleteVolumeBackup(ctx, ocicore.DeleteVolumeBackupRequest{VolumeBackupId: &backupID})
+		if err != nil && !apierrors.IsNotFound(err) {
+			Logf("Failed to delete backup id %q: %v", backupID, err)
 		}
 	}
 
@@ -270,3 +298,18 @@ func createOCIClient(cloudProviderConfig *providercfg.Config) (client.Interface,
 	return ociClient, nil
 }
 
+func (f *CloudProviderFramework) createStorageClient() ocicore.BlockstorageClient {
+	By("Creating an OCI block storage client")
+
+	provider, err := providercfg.NewConfigurationProvider(f.CloudProviderConfig)
+	if err != nil {
+		Failf("Unable to create configuration provider %v", err)
+	}
+
+	blockStorageClient, err := ocicore.NewBlockstorageClientWithConfigurationProvider(provider)
+	if err != nil {
+		Failf("Unable to load volume provisioner client %v", err)
+	}
+
+	return blockStorageClient
+}
