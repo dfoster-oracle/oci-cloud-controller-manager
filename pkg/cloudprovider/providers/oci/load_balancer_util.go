@@ -40,7 +40,7 @@ const (
 )
 
 const (
-	changeFmtStr  = "%v -> Actual:%v - Desired:%v"
+	changeFmtStr = "%v -> Actual:%v - Desired:%v"
 )
 
 const lbNamePrefixEnvVar = "LOAD_BALANCER_PREFIX"

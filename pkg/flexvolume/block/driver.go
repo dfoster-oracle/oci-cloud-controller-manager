@@ -110,11 +110,6 @@ func GetKubeconfigPath() string {
 	return kcp
 }
 
-const (
-	rateLimitQPSDefault    = 20.0
-	rateLimitBucketDefault = 5
-)
-
 // Init checks that we have the appropriate credentials and metadata API access
 // on driver initialisation.
 func (d OCIFlexvolumeDriver) Init(logger *zap.SugaredLogger) flexvolume.DriverStatus {

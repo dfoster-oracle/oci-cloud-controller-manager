@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package oci
+package client
 
 import (
 	"testing"
@@ -57,4 +57,35 @@ func TestBuildRateLimiterWithDefaults(t *testing.T) {
 	if rateLimiter.Writer.QPS() != rateLimitQPSDefault {
 		t.Errorf("unexpected QPS (write) value: expected %f but found %f", rateLimitQPSDefault, rateLimiter.Writer.QPS())
 	}
+}
+
+func TestDisableRateLimiterConfig(t *testing.T) {
+	rateLimiterConfig := &providercfg.RateLimiterConfig{
+		DisableRateLimiter: true,
+	}
+
+	rateLimiter := NewRateLimiter(zap.S(), rateLimiterConfig)
+	for i := 0; i < 21; i++ {
+		rateLimiter.Reader.TryAccept()
+		rateLimiter.Writer.TryAccept()
+	}
+
+	if !rateLimiter.Reader.TryAccept() || !rateLimiter.Writer.TryAccept() {
+		t.Errorf("RateLimiter Should be disabled")
+	}
+}
+
+func TestEnableRateLimiterConfig(t *testing.T) {
+
+	rateLimiterConfig := &providercfg.RateLimiterConfig{}
+	rateLimiter := NewRateLimiter(zap.S(), rateLimiterConfig)
+
+	for i := 0; i < 21; i++ {
+		rateLimiter.Reader.TryAccept()
+		rateLimiter.Writer.TryAccept()
+	}
+	if rateLimiter.Reader.TryAccept() || rateLimiter.Writer.TryAccept() {
+		t.Errorf("RateLimiter Should be enabled")
+	}
+
 }
