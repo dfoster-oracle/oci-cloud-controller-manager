@@ -466,13 +466,18 @@ func getConnectionConfigurationChanges(actual *loadbalancer.ConnectionConfigurat
 
 	//desired is not nil and actual is nil. So we need to reconcile
 	if actual == nil {
-		connectionConfigurationChanges = append(connectionConfigurationChanges, fmt.Sprintf(changeFmtStr, "Listner:ConnectionConfiguration", "NOT_PRESENT", "PRESENT"))
+		connectionConfigurationChanges = append(connectionConfigurationChanges, fmt.Sprintf(changeFmtStr, "Listener:ConnectionConfiguration", "NOT_PRESENT", "PRESENT"))
 		return connectionConfigurationChanges
 	}
 
 	if toInt64(actual.IdleTimeout) != toInt64(desired.IdleTimeout) {
-		connectionConfigurationChanges = append(connectionConfigurationChanges, fmt.Sprintf(changeFmtStr, "Listner:ConnectionConfiguration:IdleTimeout", toInt64(actual.IdleTimeout), toInt64(desired.IdleTimeout)))
+		connectionConfigurationChanges = append(connectionConfigurationChanges, fmt.Sprintf(changeFmtStr, "Listener:ConnectionConfiguration:IdleTimeout", toInt64(actual.IdleTimeout), toInt64(desired.IdleTimeout)))
 	}
+
+	if toInt(actual.BackendTcpProxyProtocolVersion) != toInt(desired.BackendTcpProxyProtocolVersion) {
+		connectionConfigurationChanges = append(connectionConfigurationChanges, fmt.Sprintf(changeFmtStr, "Listener:ConnectionConfiguration:BackendTcpProxyProtocolVersion", toInt(actual.BackendTcpProxyProtocolVersion), toInt(desired.BackendTcpProxyProtocolVersion)))
+	}
+
 	return connectionConfigurationChanges
 }
 
