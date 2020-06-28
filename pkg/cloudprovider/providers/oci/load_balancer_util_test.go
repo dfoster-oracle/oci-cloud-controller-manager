@@ -956,34 +956,34 @@ func TestHasListenerChanged(t *testing.T) {
 		{
 			name: "Port changes",
 			desired: loadbalancer.ListenerDetails{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 			},
 			actual: loadbalancer.Listener{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(442)},
+				Protocol: common.String("TCP"),
+				Port:     common.Int(442)},
 			expected: true,
 		},
 		{
 			name: "Protocol changes",
 			desired: loadbalancer.ListenerDetails{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 			},
 			actual: loadbalancer.Listener{
-				Protocol:              common.String("HTTP"),
-				Port:                  common.Int(443)},
+				Protocol: common.String("HTTP"),
+				Port:     common.Int(443)},
 			expected: true,
 		},
 		{
 			name: "SSLConfigurationChanges present in actual but not in desired",
 			desired: loadbalancer.ListenerDetails{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 			},
 			actual: loadbalancer.Listener{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 				SslConfiguration: &loadbalancer.SslConfiguration{
 					VerifyDepth:           common.Int(1),
 					VerifyPeerCertificate: common.Bool(true),
@@ -996,15 +996,15 @@ func TestHasListenerChanged(t *testing.T) {
 		{
 			name: "SSLConfigurationChanges present in desired but not in actual",
 			desired: loadbalancer.ListenerDetails{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 				SslConfiguration: &loadbalancer.SslConfigurationDetails{
 					CertificateName: common.String("desired"),
 				},
 			},
 			actual: loadbalancer.Listener{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 			},
 
 			expected: true,
@@ -1012,8 +1012,8 @@ func TestHasListenerChanged(t *testing.T) {
 		{
 			name: "SSLConfigurationChanges CertificateName changes",
 			desired: loadbalancer.ListenerDetails{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 				SslConfiguration: &loadbalancer.SslConfigurationDetails{
 					CertificateName:       common.String("desired"),
 					VerifyDepth:           common.Int(1),
@@ -1021,8 +1021,8 @@ func TestHasListenerChanged(t *testing.T) {
 				},
 			},
 			actual: loadbalancer.Listener{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 				SslConfiguration: &loadbalancer.SslConfiguration{
 					VerifyDepth:           common.Int(1),
 					VerifyPeerCertificate: common.Bool(true),
@@ -1035,12 +1035,12 @@ func TestHasListenerChanged(t *testing.T) {
 		{
 			name: "ConnectionConfiguration present in actual but not in desired",
 			desired: loadbalancer.ListenerDetails{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 			},
 			actual: loadbalancer.Listener{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 				ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
 					IdleTimeout: common.Int64(300),
 				},
@@ -1051,15 +1051,15 @@ func TestHasListenerChanged(t *testing.T) {
 		{
 			name: "ConnectionConfiguration present in desired but not in actual",
 			desired: loadbalancer.ListenerDetails{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 				ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
 					IdleTimeout: common.Int64(300),
 				},
 			},
 			actual: loadbalancer.Listener{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 			},
 
 			expected: true,
@@ -1067,15 +1067,15 @@ func TestHasListenerChanged(t *testing.T) {
 		{
 			name: "ConnectionConfiguration IdleTimeout changed",
 			desired: loadbalancer.ListenerDetails{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 				ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
 					IdleTimeout: common.Int64(300),
 				},
 			},
 			actual: loadbalancer.Listener{
-				Protocol:              common.String("TCP"),
-				Port:                  common.Int(443),
+				Protocol: common.String("TCP"),
+				Port:     common.Int(443),
 				ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
 					IdleTimeout: common.Int64(400),
 				},

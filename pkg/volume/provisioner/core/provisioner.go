@@ -39,7 +39,6 @@ import (
 	listersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/flowcontrol"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 )
 
@@ -57,8 +56,6 @@ const (
 )
 
 const (
-	rateLimitQPSDefault       = 20.0
-	rateLimitBucketDefault    = 5
 	resyncPeriod              = 15 * time.Second
 	minResyncPeriod           = 12 * time.Hour
 	exponentialBackOffOnError = false
@@ -127,16 +124,9 @@ func NewOCIProvisioner(logger *zap.SugaredLogger, kubeClient kubernetes.Interfac
 		"tenancyID", tenancyID,
 	)
 
-	client, err := client.New(logger, cp, &client.RateLimiter{
-		Reader: flowcontrol.NewTokenBucketRateLimiter(
-			rateLimitQPSDefault,
-			rateLimitBucketDefault,
-		),
-		Writer: flowcontrol.NewTokenBucketRateLimiter(
-			rateLimitQPSDefault,
-			rateLimitBucketDefault,
-		),
-	}, cfg.Auth.TenancyID)
+	rateLimiter := client.NewRateLimiter(logger, cfg.RateLimiter)
+
+	client, err := client.New(logger, cp, &rateLimiter, cfg.Auth.TenancyID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "unable to construct OCI client")
 	}
