@@ -54,7 +54,7 @@ var _ = Describe("Instances", func() {
 		node = nodes.Items[0]
 	})
 
-	Context("[ccm]", func() {
+	Context("[cloudprovider][ccm]", func() {
 		It("should be possible to get node addresses", func() {
 			nodeName := apitypes.NodeName(node.Labels["hostname"])
 			Expect(nodeName).NotTo(BeEmpty())

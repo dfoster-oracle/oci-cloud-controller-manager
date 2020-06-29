@@ -93,6 +93,7 @@ if [ "$ENABLE_CREATE_CLUSTER" == "true" ]; then
     check-env "OCI_KEY"         $OCI_KEY
     check-env "OCI_TENANCY"     $OCI_TENANCY
     check-env "OCI_REGION"      $OCI_REGION
+    check-env "ADLOCATION"      $ADLOCATION
     check-env "COMPARTMENT1"    $COMPARTMENT
     check-env "COMPARTMENT2"    $COMPARTMENT2
     check-env "VCN"             $VCN
@@ -118,8 +119,12 @@ if [ "$ENABLE_CREATE_CLUSTER" == "true" ]; then
 else
     check-env "CLUSTER_KUBECONFIG"    $CLUSTER_KUBECONFIG
     check-env "CLOUD_CONFIG"          $CLOUD_CONFIG
+    check-env "ADLOCATION"      $ADLOCATION
 fi
 
+if [ -z "$IMAGE_PULL_REPO" ]; then
+    IMAGE_PULL_REPO=""
+fi
 
 DELETE_NAMESPACE=${DELETE_NAMESPACE:-"true"}
 
@@ -175,6 +180,7 @@ function run_e2e_tests() {
         --cluster-kubeconfig=${CLUSTER_KUBECONFIG} \
         --cloud-config=${CLOUD_CONFIG} \
         --delete-namespace=${DELETE_NAMESPACE} \
+        --image-pull-repo=${IMAGE_PULL_REPO} \
     retval=$?
     rm -f $OCI_KEY_FILE
     exit $retval
@@ -186,13 +192,15 @@ function run_e2e_tests_existing_cluster() {
         --enable-create-cluster=${ENABLE_CREATE_CLUSTER} \
         --cluster-kubeconfig=${CLUSTER_KUBECONFIG} \
         --cloud-config=${CLOUD_CONFIG} \
+        --adlocation=${ADLOCATION} \
         --delete-namespace=${DELETE_NAMESPACE} \
+        --image-pull-repo=${IMAGE_PULL_REPO} \
     retval=$?
     exit $retval
 }
 
 # The FOCUS environment variable can be set with a regex to tun selected tests
-# e.g. export FOCUS="\[ccm\]"
+# e.g. export FOCUS="\[cloudprovider\]"
 export FOCUS_OPT=""
 export FOCUS_FP_OPT=""
 if [ ! -z "${FOCUS}" ]; then

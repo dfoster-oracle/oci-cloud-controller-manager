@@ -44,7 +44,7 @@ var _ = Describe("Zones", func() {
 		node = nodes.Items[0]
 	})
 
-	Context("[ccm]", func() {
+	Context("[cloudprovider][ccm]", func() {
 		It("should be possible to get a non-empty zone by provider ID", func() {
 			providerID := node.Spec.ProviderID
 			Expect(providerID).NotTo(BeEmpty())

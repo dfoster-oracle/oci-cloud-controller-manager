@@ -20,8 +20,9 @@ export TC_BUILD=0
 export E2E_NODE_COUNT=1
 
 # The test suites to run (can remove unwanted ones)
-export FOCUS="\[ccm\]"
+export FOCUS="\[cloudprovider\]"
 
+export IMAGE_PULL_REPO="iad.ocir.io/okedev/e2e-tests/"
 
 # ------------------------------------------------------------------------------------------------
 # dev: These variables apply if you are running against dev in iad and using okedev tenancy
@@ -112,7 +113,7 @@ export NODE_SHAPE=VM.Standard1.2
 # The secrets to use
 export REGION_SECRETS=dev0-iad
 
-export ADLOCATION="zkJl:US-ASHBURN-AD-1"
+export ADLOCATION="IqDk:US-ASHBURN-AD-1"
 
 # ------------------------------------------------------------------------------------------------
 # Bonus: other stuff to tweak if you know what they mean

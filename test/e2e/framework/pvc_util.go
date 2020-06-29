@@ -40,7 +40,6 @@ type PVCTestJig struct {
 	ID     string
 	Name   string
 	Labels map[string]string
-
 	BlockStorageClient *ocicore.BlockstorageClient
 	KubeClient         clientset.Interface
 }
@@ -128,7 +127,7 @@ func (j *PVCTestJig) CreateAndAwaitPVCOrFail(namespace string, volumeSize string
 // newPVCTemplateCSI returns the default template for this jig, but
 // does not actually create the PVC.  The default PVC has the same name
 // as the jig
-func (j *PVCTestJig) newPVCTemplateCSI(namespace string, volumeSize string, scName string, adLabel string) *v1.PersistentVolumeClaim {
+func (j *PVCTestJig) newPVCTemplateCSI(namespace string, volumeSize string, scName string) *v1.PersistentVolumeClaim {
 	return &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    namespace,
@@ -198,8 +197,8 @@ func (j *PVCTestJig) CreatePVorFailCSI(namespace string, scName string, ocid str
 // CreatePVCorFail creates a new claim based on the jig's
 // defaults. Callers can provide a function to tweak the claim object
 // before it is created.
-func (j *PVCTestJig) CreatePVCorFailCSI(namespace string, volumeSize string, scName string, adLabel string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
-	pvc := j.newPVCTemplateCSI(namespace, volumeSize, scName, adLabel)
+func (j *PVCTestJig) CreatePVCorFailCSI(namespace string, volumeSize string, scName string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
+	pvc := j.newPVCTemplateCSI(namespace, volumeSize, scName)
 	if tweak != nil {
 		tweak(pvc)
 	}
@@ -218,8 +217,8 @@ func (j *PVCTestJig) CreatePVCorFailCSI(namespace string, volumeSize string, scN
 // jig's defaults, waits for it to become ready, and then sanity checks it and
 // its dependant resources. Callers can provide a function to tweak the
 // PVC object before it is created.
-func (j *PVCTestJig) CreateAndAwaitPVCOrFailCSI(namespace string, volumeSize string, scName string, adLabel string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
-	pvc := j.CreatePVCorFailCSI(namespace, volumeSize, scName, adLabel, tweak)
+func (j *PVCTestJig) CreateAndAwaitPVCOrFailCSI(namespace string, volumeSize string, scName string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
+	pvc := j.CreatePVCorFailCSI(namespace, volumeSize, scName, tweak)
 	pvc = j.waitForConditionOrFail(namespace, pvc.Name, DefaultTimeout, "to be dynamically provisioned", func(pvc *v1.PersistentVolumeClaim) bool {
 		err := j.WaitForPVCPhase(v1.ClaimPending, namespace, pvc.Name)
 		if err != nil {
@@ -236,11 +235,11 @@ func (j *PVCTestJig) CreateAndAwaitPVCOrFailCSI(namespace string, volumeSize str
 // jig's defaults, waits for it to become ready, and then sanity checks it and
 // its dependant resources. Callers can provide a function to tweak the
 // PVC object before it is created.
-func (j *PVCTestJig) CreateAndAwaitStaticPVCOrFailCSI(namespace string, volumeSize string, scName string, adLabel string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
+func (j *PVCTestJig) CreateAndAwaitStaticPVCOrFailCSI(namespace string, volumeSize string, scName string, adLabel string, compartmentId string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
 
-	volumeOcid := j.CreateVolume(adLocation,"test-volume")
+	volumeOcid := j.CreateVolume(adLabel, compartmentId, "test-volume")
 
-	pv := j.CreatePVorFailCSI(namespace,scName, *volumeOcid)
+	pv := j.CreatePVorFailCSI(namespace, scName, *volumeOcid)
 	pv = j.waitForConditionOrFailForPV(pv.Name, DefaultTimeout, "to be dynamically provisioned", func(pvc *v1.PersistentVolume) bool {
 		err := j.WaitForPVPhase(v1.VolumeAvailable, pv.Name)
 		if err != nil {
@@ -250,7 +249,7 @@ func (j *PVCTestJig) CreateAndAwaitStaticPVCOrFailCSI(namespace string, volumeSi
 		return true
 	})
 
-	pvc := j.CreatePVCorFailCSI(namespace, volumeSize, scName, adLabel, tweak)
+	pvc := j.CreatePVCorFailCSI(namespace, volumeSize, scName, tweak)
 	pvc = j.waitForConditionOrFail(namespace, pvc.Name, DefaultTimeout, "to be dynamically provisioned", func(pvc *v1.PersistentVolumeClaim) bool {
 		err := j.WaitForPVCPhase(v1.ClaimPending, namespace, pvc.Name)
 		if err != nil {
@@ -264,9 +263,9 @@ func (j *PVCTestJig) CreateAndAwaitStaticPVCOrFailCSI(namespace string, volumeSi
 }
 
 // CreateVolume is a function to create the block volume
-func (j *PVCTestJig) CreateVolume(adLabel string, volName string) *string {
+func (j *PVCTestJig) CreateVolume(adLabel string, compartmentId string, volName string) *string {
 	var size int64 =50
-	var compartmentId = "ocid1.compartment.oc1..aaaaaaaai6jt6asobfmkm5geioeod3zh6nxzjiplu722opjuoxxrndxjos6q"
+	//var compartmentId = "ocid1.compartment.oc1..aaaaaaaai6jt6asobfmkm5geioeod3zh6nxzjiplu722opjuoxxrndxjos6q"
 	request := ocicore.CreateVolumeRequest{
 		CreateVolumeDetails: ocicore.CreateVolumeDetails {
 			AvailabilityDomain: &adLabel,
@@ -289,7 +288,7 @@ func (j *PVCTestJig) CreateVolume(adLabel string, volName string) *string {
 
 // newPODTemplate returns the default template for this jig,
 // creates the Pod. Attaches PVC to the Pod which is created by CSI
-func (j *PVCTestJig) NewPODForCSI(name string, namespace string, claimName string) {
+func (j *PVCTestJig) NewPODForCSI(name string, namespace string, claimName string, adLabel string) {
 	By("Creating a pod with the claiming PVC created by CSI")
 	pod, err := j.KubeClient.CoreV1().Pods(namespace).Create(&v1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -304,7 +303,7 @@ func (j *PVCTestJig) NewPODForCSI(name string, namespace string, claimName strin
 			Containers: []v1.Container{
 				{
 					Name:  name,
-					Image: "centos",
+					Image: centos,
 					Command: []string{"/bin/sh"},
 					Args:    []string{"-c", "while true; do echo $(date -u) >> /data/out.txt; sleep 5; done"},
 					VolumeMounts: []v1.VolumeMount{
@@ -324,6 +323,9 @@ func (j *PVCTestJig) NewPODForCSI(name string, namespace string, claimName strin
 						},
 					},
 				},
+			},
+			NodeSelector: map[string]string{
+				plugin.LabelZoneFailureDomain: adLabel,
 			},
 		},
 	})
