@@ -13,6 +13,10 @@ import (
 	oke "github.com/oracle/oci-go-sdk/containerengine"
 )
 
+var (
+	tenanciesBOAT = []string{"ocid1.tenancy.oc1..aaaaaaaagkbzgg6lpzrf47xzy4rjoxg4de6ncfiq2rncmjiujvy2hjgxvziq","ocid1.tenancy.oc2..aaaaaaaagwtifvnhpr2zoymzwmqk364ycc5fspwx2zzc577cxmmnimazi6nq","ocid1.tenancy.oc3..aaaaaaaatg7khloug5adtynfkhhhr6ysky5fxb57ghqp3ddpqwqvcavznnnq","ocid1.tenancy.oc4..aaaaaaaak37nmbaszvdjdrmkvcvlypax53ila3yajff5tgdffk5njsm2czsa","ocid1.tenancy.oc5..aaaaaaaalfjjthxqwuoxh6ps4aqx62zc46w3aj5n425y3dpvqlqwkant5gda", "ocid1.tenancy.oc6..aaaaaaaalfjjthxqwuoxh6ps4aqx62zc46w3aj5n425y3dpvqlqwkant5gda", "ocid1.tenancy.oc7..aaaaaaaalfjjthxqwuoxh6ps4aqx62zc46w3aj5n425y3dpvqlqwkant5gda"}
+)
+
 // NodePoolCreateConfig contains values that can be specified when creating a NodePool.
 type NodePoolCreateConfig struct {
 	ClusterID string
@@ -53,6 +57,10 @@ func (f *Framework) GetNodePoolOptions(nodePoolOptionId string) oke.NodePoolOpti
 	if f.authType == ServiceAuth && crossTenancy != "" {
 		compartmentId = f.Compartment1
 	}
+	// if BOAT tenancy, set the compartmentId in the request
+	if isBOATTenancy(f.Tenancy) {
+		compartmentId = f.Compartment1
+	}
 	response, err := f.clustersClient.GetNodePoolOptions(ctx, oke.GetNodePoolOptionsRequest{
 		NodePoolOptionId: &id,
 		CompartmentId:    &compartmentId,
@@ -61,6 +69,15 @@ func (f *Framework) GetNodePoolOptions(nodePoolOptionId string) oke.NodePoolOpti
 
 	Expect(err).NotTo(HaveOccurred())
 	return response.NodePoolOptions
+}
+
+func isBOATTenancy(tenancy string) bool {
+	for _, bTenancy := range tenanciesBOAT {
+		if tenancy == bTenancy {
+			return true
+		}
+	}
+	return false
 }
 
 // ListNodePoolShapes return the set of instance shapes available to nodepools.

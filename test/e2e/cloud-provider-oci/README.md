@@ -11,13 +11,13 @@ You need to have [ginkgo][2] installed and configured.
 There are 2 options to run the tests. 
 
 ## Option 1.
-For a simpler way to run e2e tests locally, follow the template [here](../../../hack/dev0-env-template.sh). This template is intended for running e2e-tests against dev0-iad but can be modified to run against your dev environment.
+For a simpler way to run e2e tests locally, follow the template [here](../../../hack/cluster-create-dev0-env-template.sh). This template is intended for running e2e-tests against dev0-iad but can be modified to run against your dev environment.
 Option 1 creates a cluster using the environment variables set by you. All the tests are then run on this newly created cluster.
 
 To set the variables, run
 
 ```bash
-source ./dev0-env-template.sh
+source hack/cluster-create-dev0-env-template.sh
 ```
 
 Then run
@@ -27,19 +27,16 @@ make run-ccm-e2e-tests-local
 ```
 
 ## Option 2.
-You can skip setting the above environments variables if you already have a cluster and wish to run the tests on your existing cluster.
+If you already have a cluster and wish to run the tests on your existing cluster. follow the template [here](../../../hack/existing-cluster-dev0-env-template.sh)
+It will not create a new cluster and use the one provided by you. 
 
-Define the following environment variables in your shell environment - 
+To set the variables, run
 
 ```bash
-export LOCAL_RUN=1
-export TC_BUILD=0
-export ENABLE_CREATE_CLUSTER=false
-# ADLOCATION example is IqDk:US-ASHBURN-AD-1
-export ADLOCATION=<adlocation>
-export CLUSTER_KUBECONFIG=<file path to your cluster's kubeconfig>
-export CLOUD_CONFIG=<path that points to cloud-provider.yaml for your cluster>
+source hack/existing-cluster-dev0-env-template.sh
 ```
+
+Then run
 
 ```bash
 make run-ccm-e2e-tests-local
