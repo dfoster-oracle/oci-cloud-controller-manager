@@ -95,7 +95,6 @@ if [ "$ENABLE_CREATE_CLUSTER" == "true" ]; then
     check-env "OCI_REGION"      $OCI_REGION
     check-env "ADLOCATION"      $ADLOCATION
     check-env "COMPARTMENT1"    $COMPARTMENT
-    check-env "COMPARTMENT2"    $COMPARTMENT2
     check-env "VCN"             $VCN
     check-env "LBSUBNET1"       $LBSUBNET1
     check-env "LBSUBNET2"       $LBSUBNET2
@@ -159,7 +158,6 @@ function run_e2e_tests() {
         --ocitenancy=${OCI_TENANCY} \
         --ociregion=${OCI_REGION} \
         --compartment1=${COMPARTMENT} \
-        --compartment2=${COMPARTMENT2} \
         --vcn=${VCN} \
         --lbsubnet1=${LBSUBNET1} \
         --lbsubnet2=${LBSUBNET2} \
@@ -237,7 +235,6 @@ if [ "$ENABLE_CREATE_CLUSTER" == "true" ]; then
     echo "OCI_TENANCY is ${OCI_TENANCY}"
     echo "OCI_REGION  is  ${OCI_REGION}"
     echo "COMPARTMENT is ${COMPARTMENT}"
-    echo "COMPARTMENT2 is ${COMPARTMENT2}"
     echo "VCN  is ${VCN}"
     echo "LBSUBNET1  is  ${LBSUBNET1}"
     echo "LBSUBNET2  is  ${LBSUBNET2}"

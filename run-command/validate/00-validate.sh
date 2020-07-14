@@ -33,7 +33,6 @@ run_tests() {
           --rm \
           -w /go/src/github.com/oracle/oci-cloud-controller-manager \
           -e COMPARTMENT \
-          -e COMPARTMENT2 \
           -e LBRGNSUBNET \
           -e LBSUBNET1 \
           -e LBSUBNET2 \
