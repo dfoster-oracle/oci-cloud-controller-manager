@@ -25,10 +25,10 @@ import (
 
 const exampleResponse = `{
   "availabilityDomain" : "NWuj:PHX-AD-1",
-  "compartmentId" : "ocid1.compartment.oc1..aaaaaaaa3um2atybwhder4qttfhgon4j3hcxgmsvnyvx4flfjyewkkwfzwnq",
+  "compartmentId" : "ocid1.compartment.oc1..abc",
   "displayName" : "trjl-kb8s-master",
-  "id" : "ocid1.instance.oc1.phx.abyhqljtj775udgtbu7nddt6j2hqgxdsgrnpweepogvvsmqfppefewile5zq",
-  "image" : "ocid1.image.oc1.phx.aaaaaaaaamx6ta37uxltor6n5lxfgd5lkb3lwmoqurlpn2x4dz5ockekiuea",
+  "id" : "ocid1.instance.oc1.phx.xyz",
+  "image" : "ocid1.image.oc1.phx.pqr",
   "metadata" : {
     "ssh_authorized_keys" : "ssh-rsa some-key-data tlangfor@tlangfor-mac\n"
   },
@@ -56,7 +56,7 @@ func TestGetMetadata(t *testing.T) {
 			endpoint: "opc/v1/instance",
 			expected: Result{
 				metadata: &InstanceMetadata{
-					CompartmentID:       "ocid1.compartment.oc1..aaaaaaaa3um2atybwhder4qttfhgon4j3hcxgmsvnyvx4flfjyewkkwfzwnq",
+					CompartmentID:       "ocid1.compartment.oc1..abc",
 					Region:              "phx",
 					CanonicalRegionName: "us-phoenix-1",
 				},
@@ -71,7 +71,7 @@ func TestGetMetadata(t *testing.T) {
 			endpoint: "opc/v2/instance",
 			expected: Result{
 				metadata: &InstanceMetadata{
-					CompartmentID:       "ocid1.compartment.oc1..aaaaaaaa3um2atybwhder4qttfhgon4j3hcxgmsvnyvx4flfjyewkkwfzwnq",
+					CompartmentID:       "ocid1.compartment.oc1..abc",
 					Region:              "phx",
 					CanonicalRegionName: "us-phoenix-1",
 				},
@@ -101,7 +101,7 @@ func TestGetMetadata(t *testing.T) {
 			endpoint: "opc/v2/instance",
 			expected: Result{
 				metadata: &InstanceMetadata{
-					CompartmentID:       "ocid1.compartment.oc1..aaaaaaaa3um2atybwhder4qttfhgon4j3hcxgmsvnyvx4flfjyewkkwfzwnq",
+					CompartmentID:       "ocid1.compartment.oc1..abc",
 					Region:              "phx",
 					CanonicalRegionName: "us-phoenix-1",
 				},
