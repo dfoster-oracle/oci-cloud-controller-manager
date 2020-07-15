@@ -105,7 +105,7 @@ type LBSpec struct {
 }
 
 // NewLBSpec creates a LB Spec from a Kubernetes service and a slice of nodes.
-func NewLBSpec(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, defaultSubnets []string, sslConfig *SSLConfig, secListFactory securityListManagerFactory) (*LBSpec, error) {
+func NewLBSpec(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, subnets []string, sslConfig *SSLConfig, secListFactory securityListManagerFactory) (*LBSpec, error) {
 	if err := validateService(svc); err != nil {
 		return nil, errors.Wrap(err, "invalid service")
 	}
@@ -122,40 +122,6 @@ func NewLBSpec(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, def
 	sourceCIDRs, err := getLoadBalancerSourceRanges(svc)
 	if err != nil {
 		return nil, err
-	}
-
-	// NOTE: These will be overridden for existing load balancers as load
-	// balancer subnets cannot be modified.
-	subnets := defaultSubnets
-
-	//Below annotations will be deprecated in future releases.
-	if s, ok := svc.Annotations[ServiceAnnotationLoadBalancerSubnet1]; ok {
-		subnets[0] = s
-	}
-	if s, ok := svc.Annotations[ServiceAnnotationLoadBalancerSubnet2]; ok {
-		if len(subnets) > 1 {
-			subnets[1] = s
-		} else {
-			subnets = append(subnets, s)
-		}
-	}
-
-	//ServiceAnnotationLoadBalancerSubnets annotation overrides old annotations
-	if s, ok := svc.Annotations[ServiceAnnotationLoadBalancerSubnets]; ok {
-		subnets = strings.Split(s, ",")
-	}
-
-	for i, s := range subnets {
-		subnets[i] = strings.TrimSpace(s)
-	}
-
-	if internal {
-		// Only public load balancers need two subnets.  Internal load
-		// balancers will always use the first subnet.
-		if subnets[0] == "" {
-			return nil, errors.Errorf("a configuration for subnet1 must be specified for an internal load balancer")
-		}
-		subnets = subnets[:1]
 	}
 
 	listeners, err := getListeners(svc, sslConfig)
