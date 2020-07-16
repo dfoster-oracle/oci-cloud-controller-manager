@@ -294,7 +294,7 @@ func (p *MockProvisionerClient) Timeout() time.Duration {
 
 // TenancyOCID mocks client TenancyOCID implementation
 func (p *MockProvisionerClient) TenancyOCID() string {
-	return "ocid1.tenancy.oc1..aaaaaaaatyn7scrtwtqedvgrxgr2xunzeo6uanvyhzxqblctwkrpisvke4kq"
+	return "ocid1.tenancy.oc1..aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 }
 
 type MockLoadBalancerClient struct{}

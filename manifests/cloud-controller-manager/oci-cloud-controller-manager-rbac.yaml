@@ -45,6 +45,15 @@ rules:
   - update
 
 - apiGroups:
+    - ""
+  resources:
+    - configmaps
+  resourceNames:
+    - "extension-apiserver-authentication"
+  verbs:
+    - get
+
+- apiGroups:
   - ""
   resources:
   - events

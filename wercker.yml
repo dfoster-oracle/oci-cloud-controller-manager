@@ -84,8 +84,8 @@ publish-docker-image:
 #        export VERSION=$(make version)
 #        echo "Running CCM tests version: ${VERSION}"
 #        export NODEPORT_TEST="true"
-#        export CCM_SECLIST_ID="ocid1.securitylist.oc1.iad.aaaaaaaagekgnvc75yxb66xj2qgocejhyk5xuhojm6wimmteqa5fj43kk5lq"
-#        export K8S_SECLIST_ID="ocid1.securitylist.oc1.iad.aaaaaaaajzgrgfma2xzzdv4erczaiphuyaflazbt2bvzw2cwj2pxo3fygo5a"
+#        export CCM_SECLIST_ID="ocid1.securitylist.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+#        export K8S_SECLIST_ID="ocid1.securitylist.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 #
 #        if [ -z "${KUBECONFIG}" ]; then
 #            if [ -z "${KUBECONFIG_VAR}" ]; then
@@ -131,7 +131,7 @@ publish-docker-image:
 #        export KUBECONFIG="/tmp/kubeconfig"
 #        echo -n "${KUBECONFIG_VAR}" | openssl enc -base64 -d -A > "${KUBECONFIG}"
 #
-#        export MOUNT_TARGET_ID="ocid1.mounttarget.oc1.iad.aaaaaby27vezbb5cnfqwillqojxwiotjmfsc2ylefuzqaaaa"
+#        export MOUNT_TARGET_ID="ocid1.mounttarget.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 #
 #        ginkgo \
 #          -v \
