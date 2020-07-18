@@ -19,7 +19,6 @@ import (
 	"errors"
 	"reflect"
 	"testing"
-	"time"
 
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
@@ -95,33 +94,33 @@ var (
 			VcnId:    common.String("vcnwithoutdnslabel"),
 		},
 		"one": &core.Subnet{
-			Id:       common.String("one"),
-			DnsLabel: common.String("subnetwithnovcndnslabel"),
-			VcnId:    common.String("vcnwithoutdnslabel"),
+			Id:                 common.String("one"),
+			DnsLabel:           common.String("subnetwithnovcndnslabel"),
+			VcnId:              common.String("vcnwithoutdnslabel"),
 			AvailabilityDomain: common.String("AD1"),
 		},
 		"two": &core.Subnet{
-			Id:       common.String("two"),
-			DnsLabel: common.String("subnetwithnovcndnslabel"),
-			VcnId:    common.String("vcnwithoutdnslabel"),
+			Id:                 common.String("two"),
+			DnsLabel:           common.String("subnetwithnovcndnslabel"),
+			VcnId:              common.String("vcnwithoutdnslabel"),
 			AvailabilityDomain: common.String("AD2"),
 		},
 		"annotation-one": &core.Subnet{
-			Id:       common.String("annotation-one"),
-			DnsLabel: common.String("subnetwithnovcndnslabel"),
-			VcnId:    common.String("vcnwithoutdnslabel"),
+			Id:                 common.String("annotation-one"),
+			DnsLabel:           common.String("subnetwithnovcndnslabel"),
+			VcnId:              common.String("vcnwithoutdnslabel"),
 			AvailabilityDomain: common.String("AD1"),
 		},
 		"annotation-two": &core.Subnet{
-			Id:       common.String("annotation-two"),
-			DnsLabel: common.String("subnetwithnovcndnslabel"),
-			VcnId:    common.String("vcnwithoutdnslabel"),
+			Id:                 common.String("annotation-two"),
+			DnsLabel:           common.String("subnetwithnovcndnslabel"),
+			VcnId:              common.String("vcnwithoutdnslabel"),
 			AvailabilityDomain: common.String("AD2"),
 		},
 		"regional-subnet": &core.Subnet{
-			Id:       common.String("regional-subnet"),
-			DnsLabel: common.String("subnetwithnovcndnslabel"),
-			VcnId:    common.String("vcnwithoutdnslabel"),
+			Id:                 common.String("regional-subnet"),
+			DnsLabel:           common.String("subnetwithnovcndnslabel"),
+			VcnId:              common.String("vcnwithoutdnslabel"),
 			AvailabilityDomain: nil,
 		},
 	}
@@ -226,7 +225,7 @@ func (c *MockVirtualNetworkClient) GetSecurityList(ctx context.Context, id strin
 	return core.GetSecurityListResponse{}, nil
 }
 
-func (c *MockVirtualNetworkClient) UpdateSecurityList(ctx context.Context, request core.UpdateSecurityListRequest) (core.UpdateSecurityListResponse, error) {
+func (c *MockVirtualNetworkClient) UpdateSecurityList(ctx context.Context, id string, etag string, ingressRules []core.IngressSecurityRule, egressRules []core.EgressSecurityRule) (core.UpdateSecurityListResponse, error) {
 	return core.UpdateSecurityListResponse{}, nil
 }
 
@@ -296,11 +295,7 @@ func (c *MockLoadBalancerClient) AwaitWorkRequest(ctx context.Context, id string
 // MockBlockStorageClient mocks BlockStoargae client implementation
 type MockBlockStorageClient struct{}
 
-func (MockBlockStorageClient) AwaitVolumeAvailable(ctx context.Context, id string) (*core.Volume, error) {
-	return nil, nil
-}
-
-func (MockBlockStorageClient) AwaitVolumeAvailableORTimeout(ctx context.Context, id string, timeout time.Duration) (*core.Volume, error) {
+func (MockBlockStorageClient) AwaitVolumeAvailableORTimeout(ctx context.Context, id string) (*core.Volume, error) {
 	return nil, nil
 }
 
