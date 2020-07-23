@@ -697,6 +697,47 @@ func TestGetListenerChanges(t *testing.T) {
 			},
 		},
 		{
+			name: "proxy protocol version change",
+			desired: map[string]loadbalancer.ListenerDetails{
+				"TCP-80": loadbalancer.ListenerDetails{
+					DefaultBackendSetName: common.String("TCP-80"),
+					Protocol:              common.String("TCP"),
+					Port:                  common.Int(80),
+					ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
+						IdleTimeout: common.Int64(100),
+						BackendTcpProxyProtocolVersion: common.Int(2),
+					},
+				},
+			},
+			actual: map[string]loadbalancer.Listener{
+				"TCP-80": loadbalancer.Listener{
+					Name:                  common.String("TCP-80"),
+					DefaultBackendSetName: common.String("TCP-80"),
+					Protocol:              common.String("TCP"),
+					Port:                  common.Int(80),
+					ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
+						IdleTimeout: common.Int64(100),
+						BackendTcpProxyProtocolVersion: nil,
+					},
+				},
+			},
+			expected: []Action{
+				&ListenerAction{
+					name:       "TCP-80",
+					actionType: Update,
+					Listener: loadbalancer.ListenerDetails{
+						DefaultBackendSetName: common.String("TCP-80"),
+						Protocol:              common.String("TCP"),
+						Port:                  common.Int(80),
+						ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
+							IdleTimeout: common.Int64(100),
+							BackendTcpProxyProtocolVersion: common.Int(2),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "ssl config change [legacy listeners]",
 			desired: map[string]loadbalancer.ListenerDetails{
 				"TCP-80": loadbalancer.ListenerDetails{
@@ -1095,6 +1136,7 @@ func TestHasListenerChanged(t *testing.T) {
 				},
 				ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
 					IdleTimeout: common.Int64(300),
+					BackendTcpProxyProtocolVersion: common.Int(1),
 				},
 			},
 			actual: loadbalancer.Listener{
@@ -1467,6 +1509,7 @@ func TestGetConnectionConfigurationChanges(t *testing.T) {
 			},
 			expected: []string{
 				fmt.Sprintf(changeFmtStr, "Listner:ConnectionConfiguration:IdleTimeout", 400, 300),
+				fmt.Sprintf(changeFmtStr, "Listner:ConnectionConfiguration:BackendTcpProxyProtocolVersion", 3, 2),
 			},
 		},
 	}

@@ -74,6 +74,10 @@ const (
 	// on the service to specify the idle connection timeout.
 	ServiceAnnotationLoadBalancerConnectionIdleTimeout = "service.beta.kubernetes.io/oci-load-balancer-connection-idle-timeout"
 
+	// ServiceAnnotationLoadBalancerConnectionProxyProtocolVersion is the annotation used
+	// on the service to specify the proxy protocol version.
+	ServiceAnnotationLoadBalancerConnectionProxyProtocolVersion = "service.beta.kubernetes.io/oci-load-balancer-connection-proxy-protocol-version"
+
 	// ServiceAnnotaionLoadBalancerSecurityListManagementMode is a Service annotation for
 	// specifying the security list managment mode ("All", "Frontend", "None") that configures how security lists are managed by the CCM
 	ServiceAnnotaionLoadBalancerSecurityListManagementMode = "service.beta.kubernetes.io/oci-load-balancer-security-list-management-mode"
@@ -100,6 +104,11 @@ const (
 	lbNodesHealthCheckPort      = k8sports.ProxyHealthzPort
 	lbNodesHealthCheckProtoHTTP = "HTTP"
 	lbNodesHealthCheckProtoTCP  = "TCP"
+
+	// default connection idle timeout per protocol
+	// https://docs.cloud.oracle.com/en-us/iaas/Content/Balance/Reference/connectionreuse.htm#ConnectionConfiguration
+	lbConnectionIdleTimeoutTCP = 300
+	lbConnectionIdleTimeoutHTTP = 60
 )
 
 // GetLoadBalancerName returns the name of the loadbalancer
