@@ -91,7 +91,6 @@ const (
 	// returns within this timeout period.
 	ServiceAnnotationLoadBalancerHealthCheckTimeout = "service.beta.kubernetes.io/oci-load-balancer-health-check-timeout"
 
-
 	// ServiceAnnotationLoadBalancerBEProtocol is a Service annotation for specifying the
 	// load balancer listener backend protocol ("TCP", "HTTP").
 	// See: https://docs.cloud.oracle.com/iaas/Content/Balance/Concepts/balanceoverview.htm#concepts
@@ -117,7 +116,7 @@ const (
 
 	// default connection idle timeout per protocol
 	// https://docs.cloud.oracle.com/en-us/iaas/Content/Balance/Reference/connectionreuse.htm#ConnectionConfiguration
-	lbConnectionIdleTimeoutTCP = 300
+	lbConnectionIdleTimeoutTCP  = 300
 	lbConnectionIdleTimeoutHTTP = 60
 )
 
@@ -457,10 +456,6 @@ func (cp *CloudProvider) updateLoadBalancer(ctx context.Context, lb *loadbalance
 	desiredListeners := spec.Listeners
 	listenerActions := getListenerChanges(logger, actualListeners, desiredListeners)
 
-	if len(backendSetActions) == 0 && len(listenerActions) == 0 {
-		return nil // Nothing to do.
-	}
-
 	lbSubnets, err := getSubnets(ctx, spec.Subnets, cp.client.Networking())
 	if err != nil {
 		return errors.Wrapf(err, "getting load balancer subnets")
@@ -468,6 +463,19 @@ func (cp *CloudProvider) updateLoadBalancer(ctx context.Context, lb *loadbalance
 	nodeSubnets, err := getSubnetsForNodes(ctx, spec.nodes, cp.client, cp.config.CompartmentID)
 	if err != nil {
 		return errors.Wrap(err, "get subnets for nodes")
+	}
+
+	if len(backendSetActions) == 0 && len(listenerActions) == 0 {
+		// If there are no backendSetActions or Listener actions
+		// this function must have been called because of a failed
+		// seclist update when the load balancer was created
+		// We try to update the seclist this way to prevent replication
+		// of seclist reconciliation logic
+		for _, ports := range spec.Ports {
+			if err = spec.securityListManager.Update(ctx, lbSubnets, nodeSubnets, spec.SourceCIDRs, nil, ports); err != nil {
+				return err
+			}
+		}
 	}
 
 	actions := sortAndCombineActions(logger, backendSetActions, listenerActions)
