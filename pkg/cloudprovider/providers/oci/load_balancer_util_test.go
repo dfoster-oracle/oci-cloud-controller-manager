@@ -1231,6 +1231,11 @@ func TestHasListenerChanged(t *testing.T) {
 	}
 }
 
+var (
+	testBackendPort    = int(30500)
+	testNewBackendPort = int(30600)
+)
+
 func TestHasBackendSetChanged(t *testing.T) {
 	var testCases = []struct {
 		name     string
@@ -1401,13 +1406,13 @@ func TestHasBackendSetChanged(t *testing.T) {
 			name: "HealthChecker retries changes",
 			desired: loadbalancer.BackendSetDetails{
 				HealthChecker: &loadbalancer.HealthCheckerDetails{
-					Port:            common.Int(20),
+					Port:    common.Int(20),
 					Retries: common.Int(2),
 				},
 			},
 			actual: loadbalancer.BackendSet{
 				HealthChecker: &loadbalancer.HealthChecker{
-					Port:            common.Int(20),
+					Port:    common.Int(20),
 					Retries: common.Int(3),
 				},
 			},
@@ -1417,13 +1422,13 @@ func TestHasBackendSetChanged(t *testing.T) {
 			name: "HealthChecker IntervalInMillis changes",
 			desired: loadbalancer.BackendSetDetails{
 				HealthChecker: &loadbalancer.HealthCheckerDetails{
-					Port:            common.Int(20),
+					Port:             common.Int(20),
 					IntervalInMillis: common.Int(1000),
 				},
 			},
 			actual: loadbalancer.BackendSet{
 				HealthChecker: &loadbalancer.HealthChecker{
-					Port:            common.Int(20),
+					Port:             common.Int(20),
 					IntervalInMillis: common.Int(300),
 				},
 			},
@@ -1439,7 +1444,7 @@ func TestHasBackendSetChanged(t *testing.T) {
 			},
 			actual: loadbalancer.BackendSet{
 				HealthChecker: &loadbalancer.HealthChecker{
-					Port:            common.Int(20),
+					Port: common.Int(20),
 				},
 			},
 			expected: true,
@@ -1448,13 +1453,13 @@ func TestHasBackendSetChanged(t *testing.T) {
 			name: "HealthChecker retries present in desired and not in actual",
 			desired: loadbalancer.BackendSetDetails{
 				HealthChecker: &loadbalancer.HealthCheckerDetails{
-					Port:            common.Int(20),
+					Port:    common.Int(20),
 					Retries: common.Int(2),
 				},
 			},
 			actual: loadbalancer.BackendSet{
 				HealthChecker: &loadbalancer.HealthChecker{
-					Port:            common.Int(20),
+					Port: common.Int(20),
 				},
 			},
 			expected: true,
@@ -1463,13 +1468,13 @@ func TestHasBackendSetChanged(t *testing.T) {
 			name: "HealthChecker IntervalInMillis present in desired and not in actual",
 			desired: loadbalancer.BackendSetDetails{
 				HealthChecker: &loadbalancer.HealthCheckerDetails{
-					Port:            common.Int(20),
+					Port:             common.Int(20),
 					IntervalInMillis: common.Int(1000),
 				},
 			},
 			actual: loadbalancer.BackendSet{
 				HealthChecker: &loadbalancer.HealthChecker{
-					Port:            common.Int(20),
+					Port: common.Int(20),
 				},
 			},
 			expected: true,
@@ -1478,7 +1483,7 @@ func TestHasBackendSetChanged(t *testing.T) {
 			name: "HealthChecker TimeoutInMillis present in actual and not in desired",
 			desired: loadbalancer.BackendSetDetails{
 				HealthChecker: &loadbalancer.HealthCheckerDetails{
-					Port:            common.Int(20),
+					Port: common.Int(20),
 				},
 			},
 			actual: loadbalancer.BackendSet{
@@ -1493,12 +1498,12 @@ func TestHasBackendSetChanged(t *testing.T) {
 			name: "HealthChecker retries present in actual and not in desired",
 			desired: loadbalancer.BackendSetDetails{
 				HealthChecker: &loadbalancer.HealthCheckerDetails{
-					Port:            common.Int(20),
+					Port: common.Int(20),
 				},
 			},
 			actual: loadbalancer.BackendSet{
 				HealthChecker: &loadbalancer.HealthChecker{
-					Port:            common.Int(20),
+					Port:    common.Int(20),
 					Retries: common.Int(2),
 				},
 			},
@@ -1508,12 +1513,12 @@ func TestHasBackendSetChanged(t *testing.T) {
 			name: "HealthChecker IntervalInMillis present in actual and not in desired",
 			desired: loadbalancer.BackendSetDetails{
 				HealthChecker: &loadbalancer.HealthCheckerDetails{
-					Port:            common.Int(20),
+					Port: common.Int(20),
 				},
 			},
 			actual: loadbalancer.BackendSet{
 				HealthChecker: &loadbalancer.HealthChecker{
-					Port:            common.Int(20),
+					Port:             common.Int(20),
 					IntervalInMillis: common.Int(1000),
 				},
 			},
@@ -1570,6 +1575,46 @@ func TestHasBackendSetChanged(t *testing.T) {
 				},
 			},
 			expected: false,
+		},
+		{
+			name: "no change - nodeport",
+			desired: loadbalancer.BackendSetDetails{
+				Policy: common.String("policy"),
+				Backends: []loadbalancer.BackendDetails{
+					{
+						Port: &testBackendPort,
+					},
+				},
+			},
+			actual: loadbalancer.BackendSet{
+				Policy: common.String("policy"),
+				Backends: []loadbalancer.Backend{
+					{
+						Port: &testBackendPort,
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "nodeport change",
+			desired: loadbalancer.BackendSetDetails{
+				Policy: common.String("policy"),
+				Backends: []loadbalancer.BackendDetails{
+					{
+						Port: &testBackendPort,
+					},
+				},
+			},
+			actual: loadbalancer.BackendSet{
+				Policy: common.String("policy"),
+				Backends: []loadbalancer.Backend{
+					{
+						Port: &testNewBackendPort,
+					},
+				},
+			},
+			expected: true,
 		},
 	}
 
