@@ -704,7 +704,7 @@ func TestGetListenerChanges(t *testing.T) {
 					Protocol:              common.String("TCP"),
 					Port:                  common.Int(80),
 					ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
-						IdleTimeout: common.Int64(100),
+						IdleTimeout:                    common.Int64(100),
 						BackendTcpProxyProtocolVersion: common.Int(2),
 					},
 				},
@@ -716,7 +716,7 @@ func TestGetListenerChanges(t *testing.T) {
 					Protocol:              common.String("TCP"),
 					Port:                  common.Int(80),
 					ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
-						IdleTimeout: common.Int64(100),
+						IdleTimeout:                    common.Int64(100),
 						BackendTcpProxyProtocolVersion: nil,
 					},
 				},
@@ -730,7 +730,7 @@ func TestGetListenerChanges(t *testing.T) {
 						Protocol:              common.String("TCP"),
 						Port:                  common.Int(80),
 						ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
-							IdleTimeout: common.Int64(100),
+							IdleTimeout:                    common.Int64(100),
 							BackendTcpProxyProtocolVersion: common.Int(2),
 						},
 					},
@@ -771,6 +771,64 @@ func TestGetListenerChanges(t *testing.T) {
 						SslConfiguration: &loadbalancer.SslConfigurationDetails{
 							CertificateName: common.String("desired"),
 						},
+					},
+				},
+			},
+		},
+		{
+			name: "protocol change TCP to HTTP",
+			desired: map[string]loadbalancer.ListenerDetails{
+				"HTTP-80": loadbalancer.ListenerDetails{
+					DefaultBackendSetName: common.String("TCP-80"),
+					Protocol:              common.String("HTTP"),
+					Port:                  common.Int(80),
+				},
+			},
+			actual: map[string]loadbalancer.Listener{
+				"TCP-80": loadbalancer.Listener{
+					Name:                  common.String("TCP-80"),
+					DefaultBackendSetName: common.String("TCP-80"),
+					Protocol:              common.String("TCP"),
+					Port:                  common.Int(80),
+				},
+			},
+			expected: []Action{
+				&ListenerAction{
+					name:       "TCP-80",
+					actionType: Update,
+					Listener: loadbalancer.ListenerDetails{
+						DefaultBackendSetName: common.String("TCP-80"),
+						Protocol:              common.String("HTTP"),
+						Port:                  common.Int(80),
+					},
+				},
+			},
+		},
+		{
+			name: "protocol change HTTP to TCP",
+			desired: map[string]loadbalancer.ListenerDetails{
+				"TCP-80": loadbalancer.ListenerDetails{
+					DefaultBackendSetName: common.String("TCP-80"),
+					Protocol:              common.String("TCP"),
+					Port:                  common.Int(80),
+				},
+			},
+			actual: map[string]loadbalancer.Listener{
+				"HTTP-80": loadbalancer.Listener{
+					Name:                  common.String("HTTP-80"),
+					DefaultBackendSetName: common.String("TCP-80"),
+					Protocol:              common.String("HTTP"),
+					Port:                  common.Int(80),
+				},
+			},
+			expected: []Action{
+				&ListenerAction{
+					name:       "HTTP-80",
+					actionType: Update,
+					Listener: loadbalancer.ListenerDetails{
+						DefaultBackendSetName: common.String("TCP-80"),
+						Protocol:              common.String("TCP"),
+						Port:                  common.Int(80),
 					},
 				},
 			},
@@ -931,6 +989,11 @@ func TestGetSanitizedName(t *testing.T) {
 		{
 			"new name (suffix secret name omitted)",
 			"TCP-80",
+			"TCP-80",
+		},
+		{
+			"Name has HTTP",
+			"HTTP-80",
 			"TCP-80",
 		},
 	}
@@ -1135,7 +1198,7 @@ func TestHasListenerChanged(t *testing.T) {
 					VerifyDepth:     common.Int(1),
 				},
 				ConnectionConfiguration: &loadbalancer.ConnectionConfiguration{
-					IdleTimeout: common.Int64(300),
+					IdleTimeout:                    common.Int64(300),
 					BackendTcpProxyProtocolVersion: common.Int(1),
 				},
 			},
