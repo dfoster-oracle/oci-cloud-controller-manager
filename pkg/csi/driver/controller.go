@@ -3,9 +3,10 @@ package driver
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
 	"strconv"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/oracle/oci-go-sdk/core"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -134,8 +135,9 @@ func (d *ControllerDriver) CreateVolume(ctx context.Context, req *csi.CreateVolu
 			return nil, status.Errorf(codes.Internal, "New volume creation failed %v", err.Error())
 		}
 	}
-
-	_, err = d.client.BlockStorage().AwaitVolumeAvailableORTimeout(ctx, *provisionedVolume.Id, timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	_, err = d.client.BlockStorage().AwaitVolumeAvailableORTimeout(ctx, *provisionedVolume.Id)
 	if err != nil {
 		log.With("volumeName", volumeName).Error("Create volume failed with time out")
 		status.Errorf(codes.DeadlineExceeded, "Create volume failed with time out")
