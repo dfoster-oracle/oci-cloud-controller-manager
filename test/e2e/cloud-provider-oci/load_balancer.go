@@ -27,7 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 	cloudprovider "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci"
 	sharedfw "github.com/oracle/oci-cloud-controller-manager/test/e2e/framework"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -40,7 +40,7 @@ var _ = Describe("Service [Slow]", func() {
 	f := sharedfw.NewDefaultFramework(baseName)
 
 	Context("[cloudprovider][ccm]", func() {
-		It("should be possible to create and mutate a Service type:LoadBalancer [Canary]", func() {
+		It("should be possible to create and mutate a Service type:LoadBalancer (change nodeport) [Canary]", func() {
 			serviceName := "basic-lb-test"
 			ns := f.Namespace.Name
 
@@ -721,8 +721,7 @@ var _ = Describe("LB Properties", func() {
 
 			By("changing TCP service health check config - remove annotations")
 			tcpService = jig.UpdateServiceOrFail(ns, tcpService.Name, func(s *v1.Service) {
-				s.ObjectMeta.Annotations = map[string]string{
-				}
+				s.ObjectMeta.Annotations = map[string]string{}
 			})
 
 			By("waiting upto 5m0s to verify health check config should fall back to default after removing annotations")
@@ -761,7 +760,7 @@ var _ = Describe("LB Properties", func() {
 				s.Spec.Ports = []v1.ServicePort{{Name: "http", Port: 80, TargetPort: intstr.FromInt(80)},
 					{Name: "https", Port: 443, TargetPort: intstr.FromInt(80)}}
 				s.ObjectMeta.Annotations = map[string]string{
-					cloudprovider.ServiceAnnotationLoadBalancerShape:  "400Mbps",
+					cloudprovider.ServiceAnnotationLoadBalancerShape: "400Mbps",
 				}
 
 			})
@@ -829,7 +828,7 @@ var _ = Describe("LB Properties", func() {
 				s.Spec.Ports = []v1.ServicePort{{Name: "http", Port: 80, TargetPort: intstr.FromInt(80)},
 					{Name: "https", Port: 443, TargetPort: intstr.FromInt(80)}}
 				s.ObjectMeta.Annotations = map[string]string{
-					cloudprovider.ServiceAnnotationLoadBalancerConnectionIdleTimeout:  "500",
+					cloudprovider.ServiceAnnotationLoadBalancerConnectionIdleTimeout: "500",
 				}
 			})
 
@@ -867,7 +866,7 @@ var _ = Describe("LB Properties", func() {
 			By("changing TCP service health check config")
 			tcpService = jig.UpdateServiceOrFail(ns, tcpService.Name, func(s *v1.Service) {
 				s.ObjectMeta.Annotations = map[string]string{
-					cloudprovider.ServiceAnnotationLoadBalancerConnectionIdleTimeout:  "800",
+					cloudprovider.ServiceAnnotationLoadBalancerConnectionIdleTimeout: "800",
 				}
 			})
 
@@ -889,4 +888,3 @@ var _ = Describe("LB Properties", func() {
 		})
 	})
 })
-
