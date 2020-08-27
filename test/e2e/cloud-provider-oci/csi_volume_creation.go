@@ -57,7 +57,12 @@ var _ = Describe("CSI Volume Creation", func() {
 
 			pvcJig.CheckVolumeCapacity("100Gi", pvc.Name, f.Namespace.Name)
 		})
+	})
+})
 
+var _ = Describe("CSI Static Volume Creation", func() {
+	f := framework.NewBackupFramework("csi-static")
+	Context("[cloudprovider][storage][csi]", func() {
 		It("Static Provisioning CSI", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-provisioner-e2e-tests-pvc-with-static")
 
@@ -73,7 +78,7 @@ var _ = Describe("CSI Volume Creation", func() {
 			} else {
 				framework.Failf("Compartment Id undefined.")
 			}
-			pvc := pvcJig.CreateAndAwaitStaticPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, setupF.AdLocation, compartmentId, nil)
+			pvc := pvcJig.CreateAndAwaitStaticPVCOrFailCSI(f.BlockStorageClient, f.Namespace.Name, framework.MinVolumeBlock, scName, setupF.AdLocation, compartmentId, nil)
 
 			pvcJig.NewPODForCSI("app4", f.Namespace.Name, pvc.Name, setupF.AdLabel)
 
