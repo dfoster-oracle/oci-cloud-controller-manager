@@ -35,7 +35,10 @@ var build string
 func GetLogPath() string {
 	path := os.Getenv("OCI_FLEXD_DRIVER_LOG_DIR")
 	if path == "" {
-		path = block.GetDriverDirectory()
+		path = "/var/log/oracle~oci"
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			os.Mkdir(path, 0755)
+		}
 	}
 	return path + "/oci_flexvolume_driver.log"
 }
