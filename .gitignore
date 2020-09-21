@@ -48,3 +48,7 @@ config.yaml
 
 .idea/
 *.iml
+
+/coverage.out
+/coverage.html
+/coverage.txt
