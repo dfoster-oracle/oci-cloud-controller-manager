@@ -106,6 +106,11 @@ vendor:
 test:
 	@./hack/test.sh $(SRC_DIRS)
 
+.PHONY: coverage
+coverage: test
+	go tool cover -html=coverage.out -o coverage.html
+	go tool cover -func=coverage.out > coverage.txt
+
 # Run the canary tests - in single run mode.
 .PHONY: canary-run-once
 canary-run-once:
