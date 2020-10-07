@@ -16,7 +16,6 @@ package framework
 
 import (
 	"fmt"
-	"github.com/oracle/oci-go-sdk/common"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"time"
@@ -235,9 +234,9 @@ func (j *PVCTestJig) CreateAndAwaitPVCOrFailCSI(namespace string, volumeSize str
 // jig's defaults, waits for it to become ready, and then sanity checks it and
 // its dependant resources. Callers can provide a function to tweak the
 // PVC object before it is created.
-func (j *PVCTestJig) CreateAndAwaitStaticPVCOrFailCSI(namespace string, volumeSize string, scName string, adLabel string, compartmentId string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
+func (j *PVCTestJig) CreateAndAwaitStaticPVCOrFailCSI(bs ocicore.BlockstorageClient, namespace string, volumeSize string, scName string, adLabel string, compartmentId string, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
 
-	volumeOcid := j.CreateVolume(adLabel, compartmentId, "test-volume")
+	volumeOcid := j.CreateVolume(bs, adLabel, compartmentId, "test-volume")
 
 	pv := j.CreatePVorFailCSI(namespace, scName, *volumeOcid)
 	pv = j.waitForConditionOrFailForPV(pv.Name, DefaultTimeout, "to be dynamically provisioned", func(pvc *v1.PersistentVolume) bool {
@@ -263,9 +262,8 @@ func (j *PVCTestJig) CreateAndAwaitStaticPVCOrFailCSI(namespace string, volumeSi
 }
 
 // CreateVolume is a function to create the block volume
-func (j *PVCTestJig) CreateVolume(adLabel string, compartmentId string, volName string) *string {
+func (j *PVCTestJig) CreateVolume(bs ocicore.BlockstorageClient, adLabel string, compartmentId string, volName string) *string {
 	var size int64 =50
-	//var compartmentId = "ocid1.compartment.oc1..aaaaaaaai6jt6asobfmkm5geioeod3zh6nxzjiplu722opjuoxxrndxjos6q"
 	request := ocicore.CreateVolumeRequest{
 		CreateVolumeDetails: ocicore.CreateVolumeDetails {
 			AvailabilityDomain: &adLabel,
@@ -275,10 +273,6 @@ func (j *PVCTestJig) CreateVolume(adLabel string, compartmentId string, volName 
 		},
 	}
 
-	bs, err := ocicore.NewBlockstorageClientWithConfigurationProvider(common.DefaultConfigProvider())
-	if err != nil {
-		Failf("Failed to create Block Storage Client: %v", err)
-	}
 	newVolume, err := bs.CreateVolume(context.Background(), request)
 	if err != nil {
 		Failf("Volume %q creation API error: %v", volName, err)
