@@ -42,7 +42,7 @@ const (
 	MinVolumeBlock    = "50Gi"
 	MaxVolumeBlock    = "100Gi"
 	VolumeFss         = "1Gi"
-	Netexec           = "netexec:1.1"
+	Agnhost           = "agnhost:2.6"
 	BusyBoxImage      = "busybox:latest"
 	Nginx             = "nginx:stable-alpine"
 	Centos            = "centos:latest"
@@ -76,20 +76,20 @@ var (
 	delegateGroupID              string
 	instanceCfg                  *DelegationPrincipalConfig
 	enableCreateCluster          bool
-	kmsKeyID                     string
-	adlocation                   string
-	clusterkubeconfig            string // path to kubeconfig file
-	deleteNamespace              bool   // whether or not to delete test namespaces
-	cloudConfigFile              string // path to cloud provider config file
-	nodePortTest                 bool   // whether or not to test the connectivity of node ports.
-	ccmSeclistID                 string // The ocid of the loadbalancer subnet seclist. Optional.
-	k8sSeclistID                 string // The ocid of the k8s worker subnet seclist. Optional.
-	mntTargetOCID                string // Mount Target ID is specified to identify the mount target to be attached to the volumes. Optional.
-	nginx						 string // Image for nginx
-	netexec                      string // Image for netexec
-	busyBoxImage                 string // Image for busyBoxImage
-	centos                       string // Image for centos
-	imagePullRepo                string // Repo to pull images from. Will pull public images if not specified.
+	kmsKeyID          string
+	adlocation        string
+	clusterkubeconfig string // path to kubeconfig file
+	deleteNamespace   bool   // whether or not to delete test namespaces
+	cloudConfigFile   string // path to cloud provider config file
+	nodePortTest      bool   // whether or not to test the connectivity of node ports.
+	ccmSeclistID      string // The ocid of the loadbalancer subnet seclist. Optional.
+	k8sSeclistID      string // The ocid of the k8s worker subnet seclist. Optional.
+	mntTargetOCID     string // Mount Target ID is specified to identify the mount target to be attached to the volumes. Optional.
+	nginx             string // Image for nginx
+	agnhost           string // Image for agnhost
+	busyBoxImage      string // Image for busyBoxImage
+	centos            string // Image for centos
+	imagePullRepo     string // Repo to pull images from. Will pull public images if not specified.
 )
 
 func init() {
@@ -725,12 +725,12 @@ func (f *Framework) SaveKubeConfig(kubeconfig string) error {
 
 func (f *Framework) setImages() {
 	if imagePullRepo != "" {
-		netexec = fmt.Sprintf("%s%s", imagePullRepo, Netexec)
+		agnhost = fmt.Sprintf("%s%s", imagePullRepo, Agnhost)
 		busyBoxImage = fmt.Sprintf("%s%s", imagePullRepo, BusyBoxImage)
 		nginx = fmt.Sprintf("%s%s", imagePullRepo, Nginx)
 		centos = fmt.Sprintf("%s%s", imagePullRepo, Centos)
 	} else {
-		netexec = imageutils.GetE2EImage(imageutils.Netexec)
+		agnhost = imageutils.GetE2EImage(imageutils.Agnhost)
 		busyBoxImage = BusyBoxImage
 		nginx = Nginx
 		centos = Centos
