@@ -61,10 +61,17 @@ func (f *Framework) GetNodePoolOptions(nodePoolOptionId string) oke.NodePoolOpti
 	if isBOATTenancy(f.Tenancy) {
 		compartmentId = f.Compartment1
 	}
-	response, err := f.clustersClient.GetNodePoolOptions(ctx, oke.GetNodePoolOptionsRequest{
+
+	request := oke.GetNodePoolOptionsRequest{
 		NodePoolOptionId: &id,
-		CompartmentId:    &compartmentId,
-	})
+	}
+
+	if len(compartmentId) > 0 {
+		request.CompartmentId = &compartmentId
+	}
+
+	response, err := f.clustersClient.GetNodePoolOptions(ctx, request)
+
 	Logf("nodePoolOptions : '%#v'", response.NodePoolOptions)
 
 	Expect(err).NotTo(HaveOccurred())

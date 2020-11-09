@@ -1,9 +1,9 @@
-FROM golang:1.10
+FROM golang:1.12
 
 ARG OCI_CLI_VERSION
 ARG KUBECTL_VERSION
 
-RUN apt-get update && apt-get install -y python3 openssl locales
+RUN apt-get update && apt-get install -y python3 python3-venv python3-distutils openssl locales
 RUN locale-gen C.UTF-8
 ENV LC_ALL="C.UTF-8"
 ENV LANG="C.UTF-8"
