@@ -52,7 +52,7 @@ NOTE: Test suite will fail if executed behind a `$HTTP_PROXY` that returns a
 
 The tests use below images - 
 *   nginx:stable-alpine
-*   netexec:1.1
+*   agnhost:2.6
 *   centos:latest
 *   busybox:latest
 

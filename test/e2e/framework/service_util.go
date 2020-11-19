@@ -228,7 +228,7 @@ func (j *ServiceTestJig) ChangeServiceType(namespace, name string, newType v1.Se
 // CreateOnlyLocalNodePortService creates a NodePort service with
 // ExternalTrafficPolicy set to Local and sanity checks its nodePort.
 // If createPod is true, it also creates an RC with 1 replica of
-// the standard netexec container used everywhere in this test.
+// the standard agnhost container used everywhere in this test.
 func (j *ServiceTestJig) CreateOnlyLocalNodePortService(namespace, serviceName string, createPod bool) *v1.Service {
 	By("creating a service " + namespace + "/" + serviceName + " with type=NodePort and ExternalTrafficPolicy=Local")
 	svc := j.CreateTCPServiceOrFail(namespace, func(svc *v1.Service) {
@@ -248,7 +248,7 @@ func (j *ServiceTestJig) CreateOnlyLocalNodePortService(namespace, serviceName s
 // CreateOnlyLocalLoadBalancerService creates a loadbalancer service with
 // ExternalTrafficPolicy set to Local and waits for it to acquire an ingress IP.
 // If createPod is true, it also creates an RC with 1 replica of
-// the standard netexec container used everywhere in this test.
+// the standard agnhost container used everywhere in this test.
 func (j *ServiceTestJig) CreateOnlyLocalLoadBalancerService(namespace, serviceName string, timeout time.Duration, createPod bool,
 	tweak func(svc *v1.Service)) *v1.Service {
 	By("creating a service " + namespace + "/" + serviceName + " with type=LoadBalancer and ExternalTrafficPolicy=Local")
@@ -573,7 +573,7 @@ func (j *ServiceTestJig) waitForConditionOrFail(namespace, name string, timeout 
 
 // newRCTemplate returns the default v1.ReplicationController object for
 // this jig, but does not actually create the RC.  The default RC has the same
-// name as the jig and runs the "netexec" container.
+// name as the jig and runs the "agnhost" container.
 func (j *ServiceTestJig) newRCTemplate(namespace string) *v1.ReplicationController {
 	var replicas int32 = 1
 
@@ -593,9 +593,9 @@ func (j *ServiceTestJig) newRCTemplate(namespace string) *v1.ReplicationControll
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Name:  "netexec",
-							Image: netexec,
-							Args:  []string{"--http-port=80", "--udp-port=80"},
+							Name:    "agnhost",
+							Image:   agnhost,
+							Args:    []string{"netexec", "--http-port=80" ,"--udp-port=80"},
 							ReadinessProbe: &v1.Probe{
 								PeriodSeconds: 3,
 								Handler: v1.Handler{

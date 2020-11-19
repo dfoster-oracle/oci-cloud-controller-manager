@@ -16,13 +16,16 @@ package nodedriverregistrar
 
 import (
 	"context"
-	"github.com/kubernetes-csi/csi-lib-utils/connection"
-	csirpc "github.com/kubernetes-csi/csi-lib-utils/rpc"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-node-driver/nodedriveroptions"
-	"k8s.io/klog"
-	registerapi "k8s.io/kubernetes/pkg/kubelet/apis/pluginregistration/v1alpha1"
 	"os"
 	"time"
+
+	"github.com/kubernetes-csi/csi-lib-utils/connection"
+	"github.com/kubernetes-csi/csi-lib-utils/metrics"
+	csirpc "github.com/kubernetes-csi/csi-lib-utils/rpc"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-node-driver/nodedriveroptions"
+
+	"k8s.io/klog"
+	registerapi "k8s.io/kubernetes/pkg/kubelet/apis/pluginregistration/v1alpha1"
 )
 
 const (
@@ -91,8 +94,10 @@ func RunNodeRegistrar(nodecsioptions nodedriveroptions.NodeCSIOptions) {
 	// resolved, if plugin does not support PUBLISH_UNPUBLISH_VOLUME, then we
 	// can skip adding mapping to "csi.volume.kubernetes.io/nodeid" annotation.
 
+	metricsManager := metrics.NewCSIMetricsManager("" /* driverName */)
+
 	klog.V(1).Infof("Attempting to open a gRPC connection with: %q", nodecsioptions.CsiAddress)
-	csiConn, err := connection.Connect(nodecsioptions.CsiAddress)
+	csiConn, err := connection.Connect(nodecsioptions.CsiAddress, metricsManager)
 	if err != nil {
 		klog.Errorf("error connecting to CSI driver: %v", err)
 		os.Exit(1)

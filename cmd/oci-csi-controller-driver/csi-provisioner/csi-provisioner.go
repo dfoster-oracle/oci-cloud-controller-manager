@@ -17,7 +17,6 @@ package csiprovisioner
 import (
 	"context"
 	"fmt"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
 	"math/rand"
 	"os"
 	"strconv"
@@ -25,19 +24,24 @@ import (
 	"time"
 
 	"github.com/kubernetes-csi/csi-lib-utils/leaderelection"
+	"github.com/kubernetes-csi/csi-lib-utils/metrics"
 	ctrl "github.com/kubernetes-csi/external-provisioner/pkg/controller"
 	snapclientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	v1 "k8s.io/client-go/listers/core/v1"
+	storagelistersv1beta1 "k8s.io/client-go/listers/storage/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
+	csitranslationlib "k8s.io/csi-translation-lib"
 	"k8s.io/klog"
 
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	csitranslationlib "k8s.io/csi-translation-lib"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v5/controller"
 )
 
 var (
@@ -100,7 +104,9 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		klog.Fatalf("Error getting server version: %v", err)
 	}
 
-	grpcClient, err := ctrl.Connect(csioptions.CsiAddress)
+	metricsManager := metrics.NewCSIMetricsManager("" /* driverName */)
+
+	grpcClient, err := ctrl.Connect(csioptions.CsiAddress, metricsManager)
 	if err != nil {
 		klog.Error(err.Error())
 		os.Exit(1)
@@ -119,6 +125,9 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 	}
 	klog.V(2).Infof("Detected CSI driver %s", provisionerName)
 
+	metricsManager.SetDriverName(provisionerName)
+	metricsManager.StartMetricsEndpoint(csioptions.MetricsAddress, csioptions.MetricsPath)
+
 	pluginCapabilities, controllerCapabilities, err := ctrl.GetDriverCapabilities(grpcClient, csioptions.OperationTimeout)
 	if err != nil {
 		klog.Fatalf("Error getting CSI driver capabilities: %s", err)
@@ -128,6 +137,27 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 	timeStamp := time.Now().UnixNano() / int64(time.Millisecond)
 	identity := strconv.FormatInt(timeStamp, 10) + "-" + strconv.Itoa(rand.Intn(10000)) + "-" + provisionerName
 
+	factory := informers.NewSharedInformerFactory(clientset, ctrl.ResyncPeriodOfCsiNodeInformer)
+
+	// -------------------------------
+	// Listers
+	// Create informer to prevent hit the API server for all resource request
+	scLister := factory.Storage().V1().StorageClasses().Lister()
+	claimLister := factory.Core().V1().PersistentVolumeClaims().Lister()
+
+	var csiNodeLister storagelistersv1beta1.CSINodeLister
+	var nodeLister v1.NodeLister
+	if ctrl.SupportsTopology(pluginCapabilities) {
+		csiNodeLister = factory.Storage().V1beta1().CSINodes().Lister()
+		nodeLister = factory.Core().V1().Nodes().Lister()
+	}
+
+	// -------------------------------
+	// PersistentVolumeClaims informer
+	rateLimiter := workqueue.NewItemExponentialFailureRateLimiter(csioptions.RetryIntervalStart,  csioptions.RetryIntervalMax)
+	claimQueue := workqueue.NewNamedRateLimitingQueue(rateLimiter, "claims")
+	claimInformer := factory.Core().V1().PersistentVolumeClaims().Informer()
+
 	provisionerOptions := []func(*controller.ProvisionController) error{
 		controller.LeaderElection(false), // Always disable leader election in provisioner lib. Leader election should be done here in the CSI provisioner level instead.
 		controller.FailedProvisionThreshold(0),
@@ -135,11 +165,14 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		controller.RateLimiter(workqueue.NewItemExponentialFailureRateLimiter(csioptions.RetryIntervalStart, csioptions.RetryIntervalMax)),
 		controller.Threadiness(int(csioptions.WorkerThreads)),
 		controller.CreateProvisionedPVLimiter(workqueue.DefaultControllerRateLimiter()),
+		controller.ClaimsInformer(claimInformer),
 	}
 
+	translator := csitranslationlib.New()
+
 	supportsMigrationFromInTreePluginName := ""
-	if csitranslationlib.IsMigratedCSIDriverByName(provisionerName) {
-		supportsMigrationFromInTreePluginName, err = csitranslationlib.GetInTreeNameFromCSIName(provisionerName)
+	if translator.IsMigratedCSIDriverByName(provisionerName) {
+		supportsMigrationFromInTreePluginName, err = translator.GetInTreeNameFromCSIName(provisionerName)
 		if err != nil {
 			klog.Fatalf("Failed to get InTree plugin name for migrated CSI plugin %s: %v", provisionerName, err)
 		}
@@ -149,7 +182,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
-	csiProvisioner := ctrl.NewCSIProvisioner(clientset, csioptions.OperationTimeout, identity, csioptions.VolumeNamePrefix, csioptions.VolumeNameUUIDLength, grpcClient, snapClient, provisionerName, pluginCapabilities, controllerCapabilities, supportsMigrationFromInTreePluginName, csioptions.StrictTopology)
+	csiProvisioner := ctrl.NewCSIProvisioner(clientset, csioptions.OperationTimeout, identity, csioptions.VolumeNamePrefix, csioptions.VolumeNameUUIDLength, grpcClient, snapClient, provisionerName, pluginCapabilities, controllerCapabilities, supportsMigrationFromInTreePluginName, csioptions.StrictTopology, translator, scLister, csiNodeLister, nodeLister, claimLister, csioptions.ExtraCreateMetadata)
 	provisionController = controller.NewProvisionController(
 		clientset,
 		provisionerName,
@@ -158,7 +191,24 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		provisionerOptions...,
 	)
 
+	csiClaimController := ctrl.NewCloningProtectionController(
+		clientset,
+		claimLister,
+		claimInformer,
+		claimQueue,
+	)
+
 	run := func(context.Context) {
+		stopCh := context.Background().Done()
+		factory.Start(stopCh)
+		cacheSyncResult := factory.WaitForCacheSync(stopCh)
+		for _, v := range cacheSyncResult {
+			if !v {
+				klog.Fatalf("Failed to sync Informers!")
+			}
+		}
+
+		go csiClaimController.Run(int(csioptions.FinalizerThreads), stopCh)
 		provisionController.Run(wait.NeverStop)
 	}
 
