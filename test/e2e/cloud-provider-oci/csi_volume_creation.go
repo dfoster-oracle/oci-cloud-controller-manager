@@ -15,9 +15,10 @@
 package e2e
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	"github.com/oracle/oci-cloud-controller-manager/test/e2e/framework"
-	"time"
 )
 
 var _ = Describe("CSI Volume Creation", func() {
@@ -88,3 +89,33 @@ var _ = Describe("CSI Static Volume Creation", func() {
 		})
 	})
 })
+
+var _ = Describe("CSI CMEK,PV attachment and in-transit encryption test", func() {
+	f := framework.NewDefaultFramework("csi-basic")
+	Context("[cloudprovider][storage][csi]", func() {
+		It("Create PVC and POD for CSI with CMEK,PV attachment and in-transit encryption", func() {
+			TestCMEKAttachmentTypeAndEncryptionType(f, framework.AttachmentTypeParavirtualized)
+		})
+	})
+
+	Context("[cloudprovider][storage][csi]", func() {
+		It("Create PVC and POD for CSI with CMEK,ISCSI attachment and in-transit encryption", func() {
+			TestCMEKAttachmentTypeAndEncryptionType(f, framework.AttachmentTypeISCSI)
+		})
+	})
+
+})
+
+func TestCMEKAttachmentTypeAndEncryptionType(f *framework.CloudProviderFramework, expectedAttachmentType string) {
+	pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-cmek-iscsi-in-transit-e2e-tests")
+	scParameter := map[string]string{
+		framework.KmsKey:         setupF.CMEKKMSKey,
+		framework.AttachmentType: expectedAttachmentType,
+	}
+	scName := f.CreateStorageClassOrFail(framework.SCName, "blockvolume.csi.oraclecloud.com", scParameter, pvcJig.Labels)
+	pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil)
+	podName := pvcJig.NewPODForCSI("app1", f.Namespace.Name, pvc.Name, setupF.AdLabel)
+	pvcJig.CheckCMEKKey(f.Client.BlockStorage(), pvc.Name, f.Namespace.Name, setupF.CMEKKMSKey)
+	pvcJig.CheckAttachmentTypeAndEncryptionType(f.Client.Compute(), pvc.Name, f.Namespace.Name, podName, expectedAttachmentType)
+
+}

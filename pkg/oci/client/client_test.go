@@ -172,6 +172,10 @@ func (c *mockComputeClient) DetachVolume(ctx context.Context, request core.Detac
 	return core.DetachVolumeResponse{}, nil
 }
 
+func (c *mockComputeClient) ListInstanceDevices(ctx context.Context, request core.ListInstanceDevicesRequest) (response core.ListInstanceDevicesResponse, err error) {
+	return core.ListInstanceDevicesResponse{}, nil
+}
+
 /* Mock NetworkClient interface implementations */
 func (c *mockVirtualNetworkClient) GetVnic(ctx context.Context, request core.GetVnicRequest) (response core.GetVnicResponse, err error) {
 	return core.GetVnicResponse{}, nil

@@ -31,6 +31,9 @@ export CLOUD_CONFIG=$HOME/cloudconfig
 export IMAGE_PULL_REPO="iad.ocir.io/okedev/e2e-tests/"
 export ADLOCATION="IqDk:US-ASHBURN-AD-1"
 
+#KMS key for CMEK testing
+export CMEK_KMS_KEY="ocid1.key.oc1.iad.bbpvrcsaaaeuk.abuwcljsav7rilbt6bnu3dqoakpzdtxhfk27uixzdz3yk7jrwngptfwg5u5a"
+
 # For debugging the tests in existing cluster, do not turn it off by default.
 # export DELETE_NAMESPACE=false
 

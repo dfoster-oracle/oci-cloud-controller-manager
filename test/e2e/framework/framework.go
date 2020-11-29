@@ -4,13 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"io/ioutil"
-	imageutils "k8s.io/kubernetes/test/utils/image"
 	"math/rand"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
+	imageutils "k8s.io/kubernetes/test/utils/image"
 
 	. "github.com/onsi/gomega"
 	"github.com/oracle/oci-go-sdk/common"
@@ -31,8 +32,8 @@ const (
 	// Some pods can take much longer to get ready due to volume attach/detach latency.
 	slowPodStartTimeout = 15 * time.Minute
 
-    DefaultClusterKubeconfig = "/tmp/clusterkubeconfig"
-	DefaultCloudConfig = "/tmp/cloudconfig"
+	DefaultClusterKubeconfig = "/tmp/clusterkubeconfig"
+	DefaultCloudConfig       = "/tmp/cloudconfig"
 
 	ClassOCI          = "oci"
 	ClassOCICSI       = "oci-bv"
@@ -49,47 +50,48 @@ const (
 )
 
 var (
-	okeendpoint                        string
-	defaultOCIUser                     string
-	defaultOCIUserFingerprint          string
-	defaultOCIUserKeyFile              string
-	defaultOCIUserPassphrase           string
-	defaultOCITenancy                  string
-	defaultOCIRegion                   string
-	compartment1                       string
-	vcn                                string
-	lbsubnet1                          string
-	lbsubnet2                          string
-	lbrgnsubnet                        string
-	nodeshape                          string
-	subnet1                            string
-	subnet2                            string
-	subnet3                            string
-	rgnsubnet                          string
-	okeClusterK8sVersionIndex          int
-	okeNodePoolK8sVersionIndex         int
-	pubsshkey                           string
-	flexvolumedrivertestversion         string
+	okeendpoint                  string
+	defaultOCIUser               string
+	defaultOCIUserFingerprint    string
+	defaultOCIUserKeyFile        string
+	defaultOCIUserPassphrase     string
+	defaultOCITenancy            string
+	defaultOCIRegion             string
+	compartment1                 string
+	vcn                          string
+	lbsubnet1                    string
+	lbsubnet2                    string
+	lbrgnsubnet                  string
+	nodeshape                    string
+	subnet1                      string
+	subnet2                      string
+	subnet3                      string
+	rgnsubnet                    string
+	okeClusterK8sVersionIndex    int
+	okeNodePoolK8sVersionIndex   int
+	pubsshkey                    string
+	flexvolumedrivertestversion  string
 	volumeprovisionertestversion string
 	secretsDir                   string
 	defaultKubeConfig            string
 	delegateGroupID              string
 	instanceCfg                  *DelegationPrincipalConfig
 	enableCreateCluster          bool
-	kmsKeyID          string
-	adlocation        string
-	clusterkubeconfig string // path to kubeconfig file
-	deleteNamespace   bool   // whether or not to delete test namespaces
-	cloudConfigFile   string // path to cloud provider config file
-	nodePortTest      bool   // whether or not to test the connectivity of node ports.
-	ccmSeclistID      string // The ocid of the loadbalancer subnet seclist. Optional.
-	k8sSeclistID      string // The ocid of the k8s worker subnet seclist. Optional.
-	mntTargetOCID     string // Mount Target ID is specified to identify the mount target to be attached to the volumes. Optional.
-	nginx             string // Image for nginx
-	agnhost           string // Image for agnhost
-	busyBoxImage      string // Image for busyBoxImage
-	centos            string // Image for centos
-	imagePullRepo     string // Repo to pull images from. Will pull public images if not specified.
+	kmsKeyID                     string
+	adlocation                   string
+	clusterkubeconfig            string // path to kubeconfig file
+	deleteNamespace              bool   // whether or not to delete test namespaces
+	cloudConfigFile              string // path to cloud provider config file
+	nodePortTest                 bool   // whether or not to test the connectivity of node ports.
+	ccmSeclistID                 string // The ocid of the loadbalancer subnet seclist. Optional.
+	k8sSeclistID                 string // The ocid of the k8s worker subnet seclist. Optional.
+	mntTargetOCID                string // Mount Target ID is specified to identify the mount target to be attached to the volumes. Optional.
+	nginx                        string // Image for nginx
+	agnhost                      string // Image for agnhost
+	busyBoxImage                 string // Image for busyBoxImage
+	centos                       string // Image for centos
+	imagePullRepo                string // Repo to pull images from. Will pull public images if not specified.
+	cmekKMSKey                   string //KMS key for CMEK testing
 )
 
 func init() {
@@ -137,6 +139,7 @@ func init() {
 	flag.StringVar(&mntTargetOCID, "mnt-target-id", "", "Mount Target ID is specified to identify the mount target to be attached to the volumes")
 
 	flag.StringVar(&imagePullRepo, "image-pull-repo", "", "Repo to pull images from. Will pull public images if not specified.")
+	flag.StringVar(&cmekKMSKey, "cmek-kms-key", "", "KMS key to be used for CMEK testing")
 	flag.Parse()
 }
 
@@ -161,8 +164,8 @@ func getDefaultOCIUser() OCIUser {
 type AuthType string
 
 const (
-	UserAuth      AuthType = "user"
-	ServiceAuth   AuthType = "service"
+	UserAuth    AuthType = "user"
+	ServiceAuth AuthType = "service"
 )
 
 // Framework is the context of the text execution.
@@ -259,6 +262,7 @@ type Framework struct {
 	CloudConfigPath string
 
 	MntTargetOcid string
+	CMEKKMSKey    string
 }
 
 // New creates a new a framework that holds the context of the test
@@ -309,23 +313,24 @@ func NewWithConfig(config *FrameworkConfig) *Framework {
 		RegionalKubeConfig: defaultKubeConfig,
 		requestHeaders:     map[string]string{},
 
-		timeout:                    3 * time.Minute,
-		context:                    context.Background(),
-		WaitForDeleted:             false,
-		ValidateChildResources:     true,
-		PubSSHKey:                  pubsshkey,
-		Vcn:                        vcn,
-		LbSubnet1:                  lbsubnet1,
-		LbSubnet2:                  lbsubnet2,
-		Lbrgnsubnet:                lbrgnsubnet,
-		Subnet1:                    subnet1,
-		Subnet2:                    subnet2,
-		Subnet3:                    subnet3,
-		Rgnsubnet:                  rgnsubnet,
-		NodeShape:                  nodeshape,
-		DelegationTargetServices:   "oke",
-		AdLocation:                 adlocation,
-		MntTargetOcid:              mntTargetOCID,
+		timeout:                  3 * time.Minute,
+		context:                  context.Background(),
+		WaitForDeleted:           false,
+		ValidateChildResources:   true,
+		PubSSHKey:                pubsshkey,
+		Vcn:                      vcn,
+		LbSubnet1:                lbsubnet1,
+		LbSubnet2:                lbsubnet2,
+		Lbrgnsubnet:              lbrgnsubnet,
+		Subnet1:                  subnet1,
+		Subnet2:                  subnet2,
+		Subnet3:                  subnet3,
+		Rgnsubnet:                rgnsubnet,
+		NodeShape:                nodeshape,
+		DelegationTargetServices: "oke",
+		AdLocation:               adlocation,
+		MntTargetOcid:            mntTargetOCID,
+		CMEKKMSKey:               cmekKMSKey,
 	}
 
 	f.EnableCreateCluster = enableCreateCluster
@@ -398,6 +403,8 @@ func (f *Framework) Initialize() {
 	Logf("OCI AdLabel: %s", f.AdLabel)
 	f.MntTargetOcid = mntTargetOCID
 	Logf("OCI Mount Target OCID: %s", f.MntTargetOcid)
+	f.CMEKKMSKey = cmekKMSKey
+	Logf("CMEK KMS Key: %s", f.CMEKKMSKey)
 	f.Compartment1 = compartment1
 	Logf("OCI compartment1 OCID: %s", f.Compartment1)
 	f.setImages()
@@ -664,7 +671,7 @@ func (f *Framework) GetWorkRequest(id string) oke.GetWorkRequestResponse {
 
 func (f *Framework) CreateCloudConfig() config.Config {
 	cloudConfig := config.Config{
-		Auth:                  config.AuthConfig{
+		Auth: config.AuthConfig{
 			Region:                f.Region,
 			TenancyID:             f.Tenancy,
 			UserID:                f.User.OCID,
@@ -676,10 +683,10 @@ func (f *Framework) CreateCloudConfig() config.Config {
 			CompartmentID:         "",
 			PrivateKeyPassphrase:  "",
 		},
-		LoadBalancer:          &config.LoadBalancerConfig{
+		LoadBalancer: &config.LoadBalancerConfig{
 			DisableSecurityListManagement: true,
-			Subnet1: f.LbSubnet1,
-			Subnet2: f.LbSubnet2,
+			Subnet1:                       f.LbSubnet1,
+			Subnet2:                       f.LbSubnet2,
 		},
 		RateLimiter:           nil,
 		RegionKey:             "",
@@ -736,4 +743,3 @@ func (f *Framework) setImages() {
 		centos = Centos
 	}
 }
-

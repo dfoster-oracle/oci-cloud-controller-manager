@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -17,7 +18,7 @@ import (
 	kubeAPI "k8s.io/api/core/v1"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
-	"github.com/oracle/oci-cloud-controller-manager/pkg/util/iscsi"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/util/disk"
 )
 
 const (
@@ -36,7 +37,13 @@ const (
 	// Prefix to apply to the name of a created volume. This should be the same as the option '--volume-name-prefix' of csi-provisioner.
 	pvcPrefix = "csi"
 
-	timeout = time.Minute * 3
+	timeout                       = time.Minute * 3
+	kmsKey                        = "kms-key-id"
+	attachmentType                = "attachment-type"
+	attachmentTypeISCSI           = "iscsi"
+	attachmentTypeParavirtualized = "paravirtualized"
+	//device is the consistent device path that would be used for paravirtualized attachment
+	device = "device"
 )
 
 var (
@@ -47,6 +54,42 @@ var (
 		Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 	}
 )
+
+type VolumeParameters struct {
+	//kmsKey is the KMS key that would be used as CMEK key for BV attachment
+	diskEncryptionKey   string
+	attachmentParameter map[string]string
+}
+
+type VolumeAttachmentOption struct {
+	//whether the attachment type is paravirtualized
+	useParavirtualizedAttachment bool
+	//whether to encrypt the compute to BV attachment as in-transit encryption.
+	enableInTransitEncryption bool
+}
+
+func extractVolumeParameters(parameters map[string]string) (VolumeParameters, error) {
+	p := VolumeParameters{
+		diskEncryptionKey:   "",
+		attachmentParameter: make(map[string]string),
+	}
+	for k, v := range parameters {
+		switch k {
+		case kmsKey:
+			if v != "" {
+				p.diskEncryptionKey = v
+			}
+		case attachmentType:
+			attachmentTypeLower := strings.ToLower(v)
+			if attachmentTypeLower != attachmentTypeISCSI && attachmentTypeLower != attachmentTypeParavirtualized {
+				return p, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid attachment-type: %s provided "+
+					"for storageclass. supported attachment-types are %s and %s", v, attachmentTypeISCSI, attachmentTypeParavirtualized))
+			}
+			p.attachmentParameter[attachmentType] = attachmentTypeLower
+		}
+	}
+	return p, nil
+}
 
 // CreateVolume creates a new volume from the given request. The function is
 // idempotent.
@@ -113,6 +156,12 @@ func (d *ControllerDriver) CreateVolume(ctx context.Context, req *csi.CreateVolu
 		return nil, fmt.Errorf("duplicate volume %q exists", volumeName)
 	}
 
+	volumeParams, err := extractVolumeParameters(req.GetParameters())
+	if err != nil {
+		log.Error("Failed to parse storageclass parameters %s", err)
+		return nil, status.Errorf(codes.InvalidArgument, "failed to parse storageclass parameters %v", err)
+	}
+
 	provisionedVolume := core.Volume{}
 
 	if len(volumes) > 0 {
@@ -129,7 +178,7 @@ func (d *ControllerDriver) CreateVolume(ctx context.Context, req *csi.CreateVolu
 			return nil, status.Errorf(codes.InvalidArgument, "invalid available domain: %s or compartment ID: %s", availableDomainShortName, d.config.CompartmentID)
 		}
 
-		provisionedVolume, err = provision(log, d.client, volumeName, size, *ad.Name, d.config.CompartmentID, "", timeout)
+		provisionedVolume, err = provision(log, d.client, volumeName, size, *ad.Name, d.config.CompartmentID, "", volumeParams.diskEncryptionKey, timeout)
 		if err != nil {
 			log.With("Ad name", *ad.Name, "Compartment Id", d.config.CompartmentID).Error("New volume creation failed %s", err)
 			return nil, status.Errorf(codes.Internal, "New volume creation failed %v", err.Error())
@@ -144,7 +193,7 @@ func (d *ControllerDriver) CreateVolume(ctx context.Context, req *csi.CreateVolu
 		return nil, err
 	}
 
-	d.logger.With("volumeID", *provisionedVolume.Id).Info("Volume is created.")
+	log.With("volumeID", *provisionedVolume.Id).Info("Volume is created.")
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      *provisionedVolume.Id,
@@ -156,6 +205,7 @@ func (d *ControllerDriver) CreateVolume(ctx context.Context, req *csi.CreateVolu
 					},
 				},
 			},
+			VolumeContext: volumeParams.attachmentParameter,
 		},
 	}, nil
 }
@@ -178,7 +228,7 @@ func (d *ControllerDriver) DeleteVolume(ctx context.Context, req *csi.DeleteVolu
 		return nil, fmt.Errorf("failed to delete volume, volumeId: %s, error: %v", req.VolumeId, err)
 	}
 
-	d.logger.With("volumeID", req.VolumeId).Info("Volume is deleted.")
+	log.Info("Volume is deleted.")
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
@@ -205,10 +255,21 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 	}
 	id = client.MapProviderIDToInstanceID(id)
 
+	//if the attachmentType is missing, default is iscsi
+	attachType, ok := req.VolumeContext[attachmentType]
+	if !ok {
+		attachType = attachmentTypeISCSI
+	}
+	volumeAttachmentOptions, err := getAttachmentOptions(context.Background(), d.client.Compute(), attachType, id)
+	if err != nil {
+		log.With(zap.Error(err)).With("attachmentType", attachType, "instanceID", id).Error("failed to get the attachment options")
+		return nil, status.Errorf(codes.Unknown, "failed to get the attachment options. error : %s", err)
+	}
+
 	volumeAttached, err := d.client.Compute().FindActiveVolumeAttachment(context.Background(), d.config.CompartmentID, req.VolumeId)
 
 	if err != nil && !client.IsNotFound(err) {
-		d.logger.With(zap.Error(err)).Error("Got error in finding volume attachment: %s", err)
+		log.With(zap.Error(err)).Error("Got error in finding volume attachment: %s", err)
 		return nil, err
 	}
 
@@ -236,42 +297,57 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 					}
 				}
 				log.Info("Volume is already ATTACHED to node.")
-				iSCSIVolumeAttached := volumeAttached.(core.IScsiVolumeAttachment)
-				log.With("volumeAttachedId", *volumeAttached.GetId()).Info("Publishing Volume Completed.")
-				return &csi.ControllerPublishVolumeResponse{
-					PublishContext: map[string]string{
-						iscsi.ISCSIIQN:  *iSCSIVolumeAttached.Iqn,
-						iscsi.ISCSIIP:   *iSCSIVolumeAttached.Ipv4,
-						iscsi.ISCSIPORT: strconv.Itoa(*iSCSIVolumeAttached.Port),
-					},
-				}, nil
+				return generatePublishContext(volumeAttachmentOptions, log, volumeAttached), nil
 			}
 		}
 	}
 
 	log.Info("Attaching volume to instance")
-	volumeAttached, err = d.client.Compute().AttachVolume(context.Background(), id, req.VolumeId)
-	if err != nil {
-		d.logger.With(zap.Error(err)).Info("Failed to attach volume to node.")
-		return nil, status.Errorf(codes.Internal, "Failed to attach volume to node. error : %s", err)
+
+	if volumeAttachmentOptions.useParavirtualizedAttachment {
+		volumeAttached, err = d.client.Compute().AttachParavirtualizedVolume(context.Background(), id, req.VolumeId, volumeAttachmentOptions.enableInTransitEncryption)
+		if err != nil {
+			log.With(zap.Error(err)).Info("failed paravirtualized attachment instance to volume.")
+			return nil, status.Errorf(codes.Internal, "failed paravirtualized attachment instance to volume. error : %s", err)
+		}
+	} else {
+		volumeAttached, err = d.client.Compute().AttachVolume(context.Background(), id, req.VolumeId)
+		if err != nil {
+			log.With(zap.Error(err)).Info("failed iscsi attachment instance to volume.")
+			return nil, status.Errorf(codes.Internal, "failed iscsi attachment instance to volume : %s", err)
+		}
 	}
 
 	volumeAttached, err = d.client.Compute().WaitForVolumeAttached(ctx, *volumeAttached.GetId())
 	if err != nil {
-		d.logger.With(zap.Error(err)).Error("Failed to attach volume to the node.")
+		log.With(zap.Error(err)).Error("Failed to attach volume to the node.")
 		return nil, status.Errorf(codes.Internal, "Failed to attach volume to the node %s", err)
 	}
 
+	return generatePublishContext(volumeAttachmentOptions, log, volumeAttached), nil
+
+}
+
+func generatePublishContext(volumeAttachmentOptions VolumeAttachmentOption, log *zap.SugaredLogger, volumeAttached core.VolumeAttachment) *csi.ControllerPublishVolumeResponse {
+	if volumeAttachmentOptions.useParavirtualizedAttachment {
+		log.With("volumeAttachedId", *volumeAttached.GetId()).Info("Publishing paravirtualized Volume Completed.")
+		return &csi.ControllerPublishVolumeResponse{
+			PublishContext: map[string]string{
+				attachmentType: attachmentTypeParavirtualized,
+				device:         *volumeAttached.GetDevice(),
+			},
+		}
+	}
 	iSCSIVolumeAttached := volumeAttached.(core.IScsiVolumeAttachment)
-	log.With("volumeAttachedId", *volumeAttached.GetId()).Info("Publishing Volume Completed.")
+	log.With("volumeAttachedId", *volumeAttached.GetId()).Info("Publishing iSCSI Volume Completed.")
 	return &csi.ControllerPublishVolumeResponse{
 		PublishContext: map[string]string{
-			iscsi.ISCSIIQN:  *iSCSIVolumeAttached.Iqn,
-			iscsi.ISCSIIP:   *iSCSIVolumeAttached.Ipv4,
-			iscsi.ISCSIPORT: strconv.Itoa(*iSCSIVolumeAttached.Port),
+			attachmentType: attachmentTypeISCSI,
+			disk.ISCSIIQN:  *iSCSIVolumeAttached.Iqn,
+			disk.ISCSIIP:   *iSCSIVolumeAttached.Ipv4,
+			disk.ISCSIPORT: strconv.Itoa(*iSCSIVolumeAttached.Port),
 		},
-	}, nil
-
+	}
 }
 
 // ControllerUnpublishVolume deattaches the given volume from the node
@@ -482,7 +558,7 @@ func (d *ControllerDriver) ControllerExpandVolume(ctx context.Context, req *csi.
 	return nil, status.Error(codes.Unimplemented, "ControllerExpandVolume is not supported yet")
 }
 
-func provision(log *zap.SugaredLogger, c client.Interface, volName string, volSize int64, availDomainName, compartmentID, backupID string, timeout time.Duration) (core.Volume, error) {
+func provision(log *zap.SugaredLogger, c client.Interface, volName string, volSize int64, availDomainName, compartmentID, backupID, kmsKeyId string, timeout time.Duration) (core.Volume, error) {
 
 	ctx := context.Background()
 
@@ -504,6 +580,10 @@ func provision(log *zap.SugaredLogger, c client.Interface, volName string, volSi
 		volumeDetails.SourceDetails = &core.VolumeSourceFromVolumeBackupDetails{Id: &backupID}
 	}
 
+	if kmsKeyId != "" {
+		volumeDetails.KmsKeyId = &kmsKeyId
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -520,4 +600,25 @@ func provision(log *zap.SugaredLogger, c client.Interface, volName string, volSi
 
 func roundUpSize(volumeSizeBytes int64, allocationUnitBytes int64) int64 {
 	return (volumeSizeBytes + allocationUnitBytes - 1) / allocationUnitBytes
+}
+
+//We would derive whether the customer wants in-transit encryption or not based on if the node is launched using
+//in-transit encryption enabled or not. we won't give our customers any explicit option to enable in-transit encryption
+//via storage class. In the storage class if the customer opts for iscsi attachment and if the node is launched using
+//in-transit encryption, we would still make the attachment type as paravirtualized and enable in-transit encryption. Refer
+//https://confluence.oci.oraclecorp.com/pages/viewpage.action?spaceKey=OKE&title=Customer+Managed+Encryption+key+and+In-Transit+encryption+support+for+block+volume+for+CSI#CustomerManagedEncryptionkeyandIn-TransitencryptionsupportforblockvolumeforCSI-SupportforIn-TransitEncryptioninPhase1
+func getAttachmentOptions(ctx context.Context, client client.ComputeInterface, attachmentType, instanceID string) (VolumeAttachmentOption, error) {
+	volumeAttachmentOption := VolumeAttachmentOption{}
+	if attachmentType == attachmentTypeParavirtualized {
+		volumeAttachmentOption.useParavirtualizedAttachment = true
+	}
+	instance, err := client.GetInstance(ctx, instanceID)
+	if err != nil {
+		return volumeAttachmentOption, err
+	}
+	if *instance.LaunchOptions.IsPvEncryptionInTransitEnabled {
+		volumeAttachmentOption.enableInTransitEncryption = true
+		volumeAttachmentOption.useParavirtualizedAttachment = true
+	}
+	return volumeAttachmentOption, nil
 }

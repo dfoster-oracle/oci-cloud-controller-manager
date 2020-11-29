@@ -26,7 +26,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/flexvolume"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
-	"github.com/oracle/oci-cloud-controller-manager/pkg/util/iscsi"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/util/disk"
 	"github.com/oracle/oci-go-sdk/core"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -329,7 +329,7 @@ func (d OCIFlexvolumeDriver) IsAttached(logger *zap.SugaredLogger, opts flexvolu
 // MountDevice connects the iSCSI target on the k8s worker node before mounting
 // and (if necessary) formatting the disk.
 func (d OCIFlexvolumeDriver) MountDevice(logger *zap.SugaredLogger, mountDir, mountDevice string, opts flexvolume.Options) flexvolume.DriverStatus {
-	iSCSIMounter, err := iscsi.NewFromDevicePath(logger, mountDevice)
+	iSCSIMounter, err := disk.NewFromDevicePath(logger, mountDevice)
 	if err != nil {
 		return flexvolume.Fail(logger, err)
 	}
@@ -369,9 +369,9 @@ func (d OCIFlexvolumeDriver) MountDevice(logger *zap.SugaredLogger, mountDir, mo
 // UnmountDevice unmounts the disk, logs out the iscsi target, and deletes the
 // iscsi node record.
 func (d OCIFlexvolumeDriver) UnmountDevice(logger *zap.SugaredLogger, mountPath string) flexvolume.DriverStatus {
-	iSCSIMounter, err := iscsi.NewFromMountPointPath(logger, mountPath)
+	iSCSIMounter, err := disk.NewFromMountPointPath(logger, mountPath)
 	if err != nil {
-		if err == iscsi.ErrMountPointNotFound {
+		if err == disk.ErrMountPointNotFound {
 			return flexvolume.Succeed(logger, "Mount point not found. Nothing to do.")
 		}
 		return flexvolume.Fail(logger, err)
