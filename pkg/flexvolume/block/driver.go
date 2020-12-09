@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/util"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +30,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util/disk"
 	"github.com/oracle/oci-go-sdk/core"
 	"go.uber.org/zap"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -209,8 +211,9 @@ func (d OCIFlexvolumeDriver) Attach(logger *zap.SugaredLogger, opts flexvolume.O
 
 	volumeOCID := deriveVolumeOCID(cfg.RegionKey, opts["kubernetes.io/pvOrVolumeName"])
 
+	compartmentId := *instance.CompartmentId
 	//Checking if the volume is already attached
-	attachment, err := c.Compute().FindVolumeAttachment(ctx, cfg.CompartmentID, volumeOCID)
+	attachment, err := c.Compute().FindVolumeAttachment(ctx, compartmentId, volumeOCID)
 	if err != nil && !client.IsNotFound(err) {
 		return flexvolume.Fail(logger, "Got error in finding volume attachment", err)
 	}
@@ -267,7 +270,13 @@ func (d OCIFlexvolumeDriver) Detach(logger *zap.SugaredLogger, pvOrVolumeName, n
 
 	volumeOCID := deriveVolumeOCID(cfg.RegionKey, pvOrVolumeName)
 	ctx := context.Background()
-	attachment, err := c.Compute().FindVolumeAttachment(ctx, cfg.CompartmentID, volumeOCID)
+
+	compartmentID, err := util.LookupNodeCompartment(d.K, nodeName)
+	if err != nil {
+		return flexvolume.Fail(logger, "failed to get compartmentID from node annotation: ", err)
+	}
+
+	attachment, err := c.Compute().FindVolumeAttachment(ctx, compartmentID, volumeOCID)
 	if err != nil {
 		return flexvolume.Fail(logger, "Failed to find volume attachment: ", err)
 	}
@@ -309,7 +318,13 @@ func (d OCIFlexvolumeDriver) IsAttached(logger *zap.SugaredLogger, opts flexvolu
 
 	ctx := context.Background()
 	volumeOCID := deriveVolumeOCID(cfg.RegionKey, opts["kubernetes.io/pvOrVolumeName"])
-	attachment, err := c.Compute().FindVolumeAttachment(ctx, cfg.CompartmentID, volumeOCID)
+
+	compartmentID, err := util.LookupNodeCompartment(d.K, nodeName)
+	if err != nil {
+		return flexvolume.Fail(logger, "Failed to look up node compartment id: ", err)
+	}
+
+	attachment, err := c.Compute().FindVolumeAttachment(ctx, compartmentID, volumeOCID)
 	if err != nil {
 		return flexvolume.DriverStatus{
 			Status:   flexvolume.StatusSuccess,
