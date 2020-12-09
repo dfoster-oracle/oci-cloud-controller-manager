@@ -109,6 +109,9 @@ export REGION_SECRETS=dev0-iad
 
 export ADLOCATION="IqDk:US-ASHBURN-AD-1"
 
+#KMS key for CMEK testing
+export CMEK_KMS_KEY="ocid1.key.oc1.iad.bbpvrcsaaaeuk.abuwcljsav7rilbt6bnu3dqoakpzdtxhfk27uixzdz3yk7jrwngptfwg5u5a"
+
 # ------------------------------------------------------------------------------------------------
 # Bonus: other stuff to tweak if you know what they mean
 # ------------------------------------------------------------------------------------------------

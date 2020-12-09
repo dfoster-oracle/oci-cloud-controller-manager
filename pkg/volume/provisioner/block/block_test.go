@@ -189,6 +189,10 @@ func (c *MockComputeClient) FindVolumeAttachment(ctx context.Context, compartmen
 	return nil, nil
 }
 
+func (MockComputeClient) AttachParavirtualizedVolume(ctx context.Context, instanceID, volumeID string, isPvEncryptionInTransitEnabled bool) (core.VolumeAttachment, error) {
+	return nil, nil
+}
+
 func (c *MockComputeClient) AttachVolume(ctx context.Context, instanceID, volumeID string) (core.VolumeAttachment, error) {
 	return nil, nil
 }

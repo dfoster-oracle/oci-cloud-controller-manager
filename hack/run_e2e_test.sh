@@ -179,6 +179,7 @@ function run_e2e_tests() {
         --cloud-config=${CLOUD_CONFIG} \
         --delete-namespace=${DELETE_NAMESPACE} \
         --image-pull-repo=${IMAGE_PULL_REPO} \
+        --cmek-kms-key=${CMEK_KMS_KEY} \
     retval=$?
     rm -f $OCI_KEY_FILE
     exit $retval
@@ -193,6 +194,7 @@ function run_e2e_tests_existing_cluster() {
         --adlocation=${ADLOCATION} \
         --delete-namespace=${DELETE_NAMESPACE} \
         --image-pull-repo=${IMAGE_PULL_REPO} \
+        --cmek-kms-key=${CMEK_KMS_KEY} \
     retval=$?
     exit $retval
 }

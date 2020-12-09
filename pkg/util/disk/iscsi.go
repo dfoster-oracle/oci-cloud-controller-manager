@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package iscsi
+package disk
 
 import (
 	"errors"
@@ -198,7 +198,18 @@ func NewFromMountPointPath(logger *zap.SugaredLogger, mountPath string) (Interfa
 
 // FindFromMountPointPath gets /dev/disk/by-path/ip-<ip>:<port>-iscsi-<IQN>-lun-1
 // from the given mount point path.
-func FindFromMountPointPath(logger *zap.SugaredLogger, mountPath string) ([]string, error) {
+func FindFromMountPointPath(logger *zap.SugaredLogger, diskByPaths []string) ([]string, error) {
+
+	for _, diskByPath := range diskByPaths {
+		m, err := FindFromDevicePath(logger, diskByPath)
+		if err == nil {
+			return m, nil
+		}
+	}
+	return nil, errors.New("iSCSI information not found for mount point")
+}
+
+func GetDiskPathFromMountPath(logger *zap.SugaredLogger, mountPath string) ([]string, error) {
 	mounter := mount.New(logger, mountCommand)
 	mountPoint, err := getMountPointForPath(mounter, mountPath)
 	if err != nil {
@@ -208,13 +219,8 @@ func FindFromMountPointPath(logger *zap.SugaredLogger, mountPath string) ([]stri
 	if err != nil {
 		return nil, err
 	}
-	for _, diskByPath := range diskByPaths {
-		m, err := FindFromDevicePath(logger, diskByPath)
-		if err == nil {
-			return m, nil
-		}
-	}
-	return nil, errors.New("iSCSI information not found for mount point")
+	logger.Infof("diskByPaths is %v", diskByPaths)
+	return diskByPaths, nil
 }
 
 // getISCSIAdmPath gets the absolute path to the iscsiadm executable on the
@@ -338,19 +344,29 @@ func (c *iSCSIMounter) DeviceOpened(path string) (bool, error) {
 }
 
 func (c *iSCSIMounter) FormatAndMount(source string, target string, fstype string, options []string) error {
-	return (&mount.SafeFormatAndMount{
+	safeMounter := &mount.SafeFormatAndMount{
 		Interface: c.mounter,
 		Runner:    c.runner,
 		Logger:    c.logger,
-	}).FormatAndMount(source, target, fstype, options)
+	}
+	return formatAndMount(source, target, fstype, options, safeMounter)
+}
+
+func formatAndMount(source string, target string, fstype string, options []string, sm *mount.SafeFormatAndMount) error {
+	return sm.FormatAndMount(source, target, fstype, options)
 }
 
 func (c *iSCSIMounter) Mount(source string, target string, fstype string, options []string) error {
-	return (&mount.SafeFormatAndMount{
+	safeMounter := &mount.SafeFormatAndMount{
 		Interface: c.mounter,
 		Runner:    c.runner,
 		Logger:    c.logger,
-	}).Mount(source, target, fstype, options)
+	}
+	return mnt(source, target, fstype, options, safeMounter)
+}
+
+func mnt(source string, target string, fstype string, options []string, sm *mount.SafeFormatAndMount) error {
+	return sm.Mount(source, target, fstype, options)
 }
 func (c *iSCSIMounter) UnmountPath(path string) error {
 	return mount.UnmountPath(c.logger, path, c.mounter)
