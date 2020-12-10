@@ -7,18 +7,16 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap"
-
-	"github.com/oracle/oci-go-sdk/core"
-	"k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/util"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/util/disk"
+	"github.com/oracle/oci-go-sdk/core"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	kubeAPI "k8s.io/api/core/v1"
-
-	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
-	"github.com/oracle/oci-cloud-controller-manager/pkg/util/disk"
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -266,7 +264,13 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 		return nil, status.Errorf(codes.Unknown, "failed to get the attachment options. error : %s", err)
 	}
 
-	volumeAttached, err := d.client.Compute().FindActiveVolumeAttachment(context.Background(), d.config.CompartmentID, req.VolumeId)
+	compartmentID, err := util.LookupNodeCompartment(d.KubeClient, req.NodeId)
+	if err != nil {
+		log.With(zap.Error(err)).With("instanceID", id).Errorf("failed to get compartmentID from node annotation: %s", util.CompartmentIDAnnotation)
+		return nil, status.Errorf(codes.Unknown, "failed to get compartmentID from node annotation:. error : %s", err)
+	}
+
+	volumeAttached, err := d.client.Compute().FindActiveVolumeAttachment(context.Background(), compartmentID, req.VolumeId)
 
 	if err != nil && !client.IsNotFound(err) {
 		log.With(zap.Error(err)).Error("Got error in finding volume attachment: %s", err)
@@ -359,9 +363,17 @@ func (d *ControllerDriver) ControllerUnpublishVolume(ctx context.Context, req *c
 		return nil, status.Error(codes.InvalidArgument, "Volume ID must be provided")
 	}
 
-	attachedVolume, err := d.client.Compute().FindVolumeAttachment(context.Background(), d.config.CompartmentID, req.VolumeId)
+	compartmentID, err := util.LookupNodeCompartment(d.KubeClient, req.NodeId)
+	if err != nil {
+		log.With(zap.Error(err)).Errorf("failed to get compartmentID from node annotation: %s", util.CompartmentIDAnnotation)
+		return nil, status.Errorf(codes.Unknown, "failed to get compartmentID from node annotation:. error : %s", err)
+	}
+
+	attachedVolume, err := d.client.Compute().FindVolumeAttachment(context.Background(), compartmentID, req.VolumeId)
 	if err != nil {
 		if client.IsNotFound(err) {
+			log.With(zap.Error(err)).With("compartmentID", compartmentID).With("nodeId", req.NodeId).Error("Unable to find volume " +
+				"attachment for volume to detach. Volume is possibly already detached. Nothing to do in Un-publish Volume.")
 			return &csi.ControllerUnpublishVolumeResponse{}, nil
 		}
 		log.With(zap.Error(err)).With("nodeId", req.NodeId).Error("Volume is not detached from the node.")
@@ -373,6 +385,12 @@ func (d *ControllerDriver) ControllerUnpublishVolume(ctx context.Context, req *c
 	if err != nil {
 		log.With(zap.Error(err)).With("nodeId", req.NodeId).Error("Volume can not be detached.")
 		return nil, status.Errorf(codes.Unknown, "volume can not be detached %s", err)
+	}
+
+	err = d.client.Compute().WaitForVolumeDetached(context.Background(), *attachedVolume.GetId())
+	if err != nil {
+		log.With(zap.Error(err)).With("nodeId", req.NodeId).Error("timed out waiting for volume to be detached.")
+		return nil, status.Errorf(codes.Unknown, "timed out waiting for volume to be detached %s", err)
 	}
 
 	log.With("volumeAttachedId", attachedVolume.GetId()).Info("Un-publishing Volume Completed.")
