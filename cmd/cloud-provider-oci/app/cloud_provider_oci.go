@@ -25,11 +25,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
-	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
-	_ "github.com/oracle/oci-cloud-controller-manager/pkg/oci/client" // for oci client metric registration
-	provisioner "github.com/oracle/oci-cloud-controller-manager/pkg/volume/provisioner/core"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -44,6 +39,12 @@ import (
 	cloudControllerManagerConfig "k8s.io/kubernetes/cmd/cloud-controller-manager/app/config"
 	"k8s.io/kubernetes/cmd/cloud-controller-manager/app/options"
 	"k8s.io/kubernetes/pkg/version/verflag"
+
+	csicontroller "github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
+	_ "github.com/oracle/oci-cloud-controller-manager/pkg/oci/client" // for oci client metric registration
+	provisioner "github.com/oracle/oci-cloud-controller-manager/pkg/volume/provisioner/core"
 )
 
 var (

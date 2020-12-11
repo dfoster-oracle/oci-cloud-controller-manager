@@ -217,6 +217,7 @@ github.com/oracle/oci-go-sdk/common
 github.com/oracle/oci-go-sdk/core
 github.com/oracle/oci-go-sdk/loadbalancer
 github.com/oracle/oci-go-sdk/common/auth
+github.com/oracle/oci-go-sdk/monitoring
 github.com/oracle/oci-go-sdk/filestorage
 github.com/oracle/oci-go-sdk/identity
 github.com/oracle/oci-go-sdk/containerengine
@@ -442,13 +443,13 @@ gopkg.in/tomb.v1
 gopkg.in/yaml.v2
 # k8s.io/api v0.17.3 => k8s.io/api v0.16.4
 k8s.io/api/core/v1
+k8s.io/api/apps/v1
 k8s.io/api/batch/v1
 k8s.io/api/extensions/v1beta1
 k8s.io/api/policy/v1beta1
 k8s.io/api/storage/v1beta1
 k8s.io/api/admissionregistration/v1
 k8s.io/api/admissionregistration/v1beta1
-k8s.io/api/apps/v1
 k8s.io/api/apps/v1beta1
 k8s.io/api/apps/v1beta2
 k8s.io/api/auditregistration/v1alpha1
@@ -518,11 +519,11 @@ k8s.io/apimachinery/pkg/util/diff
 k8s.io/apimachinery/pkg/util/naming
 k8s.io/apimachinery/pkg/util/strategicpatch
 k8s.io/apimachinery/pkg/conversion/queryparams
-k8s.io/apimachinery/pkg/util/httpstream
-k8s.io/apimachinery/pkg/util/remotecommand
 k8s.io/apimachinery/pkg/runtime/serializer/recognizer
 k8s.io/apimachinery/pkg/apis/meta/internalversion
 k8s.io/apimachinery/pkg/util/rand
+k8s.io/apimachinery/pkg/util/httpstream
+k8s.io/apimachinery/pkg/util/remotecommand
 k8s.io/apimachinery/pkg/util/waitgroup
 k8s.io/apimachinery/pkg/runtime/serializer/json
 k8s.io/apimachinery/pkg/runtime/serializer/versioning
@@ -531,10 +532,10 @@ k8s.io/apimachinery/pkg/runtime/serializer/protobuf
 k8s.io/apimachinery/pkg/apis/meta/v1/unstructured
 k8s.io/apimachinery/pkg/util/mergepatch
 k8s.io/apimachinery/third_party/forked/golang/json
-k8s.io/apimachinery/pkg/util/httpstream/spdy
 k8s.io/apimachinery/pkg/apis/meta/v1beta1
 k8s.io/apimachinery/pkg/api/validation
 k8s.io/apimachinery/pkg/apis/meta/v1/validation
+k8s.io/apimachinery/pkg/util/httpstream/spdy
 k8s.io/apimachinery/pkg/api/validation/path
 k8s.io/apimachinery/pkg/util/framer
 k8s.io/apimachinery/pkg/util/yaml
@@ -735,8 +736,6 @@ k8s.io/client-go/listers/storage/v1
 k8s.io/client-go/tools/reference
 k8s.io/client-go/tools/pager
 k8s.io/client-go/tools/record/util
-k8s.io/client-go/transport/spdy
-k8s.io/client-go/util/exec
 k8s.io/client-go/metadata/metadatainformer
 k8s.io/client-go/tools/watch
 k8s.io/client-go/informers/apps/v1
@@ -744,6 +743,8 @@ k8s.io/client-go/informers/coordination/v1beta1
 k8s.io/client-go/listers/apps/v1
 k8s.io/client-go/listers/coordination/v1beta1
 k8s.io/client-go/scale
+k8s.io/client-go/transport/spdy
+k8s.io/client-go/util/exec
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/informers/admissionregistration/v1
 k8s.io/client-go/informers/admissionregistration/v1beta1
@@ -860,19 +861,21 @@ k8s.io/kubernetes/pkg/version/prometheus
 k8s.io/kubernetes/pkg/kubelet/apis/pluginregistration/v1alpha1
 k8s.io/kubernetes/pkg/api/v1/service
 k8s.io/kubernetes/pkg/master/ports
+k8s.io/kubernetes/pkg/cloudprovider
 k8s.io/kubernetes/pkg/api/testapi
 k8s.io/kubernetes/pkg/api/v1/pod
 k8s.io/kubernetes/pkg/apis/apps
 k8s.io/kubernetes/pkg/apis/batch
 k8s.io/kubernetes/pkg/apis/core
-k8s.io/kubernetes/pkg/apis/core/v1/helper
 k8s.io/kubernetes/pkg/apis/extensions
-k8s.io/kubernetes/pkg/client/conditions
 k8s.io/kubernetes/pkg/controller
 k8s.io/kubernetes/pkg/controller/nodelifecycle
-k8s.io/kubernetes/pkg/scheduler/nodeinfo
+k8s.io/kubernetes/pkg/scheduler/algorithm/predicates
 k8s.io/kubernetes/test/utils
 k8s.io/kubernetes/test/utils/image
+k8s.io/kubernetes/pkg/apis/core/v1/helper
+k8s.io/kubernetes/pkg/client/conditions
+k8s.io/kubernetes/pkg/scheduler/nodeinfo
 k8s.io/kubernetes/cmd/controller-manager/app
 k8s.io/kubernetes/pkg/controller/cloud
 k8s.io/kubernetes/pkg/controller/route
@@ -925,7 +928,6 @@ k8s.io/kubernetes/pkg/apis/settings
 k8s.io/kubernetes/pkg/apis/settings/install
 k8s.io/kubernetes/pkg/apis/storage
 k8s.io/kubernetes/pkg/apis/storage/install
-k8s.io/kubernetes/pkg/apis/core/helper
 k8s.io/kubernetes/pkg/apis/core/validation
 k8s.io/kubernetes/pkg/serviceaccount
 k8s.io/kubernetes/pkg/util/hash
@@ -936,9 +938,15 @@ k8s.io/kubernetes/pkg/kubelet/apis
 k8s.io/kubernetes/pkg/scheduler/api
 k8s.io/kubernetes/pkg/util/metrics
 k8s.io/kubernetes/pkg/util/node
+k8s.io/kubernetes/pkg/apis/core/v1/helper/qos
+k8s.io/kubernetes/pkg/scheduler/algorithm
 k8s.io/kubernetes/pkg/scheduler/algorithm/priorities/util
+k8s.io/kubernetes/pkg/scheduler/util
+k8s.io/kubernetes/pkg/scheduler/volumebinder
+k8s.io/kubernetes/pkg/volume/util
 k8s.io/kubernetes/pkg/controller/deployment/util
 k8s.io/kubernetes/pkg/util/labels
+k8s.io/kubernetes/pkg/apis/core/helper
 k8s.io/kubernetes/pkg/controller/apis/config
 k8s.io/kubernetes/pkg/controller/service/config
 k8s.io/kubernetes/pkg/controller/apis/config/v1alpha1
@@ -992,6 +1000,13 @@ k8s.io/kubernetes/pkg/capabilities
 k8s.io/kubernetes/pkg/fieldpath
 k8s.io/kubernetes/pkg/security/apparmor
 k8s.io/kubernetes/pkg/kubelet/util/format
+k8s.io/kubernetes/pkg/scheduler/metrics
+k8s.io/kubernetes/pkg/controller/volume/scheduling
+k8s.io/kubernetes/pkg/util/mount
+k8s.io/kubernetes/pkg/util/resizefs
+k8s.io/kubernetes/pkg/volume
+k8s.io/kubernetes/pkg/volume/util/types
+k8s.io/kubernetes/pkg/volume/util/volumepathhandler
 k8s.io/kubernetes/pkg/controller/certificates/signer/config
 k8s.io/kubernetes/pkg/controller/daemon/config
 k8s.io/kubernetes/pkg/controller/deployment/config
@@ -1034,6 +1049,13 @@ k8s.io/kubernetes/pkg/controller/volume/attachdetach/config/v1alpha1
 k8s.io/kubernetes/pkg/controller/volume/persistentvolume/config/v1alpha1
 k8s.io/kubernetes/pkg/util/parsers
 k8s.io/kubernetes/pkg/kubelet/types
+k8s.io/kubernetes/pkg/controller/volume/persistentvolume/util
+k8s.io/kubernetes/pkg/volume/util/fs
+k8s.io/kubernetes/pkg/volume/util/hostutil
+k8s.io/kubernetes/pkg/volume/util/recyclerclient
+k8s.io/kubernetes/pkg/volume/util/subpath
+k8s.io/kubernetes/pkg/volume/util/fsquota
+k8s.io/kubernetes/pkg/volume/util/fsquota/common
 # k8s.io/utils v0.0.0-20200124190032-861946025e34
 k8s.io/utils/exec
 k8s.io/utils/net
@@ -1042,6 +1064,10 @@ k8s.io/utils/trace
 k8s.io/utils/integer
 k8s.io/utils/pointer
 k8s.io/utils/path
+k8s.io/utils/strings
+k8s.io/utils/io
+k8s.io/utils/keymutex
+k8s.io/utils/nsenter
 # oracle.com/oci/httpsigner v0.0.0-00010101000000-000000000000 => bitbucket.oci.oraclecorp.com/goiam/httpsigner.git v0.0.0-00000000000000-e8cb27ebf4409946b295b9e22e511a52fc967e91
 oracle.com/oci/httpsigner
 # oracle.com/oci/ociauthz v0.0.0-00010101000000-000000000000 => bitbucket.oci.oraclecorp.com/goiam/ociauthz.git v0.0.0-00000000000000-b00a4280e2092ac2c220111731965f49392734c1
