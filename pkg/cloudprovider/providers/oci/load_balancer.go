@@ -703,7 +703,7 @@ func (cp *CloudProvider) getNodesByIPs(backendIPs []string) ([]*v1.Node, error) 
 	for _, ip := range backendIPs {
 		node, ok := ipToNodeLookup[ip]
 		if !ok {
-			return nil, errors.Errorf("node %q was not found by IP %q", node.Name, ip)
+			return nil, errors.Errorf("node was not found by IP %q", ip)
 		}
 		nodes = append(nodes, node)
 	}
