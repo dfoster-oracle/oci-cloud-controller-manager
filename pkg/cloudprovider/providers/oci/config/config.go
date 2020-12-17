@@ -22,8 +22,8 @@ import (
 	"bitbucket.oci.oraclecorp.com/oke/oke-common/resourceprincipals"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/instance/metadata"
-	"github.com/oracle/oci-go-sdk/common"
-	"github.com/oracle/oci-go-sdk/common/auth"
+	"github.com/oracle/oci-go-sdk/v31/common"
+	"github.com/oracle/oci-go-sdk/v31/common/auth"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"

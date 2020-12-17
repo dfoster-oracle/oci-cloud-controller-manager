@@ -34,7 +34,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util/disk"
-	"github.com/oracle/oci-go-sdk/core"
+	"github.com/oracle/oci-go-sdk/v31/core"
 )
 
 const (
@@ -249,10 +249,10 @@ func (d OCIFlexvolumeDriver) Attach(logger *zap.SugaredLogger, opts flexvolume.O
 		return flexvolume.Fail(logger, "Failed to get instance: ", err)
 	}
 
-	compartmentId := *instance.CompartmentId
+	compartmentID := *instance.CompartmentId
 
 	//Checking if the volume is already attached
-	attachment, err := c.Compute().FindVolumeAttachment(ctx, compartmentId, volumeOCID)
+	attachment, err := c.Compute().FindVolumeAttachment(ctx, compartmentID, volumeOCID)
 	if err != nil && !client.IsNotFound(err) {
 		// TODO: Uncomment once we know our T2 limits are not getting breached
 		// metrics.SendMetricData(d.metricPusher, pvDetachFailureMetric, time.Since(startTime).Seconds(), flexvolumeDriver, volumeOCID)

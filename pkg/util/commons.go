@@ -7,6 +7,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// CompartmentIDAnnotation is the annotation for OCI compartment
 const CompartmentIDAnnotation = "oci.oraclecloud.com/compartment-id"
 
 // LookupNodeCompartment returns the compartment OCID for the given nodeName.

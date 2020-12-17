@@ -3,7 +3,7 @@ package framework
 import (
 	"context"
 
-	"github.com/oracle/oci-go-sdk/identity"
+	"github.com/oracle/oci-go-sdk/v31/identity"
 
 	. "github.com/onsi/gomega"
 )

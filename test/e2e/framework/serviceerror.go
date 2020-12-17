@@ -3,7 +3,7 @@ package framework
 import (
 	"fmt"
 
-	"github.com/oracle/oci-go-sdk/common"
+	"github.com/oracle/oci-go-sdk/v31/common"
 )
 
 type serviceerror struct {

@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/volume/provisioner/plugin"
-	ocicore "github.com/oracle/oci-go-sdk/core"
+	ocicore "github.com/oracle/oci-go-sdk/v31/core"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -509,9 +509,9 @@ func (j *PVCTestJig) CheckCMEKKey(bs client.BlockStorageInterface, pvcName, name
 	if err != nil {
 		Failf("Volume %q get API error: %v", pv.Spec.CSI.VolumeHandle, err)
 	}
-	Logf("Expected KMSKey:%s, Actual KMSKey:%s", kmsKeyIDExpected, *volume.KmsKeyId)
-	if *volume.KmsKeyId != kmsKeyIDExpected {
-		Failf("Expected and Actual KMS key for CMEK test doesn't match. Expected KMSKey:%s, Actual KMSKey:%s", kmsKeyIDExpected, *volume.KmsKeyId)
+	Logf("Expected KMSKey:%s, Actual KMSKey:%v", kmsKeyIDExpected, volume.KmsKeyId)
+	if volume.KmsKeyId == nil || *volume.KmsKeyId != kmsKeyIDExpected {
+		Failf("Expected and Actual KMS key for CMEK test doesn't match. Expected KMSKey:%s, Actual KMSKey:%v", kmsKeyIDExpected, volume.KmsKeyId)
 	}
 }
 

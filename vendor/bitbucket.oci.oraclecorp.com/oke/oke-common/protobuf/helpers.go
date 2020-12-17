@@ -20,6 +20,17 @@ func ToUint32(val *wrappers.UInt32Value) *uint32 {
 	return nil
 }
 
+func ToFloatValue(val float32) wrappers.FloatValue {
+	return wrappers.FloatValue{Value: val}
+}
+
+func ToFloat32(val *wrappers.FloatValue) *float32 {
+	if val != nil {
+		return &val.Value
+	}
+	return nil
+}
+
 func FromTime(src time.Time) *timestamp.Timestamp {
 	return &timestamp.Timestamp{
 		Seconds: src.Unix(),

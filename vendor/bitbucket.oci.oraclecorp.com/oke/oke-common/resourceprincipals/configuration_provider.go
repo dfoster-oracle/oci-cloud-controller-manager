@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/oracle/oci-go-sdk/common"
+	"github.com/oracle/oci-go-sdk/v31/common"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -134,20 +134,33 @@ func (cp *resourcePrincipalConfigurationProvider) refreshFromFilesystem() error 
 	return nil
 }
 
+// interface: common.ConfigurationProvider
 func (cp *resourcePrincipalConfigurationProvider) TenancyOCID() (string, error) {
 	return "", nil
 }
 
+// interface: common.ConfigurationProvider
 func (cp *resourcePrincipalConfigurationProvider) UserOCID() (string, error) {
 	return "", nil
 }
 
+// interface: common.ConfigurationProvider
 func (cp *resourcePrincipalConfigurationProvider) KeyFingerprint() (string, error) {
 	return "", nil
 }
 
+// interface: common.ConfigurationProvider
 func (cp *resourcePrincipalConfigurationProvider) Region() (string, error) {
 	return string(cp.region), nil
+}
+
+// interface: common.ConfigurationProvider
+func (cp *resourcePrincipalConfigurationProvider) AuthType() (common.AuthConfig, error) {
+	return common.AuthConfig{
+		AuthType:         common.UnknownAuthenticationType,
+		IsFromConfigFile: false,
+		OboToken:         nil,
+	}, nil
 }
 
 func readResourcePrincipalFromPath(path string) (*types.ResourcePrincipal, error) {
@@ -166,7 +179,7 @@ func readResourcePrincipalFromPath(path string) (*types.ResourcePrincipal, error
 
 func readTokenFromPath(path string) (securityToken, error) {
 	rp, err := readResourcePrincipalFromPath(path)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 

@@ -17,11 +17,11 @@ package oci
 import (
 	"context"
 	"errors"
-	"github.com/oracle/oci-go-sdk/common"
+	"github.com/oracle/oci-go-sdk/v31/common"
 	"reflect"
 	"testing"
 
-	"github.com/oracle/oci-go-sdk/core"
+	"github.com/oracle/oci-go-sdk/v31/core"
 
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"go.uber.org/zap"
@@ -299,7 +299,7 @@ func Test_getSubnets(t *testing.T) {
 	}{
 		"Get Subnets": {
 			subnetIds: []string{"regional-subnet"},
-			want:      []*core.Subnet{
+			want: []*core.Subnet{
 				{
 					Id:                 common.String("regional-subnet"),
 					DnsLabel:           common.String("subnetwithnovcndnslabel"),
@@ -307,7 +307,7 @@ func Test_getSubnets(t *testing.T) {
 					AvailabilityDomain: nil,
 				},
 			},
-			wantErr:   false,
+			wantErr: false,
 		},
 		"Get Subnets Error": {
 			subnetIds: []string{"regional-subnet-not-found"},
@@ -335,36 +335,36 @@ func Test_getSubnets(t *testing.T) {
 func TestCloudProvider_GetLoadBalancer(t *testing.T) {
 
 	tests := map[string]struct {
-		service     *v1.Service
-		want        *v1.LoadBalancerStatus
-		exists       bool
-		wantErr     bool
+		service *v1.Service
+		want    *v1.LoadBalancerStatus
+		exists  bool
+		wantErr bool
 	}{
 		"Get Load Balancer from LB client": {
-			service:     &v1.Service{
+			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: "privateLB",
 				},
 			},
-			want:        &v1.LoadBalancerStatus{
+			want: &v1.LoadBalancerStatus{
 				Ingress: []v1.LoadBalancerIngress{
 					{
-						IP:       "10.0.50.5",
+						IP: "10.0.50.5",
 					},
 				},
 			},
-			exists:       true,
-			wantErr:     false,
+			exists:  true,
+			wantErr: false,
 		},
 		"Load Balancer IP address does not exist": {
-			service:     &v1.Service{
+			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: "privateLB-no-IP",
 				},
 			},
-			want:        nil,
-			exists:      false,
-			wantErr:     true,
+			want:    nil,
+			exists:  false,
+			wantErr: true,
 		},
 	}
 	cp := &CloudProvider{

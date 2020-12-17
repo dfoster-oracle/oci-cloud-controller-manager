@@ -3,9 +3,8 @@ module github.com/oracle/oci-cloud-controller-manager
 go 1.12
 
 replace (
-	bitbucket.oci.oraclecorp.com/oke/oke-common => bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20200526005007-e8edec800a78
 	github.com/docker/docker => github.com/docker/engine v0.0.0-20181106193140-f5749085e9cb
-	github.com/oracle/oci-go-sdk => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk v1.0.1-0.20200522010431-885df7973894
+	github.com/oracle/oci-go-sdk/v31 => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk/v31 v31.0.0-20201215183620-aed686bb60a8
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.4
 	google.golang.org/grpc => google.golang.org/grpc v1.26.0
 	k8s.io/api => k8s.io/api v0.16.4
@@ -40,41 +39,35 @@ replace (
 )
 
 require (
-	bitbucket.oci.oraclecorp.com/oke/bmc-go-sdk v0.0.0-20180119170638-a7c726955dd4 // indirect
-	bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20190917222423-ba5e028f261d
+	bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20201218050159-057951da132b
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
-	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/container-storage-interface/spec v1.2.0
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/golang/protobuf v1.4.2
-	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kubernetes-csi/csi-lib-utils v0.7.1
 	github.com/kubernetes-csi/external-attacher v2.1.0+incompatible
 	github.com/kubernetes-csi/external-provisioner v1.6.1
 	github.com/kubernetes-csi/external-snapshotter v1.2.1-0.20191220180133-bba358438aee
 	github.com/munnerz/goautoneg v0.0.0-20190414153302-2ae31c8b6b30 // indirect
-	github.com/onsi/ginkgo v1.12.0
-	github.com/onsi/gomega v1.9.0
-	github.com/oracle/oci-go-sdk v0.0.0-00010101000000-000000000000
-	github.com/pkg/errors v0.8.1
+	github.com/onsi/ginkgo v1.14.0
+	github.com/onsi/gomega v1.10.1
+	github.com/oracle/oci-go-sdk/v31 v31.0.0-00010101000000-000000000000
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.4.1
-	github.com/spf13/cobra v0.0.5
+	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.3.2
-	go.uber.org/atomic v1.3.2 // indirect
-	go.uber.org/zap v1.9.1
+	github.com/spf13/viper v1.6.3
+	go.uber.org/multierr v1.6.0 // indirect
+	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
-	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
+	golang.org/x/sys v0.0.0-20200519105757-fe76b779f299
 	google.golang.org/appengine v1.6.2 // indirect
 	google.golang.org/grpc v1.29.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
-	gopkg.in/yaml.v2 v2.2.5
-	k8s.io/api v0.17.3
-	k8s.io/apimachinery v0.17.3
+	gopkg.in/yaml.v2 v2.3.0
+	k8s.io/api v0.17.15
+	k8s.io/apimachinery v0.17.15
 	k8s.io/apiserver v0.17.0
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/cloud-provider v0.17.0
@@ -84,9 +77,6 @@ require (
 	k8s.io/kubectl v1.16.4 // indirect
 	k8s.io/kubernetes v1.16.0
 	k8s.io/utils v0.0.0-20200124190032-861946025e34
-	oracle.com/oci/httpsigner v0.0.0-00010101000000-000000000000 // indirect
-	oracle.com/oci/ociauthz v0.0.0-00010101000000-000000000000 // indirect
-	oracle.com/oci/tagging v0.0.0-00010101000000-000000000000 // indirect
 	sigs.k8s.io/sig-storage-lib-external-provisioner v4.1.0+incompatible
 	sigs.k8s.io/sig-storage-lib-external-provisioner/v5 v5.0.0
 )

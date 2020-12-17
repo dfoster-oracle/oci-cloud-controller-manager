@@ -34,7 +34,11 @@ const (
 	// UpdateFieldSSHPublicKey is the affected fields key to indicate that the SSHPublicKey needs updating
 	UpdateFieldSSHPublicKey = "SSHPublicKey"
 	// UpdateFieldNodeShape is the affected fields key to indicate that the NodeShape needs updating
-	UpdateFieldNodeShape= "NodeShape"
+	UpdateFieldNodeShape = "NodeShape"
+	// UpdateFieldNodeOcpus is the affected fields key to indicate that the NodeOcpus needs updating
+	UpdateFieldNodeOcpus = "NodeOcpus"
+	// UpdateFieldNodeOcpus is the affected fields key to indicate that the NodeMemoryInGBs needs updating
+	UpdateFieldNodeMemoryInGBs = "NodeMemoryInGBs"
 
 	// k8s labels https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
 	maxLabelKeyPrefixLength = 253
@@ -133,7 +137,7 @@ func ValidateInitialNodeLabels(labels string, disallowedPrefixes []string) (int,
 					if disallowedPrefixesRegex != nil && disallowedPrefixesRegex(parts[0]) && !isAllowedSpecificPrefix(kv.Key) {
 						return http.StatusBadRequest, apierrors.NewErrorV3(
 							apierrors.HTTP400InvalidParameterCode,
-							apierrors.HTTP400InvalidParameterMessageInitialNodeLabelsPrefix)							
+							apierrors.HTTP400InvalidParameterMessageInitialNodeLabelsPrefix)
 					}
 				}
 			}
@@ -175,25 +179,25 @@ func ValidateInitialNodeLabels(labels string, disallowedPrefixes []string) (int,
 // https://github.com/kubernetes/enhancements/blob/master/keps/sig-auth/0000-20170814-bounding-self-labeling-kubelets.md
 func isAllowedSpecificPrefix(key string) bool {
 
-	if (regexp.MustCompile("[.]kubelet.kubernetes.io/").MatchString(key) || regexp.MustCompile("[.]node.kubernetes.io/").MatchString(key)) {
+	if regexp.MustCompile("[.]kubelet.kubernetes.io/").MatchString(key) || regexp.MustCompile("[.]node.kubernetes.io/").MatchString(key) {
 		return true
 	}
 
 	switch key {
-		case
-			"kubernetes.io/hostname",
-			"kubernetes.io/instance-type",
-			"kubernetes.io/os",
-			"kubernetes.io/arch",
-			"beta.kubernetes.io/instance-type",
-			"beta.kubernetes.io/os",
-			"beta.kubernetes.io/arch",
-			"failure-domain.beta.kubernetes.io/zone",
-			"failure-domain.beta.kubernetes.io/region",
-			"failure-domain.kubernetes.io/zone",
-			"failure-domain.kubernetes.io/region":
-			return true
-		}
+	case
+		"kubernetes.io/hostname",
+		"kubernetes.io/instance-type",
+		"kubernetes.io/os",
+		"kubernetes.io/arch",
+		"beta.kubernetes.io/instance-type",
+		"beta.kubernetes.io/os",
+		"beta.kubernetes.io/arch",
+		"failure-domain.beta.kubernetes.io/zone",
+		"failure-domain.beta.kubernetes.io/region",
+		"failure-domain.kubernetes.io/zone",
+		"failure-domain.kubernetes.io/region":
+		return true
+	}
 	return false
 }
 

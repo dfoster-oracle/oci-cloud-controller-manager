@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/oracle/oci-go-sdk/core"
+	"github.com/oracle/oci-go-sdk/v31/core"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 
@@ -41,12 +41,14 @@ import (
 	"k8s.io/klog"
 )
 
+// metadata labeling for placement info
 const (
 	FaultDomainLabel        = "oci.oraclecloud.com/fault-domain"
 	CompartmentIDAnnotation = "oci.oraclecloud.com/compartment-id"
 	timeout                 = 10 * time.Second
 )
 
+// NodeInfoController helps compute workers in the cluster
 type NodeInfoController struct {
 	nodeInformer  coreinformers.NodeInformer
 	kubeClient    clientset.Interface
@@ -103,6 +105,7 @@ func NewNodeInfoController(
 	return nic
 }
 
+// Run will start the NodeInfoController and manage shutdown
 func (nic *NodeInfoController) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 

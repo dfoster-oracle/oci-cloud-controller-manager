@@ -16,11 +16,16 @@ type K8sV1 struct {
 	NodesK8sVersions   []string `json:"nodes" yaml:"nodes"`
 }
 
+type EtcdKubernetesMapGetter interface {
+	GetKubernetesEtcdVersionMap(ctx context.Context, tenancyID string) (map[string]string, error)
+}
+
 type KubernetesGetter interface {
 	GetSupportedMasterKubernetes(ctx context.Context, tenancyID string) ([]string, error)
 	GetSupportedWorkerKubernetes(ctx context.Context, tenancyID string) ([]string, error)
 	// Makes no guarantee on sort order
 	GetAllKubernetes(ctx context.Context, tenancyID string) ([]string, error)
+	EtcdKubernetesMapGetter
 }
 
 // Sorts the output from the underlying KubernetesGetter call
@@ -64,7 +69,7 @@ func GetSupportedK8s(ctx context.Context, tenancyID string, versionsGetter Kuber
 // Returns available master k8 versions, given a current version
 //	* If current version equals the candidate version, don't include it
 //	* If the the version is supported and adheres to the skew policy, include it
-//	* If the version is deprecated and adheres to the skew policy, only include the latest patch version 
+//	* If the version is deprecated and adheres to the skew policy, only include the latest patch version
 func GetAvailableMasterK8s(ctx context.Context, tenancyID string, currentVersion string, versionsGetter KubernetesGetter) (*[]string, error) {
 	supportedMasterVersions, err := versionsGetter.GetSupportedMasterKubernetes(ctx, tenancyID)
 	if err != nil {
@@ -323,11 +328,12 @@ func validateK8(v string, versions []string) error {
 type HardcodedKubernetesGetter struct {
 	supportedVersions []string
 	allVersions       []string
+	etcdK8sMap        map[string]string
 	KubernetesGetter
 }
 
-func NewHardcodedKubernetesGetter(supportedVersions []string, allVersions []string) *HardcodedKubernetesGetter {
-	return &HardcodedKubernetesGetter{supportedVersions: supportedVersions, allVersions: allVersions}
+func NewHardcodedKubernetesGetter(supportedVersions []string, allVersions []string, etcdK8sMap map[string]string) *HardcodedKubernetesGetter {
+	return &HardcodedKubernetesGetter{supportedVersions: supportedVersions, allVersions: allVersions, etcdK8sMap: etcdK8sMap}
 }
 
 func (hk *HardcodedKubernetesGetter) GetSupportedMasterKubernetes(ctx context.Context, tenancyID string) ([]string, error) {
@@ -342,4 +348,8 @@ func (hk *HardcodedKubernetesGetter) GetSupportedWorkerKubernetes(ctx context.Co
 func (hk *HardcodedKubernetesGetter) GetAllKubernetes(ctx context.Context, tenancyID string) ([]string, error) {
 	// Currently, this function returns the same as the master versions
 	return hk.allVersions, nil
+}
+
+func (hk *HardcodedKubernetesGetter) GetKubernetesEtcdVersionMap(ctx context.Context, tenancyID string) (map[string]string, error) {
+	return hk.etcdK8sMap, nil
 }
