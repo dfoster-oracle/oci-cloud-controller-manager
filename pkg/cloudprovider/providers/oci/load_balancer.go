@@ -18,8 +18,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/oracle/oci-go-sdk/core"
-	"github.com/oracle/oci-go-sdk/loadbalancer"
+	"github.com/oracle/oci-go-sdk/v31/core"
+	"github.com/oracle/oci-go-sdk/v31/loadbalancer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
@@ -41,8 +41,19 @@ const (
 	// specifying the Shape of a load balancer. The shape is a template that
 	// determines the load balancer's total pre-provisioned maximum capacity
 	// (bandwidth) for ingress plus egress traffic. Available shapes include
-	// "100Mbps", "400Mbps", and "8000Mbps".
+	// "100Mbps", "400Mbps", "8000Mbps", and "flexible". When using
+	// "flexible" ,it is required to also supply
+	// ServiceAnnotationLoadBalancerShapeFlexMin and
+	// ServiceAnnotationLoadBalancerShapeFlexMax.
 	ServiceAnnotationLoadBalancerShape = "service.beta.kubernetes.io/oci-load-balancer-shape"
+
+	// ServiceAnnotationLoadBalancerShapeFlexMin is a Service annotation for
+	// specifying the minimum bandwidth in Mbps if the LB shape is flex.
+	ServiceAnnotationLoadBalancerShapeFlexMin = "service.beta.kubernetes.io/oci-load-balancer-shape-flex-min"
+
+	// ServiceAnnotationLoadBalancerShapeFlexMax is a Service annotation for
+	// specifying the maximum bandwidth in Mbps if the shape is flex.
+	ServiceAnnotationLoadBalancerShapeFlexMax = "service.beta.kubernetes.io/oci-load-balancer-shape-flex-max"
 
 	// ServiceAnnotationLoadBalancerSubnet1 is a Service annotation for
 	// specifying the first subnet of a load balancer.
@@ -122,6 +133,7 @@ const (
 	lbConnectionIdleTimeoutTCP  = 300
 	lbConnectionIdleTimeoutHTTP = 60
 	loadBalancer                = "loadbalancer"
+	flexible                    = "flexible"
 )
 
 // GetLoadBalancerName returns the name of the loadbalancer
@@ -305,6 +317,13 @@ func (cp *CloudProvider) createLoadBalancer(ctx context.Context, spec *LBSpec) (
 		BackendSets:   spec.BackendSets,
 		Listeners:     spec.Listeners,
 		Certificates:  certs,
+	}
+
+	if spec.Shape == flexible {
+		details.ShapeDetails = &loadbalancer.ShapeDetails{
+			MinimumBandwidthInMbps: spec.FlexMin,
+			MaximumBandwidthInMbps: spec.FlexMax,
+		}
 	}
 
 	wrID, err := cp.client.LoadBalancer().CreateLoadBalancer(ctx, details)
@@ -501,6 +520,15 @@ func (cp *CloudProvider) updateLoadBalancer(ctx context.Context, lb *loadbalance
 	nodeSubnets, err := getSubnetsForNodes(ctx, spec.nodes, cp.client)
 	if err != nil {
 		return errors.Wrap(err, "get subnets for nodes")
+	}
+
+	shapeChanged := hasLoadbalancerShapeChanged(ctx, spec, lb)
+
+	if shapeChanged {
+		err = cp.updateLoadbalancerShape(ctx, lb, spec)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(backendSetActions) == 0 && len(listenerActions) == 0 {
@@ -794,6 +822,33 @@ func (cp *CloudProvider) EnsureLoadBalancerDeleted(ctx context.Context, clusterN
 	logger.Info("Deleted load balancer")
 	metrics.SendMetricData(cp.metricPusher, metrics.LBDeleteSuccess, time.Since(startTime).Seconds(), loadBalancer, id)
 
+	return nil
+}
+
+func (cp *CloudProvider) updateLoadbalancerShape(ctx context.Context, lb *loadbalancer.LoadBalancer, spec *LBSpec) error {
+	shapeDetails := loadbalancer.UpdateLoadBalancerShapeDetails{
+		ShapeName:    &spec.Shape,
+		ShapeDetails: nil,
+	}
+	if *lb.ShapeName == flexible && spec.Shape != flexible {
+		// LBaaS does not support converting from flexible to fixed shapes
+		// as that can easily be achieved by setting the min and max bandwith to
+		// whatever fixed shape that is needed
+		return errors.New("cannot convert LB shape from flexible to fixed shape " + spec.Shape)
+	}
+	if spec.Shape == flexible {
+		shapeDetails.ShapeDetails = &loadbalancer.ShapeDetails{
+			MinimumBandwidthInMbps: spec.FlexMin,
+			MaximumBandwidthInMbps: spec.FlexMax,
+		}
+	}
+	opcRequestID, err := cp.client.LoadBalancer().UpdateLoadBalancerShape(ctx, *lb.Id, shapeDetails)
+	if err != nil {
+		return errors.Wrap(err, "failed to update loadbalancer shape")
+	}
+	cp.logger.With("old-shape", *lb.ShapeName, "new-shape", spec.Shape,
+		"flexMinimumMbps", spec.FlexMin, "flexMaximumMbps", spec.FlexMax,
+		"opc-request-id", opcRequestID).Info("Successfully created an loadbalancer update shape request")
 	return nil
 }
 

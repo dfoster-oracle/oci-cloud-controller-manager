@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	"github.com/oracle/oci-go-sdk/common"
-	"github.com/oracle/oci-go-sdk/common/auth"
-	"github.com/oracle/oci-go-sdk/monitoring"
+	"github.com/oracle/oci-go-sdk/v31/common"
+	"github.com/oracle/oci-go-sdk/v31/common/auth"
+	"github.com/oracle/oci-go-sdk/v31/monitoring"
 
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	ociclient "github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
@@ -103,7 +103,7 @@ func NewMetricPusher(logger *zap.SugaredLogger) (*MetricPusher, error) {
 // value is the metric value which is float by default
 // dimensions are the custom dimensions to be added to the metric
 func (p *MetricPusher) sendMetricData(name string, value float64, dimensions map[string]string) {
-	now := common.SDKTime{time.Now()}
+	now := common.SDKTime{Time: time.Now()}
 
 	dataPoint := monitoring.Datapoint{
 		Value:     &value,

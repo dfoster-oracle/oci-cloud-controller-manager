@@ -36,6 +36,7 @@ const (
 	HTTP400InvalidParameterMessageKubernetesVersion                            = "Invalid kubernetes version."
 	HTTP400InvalidParameterMessageKubernetesVersionIsSame                      = "The kubernetes version must be different than the existing version."
 	HTTP400InvalidParameterMessageKubernetesVersionIsLower                     = "The specified kubernetes version is lower than the existing version."
+	HTTP400InvalidParameterMessageGPUKubernetesVersion                         = "The specified kubernetes version does not support GPU shapes"
 	HTTP400InvalidParameterMessageMissingClusterName                           = "Missing cluster name parameter."
 	HTTP400InvalidParameterMessageMissingCompartmentID                         = "Missing compartmentId parameter."
 	HTTP400InvalidParameterMessageMissingRegion                                = "Missing region." // TODO FIX THIS

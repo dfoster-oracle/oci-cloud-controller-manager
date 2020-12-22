@@ -4,11 +4,12 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"encoding/json"
 	"fmt"
-	"github.com/oracle/oci-go-sdk/common"
+	"github.com/oracle/oci-go-sdk/v31/common"
 	"sort"
 	"strings"
 
 	nodes "bitbucket.oci.oraclecorp.com/oke/oke-common/types/nodes"
+	"bitbucket.oci.oraclecorp.com/oke/oke-common/protobuf"
 )
 
 // Set of constants representing the allowable values for NodeSource
@@ -52,6 +53,7 @@ type NodePoolSummaryV3 struct {
 	NodeSource        NodeSourceOption           `json:"nodeSource,omitempty"`
 	NodeSourceDetails NodeSourceDetails          `json:"nodeSourceDetails,omitempty"`
 	NodeShape         string                     `json:"nodeShape"`
+	NodeShapeConfig   *NodeShapeConfig           `json:"nodeShapeConfig,omitempty"`
 	InitialNodeLabels *[]KeyValueV3              `json:"initialNodeLabels,omitempty"`
 	SSHPublicKey      string                     `json:"sshPublicKey"`
 	QuantityPerSubnet uint32                     `json:"quantityPerSubnet"`
@@ -127,6 +129,17 @@ func (src *NodePool) toSummaryV3(enableNodePoolEnhancements bool) NodePoolSummar
 	initialNodeLabels := KeyValuesFromString(src.InitialNodeLabels)
 	dst.InitialNodeLabels = &initialNodeLabels
 	dst.SSHPublicKey = src.SSHPublicKey
+	if src.NodeOcpus != nil || src.NodeMemoryInGBs != nil {
+		dst.NodeShapeConfig = &NodeShapeConfig{}
+	}
+	if src.NodeOcpus != nil {
+		ocpus := src.NodeOcpus.GetValue()
+		dst.NodeShapeConfig.Ocpus = &ocpus
+	}
+	if src.NodeMemoryInGBs != nil {
+		memoryInGBs := src.NodeMemoryInGBs.GetValue()
+		dst.NodeShapeConfig.MemoryInGBs = &memoryInGBs
+	}
 
 	if src.NodeImageID != "" {
 		nodeSourceImageOption := NodeSourceViaImageOption{
@@ -183,6 +196,7 @@ type NodePoolV3 struct {
 	NodeSource        NodeSourceOption           `json:"nodeSource,omitempty"`
 	NodeSourceDetails NodeSourceDetails          `json:"nodeSourceDetails,omitempty"`
 	NodeShape         string                     `json:"nodeShape"`
+	NodeShapeConfig   *NodeShapeConfig           `json:"nodeShapeConfig,omitempty"`
 	InitialNodeLabels *[]KeyValueV3              `json:"initialNodeLabels,omitempty"`
 	SSHPublicKey      string                     `json:"sshPublicKey"`
 	QuantityPerSubnet uint32                     `json:"quantityPerSubnet"`
@@ -214,6 +228,18 @@ func toNodePoolV3(src *NodePool, exposeFaultDomainAndPrivateIp bool, enableNodeP
 	initialNodeLabels := KeyValuesFromString(src.InitialNodeLabels)
 	dst.InitialNodeLabels = &initialNodeLabels
 	dst.SSHPublicKey = src.SSHPublicKey
+	if src.NodeOcpus != nil || src.NodeMemoryInGBs != nil {
+		dst.NodeShapeConfig = &NodeShapeConfig{}
+	}
+	if src.NodeOcpus != nil {
+		ocpus := src.NodeOcpus.GetValue()
+		dst.NodeShapeConfig.Ocpus = &ocpus
+	}
+	if src.NodeMemoryInGBs != nil {
+		memoryInGBs := src.NodeMemoryInGBs.GetValue()
+		dst.NodeShapeConfig.MemoryInGBs = &memoryInGBs
+	}
+
 
 	if src.NodeImageID != "" {
 		nodeSourceImageOption := NodeSourceViaImageOption{
@@ -271,6 +297,7 @@ type CreateNodePoolDetailsV3 struct {
 	NodeImageName     string                    `json:"nodeImageName"`
 	NodeSourceDetails CreateNodeSourceDetails   `json:"nodeSourceDetails,omitempty"`
 	NodeShape         string                    `json:"nodeShape"`
+	NodeShapeConfig   *NodeShapeConfig           `json:"nodeShapeConfig,omitempty"`
 	NodeMetadata      map[string]string         `json:"nodeMetadata"`
 	InitialNodeLabels []KeyValueV3              `json:"initialNodeLabels,omitempty"`
 	SSHPublicKey      string                    `json:"sshPublicKey"`
@@ -283,6 +310,12 @@ type CreateNodePoolDetailsV3 struct {
 type CreateNodeSourceDetails struct {
 	JsonData   []byte
 	SourceType string `json:"sourceType"`
+}
+
+// NodeShapeConfig has the same structure for Create/Update/Read/List, so use the same one for now.
+type NodeShapeConfig struct {
+	Ocpus *float32 `json:"ocpus,omitempty"`
+	MemoryInGBs *float32 `json:"memoryInGBs,omitempty"`
 }
 
 type CreateNodeSourceViaImageDetails struct {
@@ -345,6 +378,7 @@ type UpdateNodePoolDetailsV3 struct {
 	NodeConfigDetails NodePoolNodeConfigDetails `json:"nodeConfigDetails,omitempty"`
 	NodeMetadata      map[string]string         `json:"nodeMetadata,omitempty"`
 	NodeShape         string                    `json:"nodeShape"`
+	NodeShapeConfig   *NodeShapeConfig           `json:"nodeShapeConfig,omitempty"`
 	NodeSourceDetails CreateNodeSourceDetails    `json:"nodeSourceDetails,omitempty"`
 	SSHPublicKey      string                    `json:"sshPublicKey,omitempty"`
 }
@@ -373,7 +407,7 @@ type NodePoolPlacementConfigDetails struct {
 }
 
 // ToProto converts a CreateNodePoolDetailsV3 to a NodePoolNewRequest object understood by grpc
-func (v3 *CreateNodePoolDetailsV3) ToProto(enableNodePoolEnhancements bool) *NewRequest {
+func (v3 *CreateNodePoolDetailsV3) ToProto(enableNodePoolEnhancements bool) (*NewRequest, error) {
 	var dst NewRequest
 	if v3 != nil {
 		dst.Name = v3.Name
@@ -382,15 +416,31 @@ func (v3 *CreateNodePoolDetailsV3) ToProto(enableNodePoolEnhancements bool) *New
 		dst.K8SVersion = v3.KubernetesVersion
 		dst.NodeImageName = v3.NodeImageName
 		dst.NodeShape = v3.NodeShape
+		if v3.NodeShapeConfig != nil && v3.NodeShapeConfig.Ocpus != nil {
+			floatValue := protobuf.ToFloatValue(*v3.NodeShapeConfig.Ocpus)
+			dst.NodeOcpus = &floatValue
+		}
+		if v3.NodeShapeConfig != nil && v3.NodeShapeConfig.MemoryInGBs != nil {
+			floatValue := protobuf.ToFloatValue(*v3.NodeShapeConfig.MemoryInGBs)
+			dst.NodeMemoryInGBs = &floatValue
+		}
 
-		if nn, e := v3.NodeSourceDetails.UnmarshalPolymorphicJSON(v3.NodeSourceDetails.JsonData); e == nil && nn != nil {
-			if nodeSrcImgDetails, ok := nn.(CreateNodeSourceViaImageDetails); ok {
-				dst.NodeImageID = *nodeSrcImgDetails.ImageId
-				if enableNodePoolEnhancements && nodeSrcImgDetails.BootVolumeSizeInGBs != nil {
-					value := wrappers.UInt32Value{Value: *nodeSrcImgDetails.BootVolumeSizeInGBs}
-					dst.NodeBootVolumeSizeInGBs = &value
+		if nodeSourceDetails, e := v3.NodeSourceDetails.UnmarshalPolymorphicJSON(v3.NodeSourceDetails.JsonData); e == nil {
+			// UnmarshalPolymorphicJSON returns nil in the scenario where the node pool was created with a legacy
+			// nodeImageId or nodeImageName, so don't throw an error
+			if nodeSourceDetails != nil {
+				if nodeSrcImgDetails, ok := nodeSourceDetails.(CreateNodeSourceViaImageDetails); ok {
+					dst.NodeImageID = *nodeSrcImgDetails.ImageId
+					if enableNodePoolEnhancements && nodeSrcImgDetails.BootVolumeSizeInGBs != nil {
+						value := wrappers.UInt32Value{Value: *nodeSrcImgDetails.BootVolumeSizeInGBs}
+						dst.NodeBootVolumeSizeInGBs = &value
+					}
+				} else {
+					return nil, fmt.Errorf("unable to determine nodeSourceDetails type")
 				}
 			}
+		} else {
+			return nil, fmt.Errorf("unable to unmarshal nodeSourceDetails")
 		}
 
 		initialNodeLabels := KeyValuesToString(v3.InitialNodeLabels)
@@ -421,7 +471,7 @@ func (v3 *CreateNodePoolDetailsV3) ToProto(enableNodePoolEnhancements bool) *New
 		}
 	}
 
-	return &dst
+	return &dst, nil
 }
 
 // KeyValueV3 is used for holding a key/value pair whose value is a string

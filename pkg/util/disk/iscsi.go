@@ -209,6 +209,7 @@ func FindFromMountPointPath(logger *zap.SugaredLogger, diskByPaths []string) ([]
 	return nil, errors.New("iSCSI information not found for mount point")
 }
 
+// GetDiskPathFromMountPath resolves a directory to a block device
 func GetDiskPathFromMountPath(logger *zap.SugaredLogger, mountPath string) ([]string, error) {
 	mounter := mount.New(logger, mountCommand)
 	mountPoint, err := getMountPointForPath(mounter, mountPath)

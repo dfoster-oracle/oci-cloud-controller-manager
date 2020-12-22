@@ -28,10 +28,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	cloudprovider "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci"
-	"github.com/oracle/oci-go-sdk/loadbalancer"
 	gerrors "github.com/pkg/errors"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +43,9 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	imageutils "k8s.io/kubernetes/test/utils/image"
+
+	cloudprovider "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci"
+	"github.com/oracle/oci-go-sdk/v31/loadbalancer"
 )
 
 const (
@@ -92,6 +93,9 @@ const (
 	// GCPMaxInstancesInInstanceGroup is the maximum number of instances supported in
 	// one instance group on GCP.
 	GCPMaxInstancesInInstanceGroup = 2000
+
+	// OCI LB Shape Update Timeout
+	OCILBShapeUpdateTimeout = 5 * time.Minute
 )
 
 // This should match whatever the default/configured range is
@@ -593,9 +597,9 @@ func (j *ServiceTestJig) newRCTemplate(namespace string) *v1.ReplicationControll
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Name:    "agnhost",
-							Image:   agnhost,
-							Args:    []string{"netexec", "--http-port=80" ,"--udp-port=80"},
+							Name:  "agnhost",
+							Image: agnhost,
+							Args:  []string{"netexec", "--http-port=80", "--udp-port=80"},
 							ReadinessProbe: &v1.Probe{
 								PeriodSeconds: 3,
 								Handler: v1.Handler{
@@ -842,7 +846,7 @@ func (j *ServiceTestJig) TestHTTPHealthCheckNodePort(host string, port int, requ
 }
 
 func (f *CloudProviderFramework) VerifyHealthCheckConfig(loadBalancerId string, retries, timeout, interval int) error {
-	for start := time.Now(); time.Since(start) < 5 * time.Minute; time.Sleep(5 * time.Second) {
+	for start := time.Now(); time.Since(start) < 5*time.Minute; time.Sleep(5 * time.Second) {
 		loadBalancer, err := f.Client.LoadBalancer().GetLoadBalancer(context.TODO(), loadBalancerId)
 		if err != nil {
 			return err
@@ -860,6 +864,33 @@ func (f *CloudProviderFramework) VerifyHealthCheckConfig(loadBalancerId string, 
 	return gerrors.Errorf("Timeout waiting for Health check config to be as expected.")
 }
 
+// WaitForLoadBalancerShapeChange polls for the shape of the LB
+// to be the same as the spec
+func (f *CloudProviderFramework) WaitForLoadBalancerShapeChange(lb *loadbalancer.LoadBalancer, shape, fMin, fMax string) error {
+	condition := func() (bool, error) {
+
+		updatedLB, err := f.Client.LoadBalancer().GetLoadBalancer(context.TODO(), *lb.Id)
+		if err != nil {
+			return false, err
+		}
+		if *updatedLB.ShapeName != shape {
+			return false, nil
+		}
+		// in case of non-flex shapes ShapeDetails will be nil
+		if updatedLB.ShapeDetails == nil {
+			return true, nil
+		}
+		if strconv.Itoa(*updatedLB.ShapeDetails.MinimumBandwidthInMbps) != fMin ||
+			strconv.Itoa(*updatedLB.ShapeDetails.MaximumBandwidthInMbps) != fMax {
+			return false, nil
+		}
+		return true, nil
+	}
+	if err := wait.Poll(15*time.Second, OCILBShapeUpdateTimeout, condition); err != nil {
+		return fmt.Errorf("Failed to update LB Shape from %s to %s. ShapeDetails (min, max) (%s, %s)", *lb.ShapeName, shape, fMin, fMax)
+	}
+	return nil
+}
 func testHealthCheckConfig(loadBalancer *loadbalancer.LoadBalancer, retries int, timeout int, interval int) (bool, error) {
 	if loadBalancer != nil && len(loadBalancer.BackendSets) != 0 {
 		for _, backendSet := range loadBalancer.BackendSets {
@@ -879,7 +910,7 @@ func testHealthCheckConfig(loadBalancer *loadbalancer.LoadBalancer, retries int,
 }
 
 func (f *CloudProviderFramework) VerifyLoadBalancerConnectionIdleTimeout(loadBalancerId string, connectionIdleTimeout int) error {
-	for start := time.Now(); time.Since(start) < 5 * time.Minute; time.Sleep(2 * time.Second) {
+	for start := time.Now(); time.Since(start) < 5*time.Minute; time.Sleep(2 * time.Second) {
 		loadBalancer, err := f.Client.LoadBalancer().GetLoadBalancer(context.TODO(), loadBalancerId)
 		if err != nil {
 			return err

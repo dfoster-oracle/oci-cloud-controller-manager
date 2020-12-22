@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/oracle/oci-go-sdk/core"
+	"github.com/oracle/oci-go-sdk/v31/core"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -56,12 +56,14 @@ var (
 	}
 )
 
+// VolumeParameters holds configuration
 type VolumeParameters struct {
 	//kmsKey is the KMS key that would be used as CMEK key for BV attachment
 	diskEncryptionKey   string
 	attachmentParameter map[string]string
 }
 
+// VolumeAttachmentOption holds config for attachments
 type VolumeAttachmentOption struct {
 	//whether the attachment type is paravirtualized
 	useParavirtualizedAttachment bool
@@ -320,16 +322,15 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 				// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 				return nil, status.Errorf(codes.Internal, "Failed to attach volume to node. "+
 					"The volume is already attached to another node.")
-			} else {
-				if volumeAttached.GetLifecycleState() == core.VolumeAttachmentLifecycleStateAttaching {
-					log.Info("Volume is ATTACHING to node.")
-					volumeAttached, err = d.client.Compute().WaitForVolumeAttached(ctx, *volumeAttached.GetId())
-					if err != nil {
-						log.With(zap.Error(err)).Error("Error while waiting: failed to attach volume to the node: %s.", err)
-						// TODO: Uncomment once we know our T2 limits are not getting breached
-						// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
-						return nil, status.Errorf(codes.Internal, "Failed to attach volume to the node: %s", err)
-					}
+			}
+			if volumeAttached.GetLifecycleState() == core.VolumeAttachmentLifecycleStateAttaching {
+				log.Info("Volume is ATTACHING to node.")
+				volumeAttached, err = d.client.Compute().WaitForVolumeAttached(ctx, *volumeAttached.GetId())
+				if err != nil {
+					log.With(zap.Error(err)).Error("Error while waiting: failed to attach volume to the node: %s.", err)
+					// TODO: Uncomment once we know our T2 limits are not getting breached
+					// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+					return nil, status.Errorf(codes.Internal, "Failed to attach volume to the node: %s", err)
 				}
 				log.Info("Volume is already ATTACHED to node.")
 				return generatePublishContext(volumeAttachmentOptions, log, volumeAttached), nil
@@ -622,7 +623,7 @@ func (d *ControllerDriver) ControllerExpandVolume(ctx context.Context, req *csi.
 	return nil, status.Error(codes.Unimplemented, "ControllerExpandVolume is not supported yet")
 }
 
-func provision(log *zap.SugaredLogger, c client.Interface, volName string, volSize int64, availDomainName, compartmentID, backupID, kmsKeyId string, timeout time.Duration) (core.Volume, error) {
+func provision(log *zap.SugaredLogger, c client.Interface, volName string, volSize int64, availDomainName, compartmentID, backupID, kmsKeyID string, timeout time.Duration) (core.Volume, error) {
 
 	ctx := context.Background()
 
@@ -644,8 +645,8 @@ func provision(log *zap.SugaredLogger, c client.Interface, volName string, volSi
 		volumeDetails.SourceDetails = &core.VolumeSourceFromVolumeBackupDetails{Id: &backupID}
 	}
 
-	if kmsKeyId != "" {
-		volumeDetails.KmsKeyId = &kmsKeyId
+	if kmsKeyID != "" {
+		volumeDetails.KmsKeyId = &kmsKeyID
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, timeout)

@@ -28,11 +28,11 @@ import (
 
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
-	"github.com/oracle/oci-go-sdk/common"
-	"github.com/oracle/oci-go-sdk/core"
-	"github.com/oracle/oci-go-sdk/filestorage"
-	"github.com/oracle/oci-go-sdk/identity"
-	"github.com/oracle/oci-go-sdk/loadbalancer"
+	"github.com/oracle/oci-go-sdk/v31/common"
+	"github.com/oracle/oci-go-sdk/v31/core"
+	"github.com/oracle/oci-go-sdk/v31/filestorage"
+	"github.com/oracle/oci-go-sdk/v31/identity"
+	"github.com/oracle/oci-go-sdk/v31/loadbalancer"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 )
@@ -409,6 +409,10 @@ func (c *MockLoadBalancerClient) DeleteListener(ctx context.Context, lbID, name 
 
 func (c *MockLoadBalancerClient) AwaitWorkRequest(ctx context.Context, id string) (*loadbalancer.WorkRequest, error) {
 	return nil, nil
+}
+
+func (c *MockLoadBalancerClient) UpdateLoadBalancerShape(ctx context.Context, id string, details loadbalancer.UpdateLoadBalancerShapeDetails) (string, error) {
+	return "", nil
 }
 
 // MockBlockStorageClient mocks BlockStoargae client implementation
@@ -967,6 +971,6 @@ func (s *mockNodeLister) Get(name string) (*v1.Node, error) {
 	return nil, nil
 }
 
-func (l *mockNodeLister) ListWithPredicate(predicate listersv1.NodeConditionPredicate) ([]*v1.Node, error) {
+func (s *mockNodeLister) ListWithPredicate(predicate listersv1.NodeConditionPredicate) ([]*v1.Node, error) {
 	return nil, nil
 }

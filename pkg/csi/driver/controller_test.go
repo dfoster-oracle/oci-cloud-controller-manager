@@ -9,11 +9,11 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
-	"github.com/oracle/oci-go-sdk/common"
-	"github.com/oracle/oci-go-sdk/core"
-	"github.com/oracle/oci-go-sdk/filestorage"
-	"github.com/oracle/oci-go-sdk/identity"
-	"github.com/oracle/oci-go-sdk/loadbalancer"
+	"github.com/oracle/oci-go-sdk/v31/common"
+	"github.com/oracle/oci-go-sdk/v31/core"
+	"github.com/oracle/oci-go-sdk/v31/filestorage"
+	"github.com/oracle/oci-go-sdk/v31/identity"
+	"github.com/oracle/oci-go-sdk/v31/loadbalancer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
@@ -204,7 +204,12 @@ func (c *MockLoadBalancerClient) AwaitWorkRequest(ctx context.Context, id string
 func (c *MockLoadBalancerClient) CreateBackend(ctx context.Context, lbID, bsName string, details loadbalancer.BackendDetails) (string, error) {
 	return "", nil
 }
+
 func (c *MockLoadBalancerClient) DeleteBackend(ctx context.Context, lbID, bsName, name string) (string, error) {
+	return "", nil
+}
+
+func (c *MockLoadBalancerClient) UpdateLoadBalancerShape(ctx context.Context, lbID string, details loadbalancer.UpdateLoadBalancerShapeDetails) (string, error) {
 	return "", nil
 }
 
@@ -733,13 +738,13 @@ func TestExtractVolumeParameters(t *testing.T) {
 func TestGetAttachmentOptions(t *testing.T) {
 	tests := map[string]struct {
 		attachmentType         string
-		instanceId             string
+		instanceID             string
 		volumeAttachmentOption VolumeAttachmentOption
 		wantErr                bool
 	}{
 		"PV attachment with instance in-transit encryption enabled": {
 			attachmentType: attachmentTypeParavirtualized,
-			instanceId:     "inTransitEnabled",
+			instanceID:     "inTransitEnabled",
 			volumeAttachmentOption: VolumeAttachmentOption{
 				enableInTransitEncryption:    true,
 				useParavirtualizedAttachment: true,
@@ -749,7 +754,7 @@ func TestGetAttachmentOptions(t *testing.T) {
 
 		"PV attachment with instance in-transit encryption disabled": {
 			attachmentType: attachmentTypeParavirtualized,
-			instanceId:     "inTransitDisabled",
+			instanceID:     "inTransitDisabled",
 			volumeAttachmentOption: VolumeAttachmentOption{
 				enableInTransitEncryption:    false,
 				useParavirtualizedAttachment: true,
@@ -758,7 +763,7 @@ func TestGetAttachmentOptions(t *testing.T) {
 		},
 		"ISCSI attachment with instance in-transit encryption enabled": {
 			attachmentType: attachmentTypeISCSI,
-			instanceId:     "inTransitEnabled",
+			instanceID:     "inTransitEnabled",
 			volumeAttachmentOption: VolumeAttachmentOption{
 				enableInTransitEncryption:    true,
 				useParavirtualizedAttachment: true,
@@ -767,7 +772,7 @@ func TestGetAttachmentOptions(t *testing.T) {
 		},
 		"ISCSI attachment with instance in-transit encryption disabled": {
 			attachmentType: attachmentTypeISCSI,
-			instanceId:     "inTransitDisabled",
+			instanceID:     "inTransitDisabled",
 			volumeAttachmentOption: VolumeAttachmentOption{
 				enableInTransitEncryption:    false,
 				useParavirtualizedAttachment: false,
@@ -776,7 +781,7 @@ func TestGetAttachmentOptions(t *testing.T) {
 		},
 		"API error": {
 			attachmentType:         attachmentTypeISCSI,
-			instanceId:             "foo",
+			instanceID:             "foo",
 			volumeAttachmentOption: VolumeAttachmentOption{},
 			wantErr:                true,
 		},
@@ -787,7 +792,7 @@ func TestGetAttachmentOptions(t *testing.T) {
 	for name, tt := range tests {
 
 		t.Run(name, func(t *testing.T) {
-			volumeAttachmentOption, err := getAttachmentOptions(context.Background(), computeClient, tt.attachmentType, tt.instanceId)
+			volumeAttachmentOption, err := getAttachmentOptions(context.Background(), computeClient, tt.attachmentType, tt.instanceID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getAttachmentOptions() error = %v, wantErr %v", err, tt.wantErr)
 				return

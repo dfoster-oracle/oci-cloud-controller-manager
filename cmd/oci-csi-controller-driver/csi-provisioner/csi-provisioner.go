@@ -154,7 +154,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 
 	// -------------------------------
 	// PersistentVolumeClaims informer
-	rateLimiter := workqueue.NewItemExponentialFailureRateLimiter(csioptions.RetryIntervalStart,  csioptions.RetryIntervalMax)
+	rateLimiter := workqueue.NewItemExponentialFailureRateLimiter(csioptions.RetryIntervalStart, csioptions.RetryIntervalMax)
 	claimQueue := workqueue.NewNamedRateLimitingQueue(rateLimiter, "claims")
 	claimInformer := factory.Core().V1().PersistentVolumeClaims().Informer()
 
