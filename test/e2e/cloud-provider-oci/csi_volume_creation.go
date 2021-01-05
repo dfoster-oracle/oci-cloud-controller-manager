@@ -27,7 +27,7 @@ var _ = Describe("CSI Volume Creation", func() {
 		It("Create PVC and POD for CSI.", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-provisioner-e2e-tests")
 
-			scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels)
+			scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer")
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil)
 
 			pvcJig.NewPODForCSI("app1", f.Namespace.Name, pvc.Name, setupF.AdLabel)
@@ -36,7 +36,7 @@ var _ = Describe("CSI Volume Creation", func() {
 		It("Create PVC with VolumeSize 1Gi but should use default 50Gi", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-provisioner-e2e-tests-pvc-with-1gi")
 
-			scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels)
+			scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer")
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.VolumeFss, scName, nil)
 
 			pvcJig.NewPODForCSI("app2", f.Namespace.Name, pvc.Name, setupF.AdLabel)
@@ -49,7 +49,7 @@ var _ = Describe("CSI Volume Creation", func() {
 		It("Create PVC with VolumeSize 100Gi should use 100Gi", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-provisioner-e2e-tests-pvc-with-100gi")
 
-			scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels)
+			scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer")
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MaxVolumeBlock, scName, nil)
 
 			pvcJig.NewPODForCSI("app3", f.Namespace.Name, pvc.Name, setupF.AdLabel)
@@ -67,7 +67,7 @@ var _ = Describe("CSI Static Volume Creation", func() {
 		It("Static Provisioning CSI", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-provisioner-e2e-tests-pvc-with-static")
 
-			scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels)
+			scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer")
 
 			compartmentId := ""
 			if setupF.Compartment1 != "" {
@@ -112,7 +112,7 @@ func TestCMEKAttachmentTypeAndEncryptionType(f *framework.CloudProviderFramework
 		framework.KmsKey:         setupF.CMEKKMSKey,
 		framework.AttachmentType: expectedAttachmentType,
 	}
-	scName := f.CreateStorageClassOrFail(framework.SCName, "blockvolume.csi.oraclecloud.com", scParameter, pvcJig.Labels)
+	scName := f.CreateStorageClassOrFail(framework.SCName, "blockvolume.csi.oraclecloud.com", scParameter, pvcJig.Labels, "WaitForFirstConsumer")
 	pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil)
 	podName := pvcJig.NewPODForCSI("app1", f.Namespace.Name, pvc.Name, setupF.AdLabel)
 	pvcJig.CheckCMEKKey(f.Client.BlockStorage(), pvc.Name, f.Namespace.Name, setupF.CMEKKMSKey)
