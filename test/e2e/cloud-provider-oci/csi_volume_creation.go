@@ -98,7 +98,7 @@ var _ = Describe("CSI CMEK,PV attachment and in-transit encryption test", func()
 		})
 	})
 
-	Context("[cloudprovider][storage][csi]", func() {
+	Context("[cloudprovider][storage][csi][cmek]", func() {
 		It("Create PVC and POD for CSI with CMEK,ISCSI attachment and in-transit encryption", func() {
 			TestCMEKAttachmentTypeAndEncryptionType(f, framework.AttachmentTypeISCSI)
 		})
