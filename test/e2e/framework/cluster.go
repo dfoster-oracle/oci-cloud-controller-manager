@@ -227,7 +227,7 @@ func (f *Framework) CreateClusterVersioned(version string) string {
 func (f *Framework) getClusterIDFromWR(wrResponse oke.GetWorkRequestResponse) string {
 	for _, resource := range wrResponse.Resources {
 		Logf("EntityType:  '%s'", *resource.EntityType)
-		if *resource.EntityType == "cluster" || *resource.EntityType == "clusterdev" {
+		if *resource.EntityType == "cluster" || *resource.EntityType == "clusterdev" || *resource.EntityType == "clusterinteg" {
 			return *resource.Identifier
 		}
 	}
