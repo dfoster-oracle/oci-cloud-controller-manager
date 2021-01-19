@@ -110,13 +110,13 @@ func (f *Framework) ListNodePoolImages() map[string]string {
 }
 
 
-func (f *Framework) PickNonGPUImage(images map[string]string) string {
+func (f *Framework) PickNonGPUImage(images map[string]string) (bool,string) {
 	for sourceName, imageId := range images {
 		if !strings.Contains(sourceName, "GPU") {
-			return imageId
+			return true,imageId
 		}
 	}
-	return " "
+	return false,""
 }
 
 // IsValidaNodePoolShape return true if the specified nodeShape is valid.
@@ -296,7 +296,8 @@ func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentI
 			})
 	}
 
-	imageId := f.PickNonGPUImage(f.ListNodePoolImages())
+	nonGPUImageFound, imageId := f.PickNonGPUImage(f.ListNodePoolImages())
+	Expect(nonGPUImageFound).To(BeTrue())
 	nodeSourceViaImageDetails := &oke.NodeSourceViaImageDetails{
 		ImageId: common.String(imageId),
 	}
