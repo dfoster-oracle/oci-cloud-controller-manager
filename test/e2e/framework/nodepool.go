@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"strings"
 
 	. "github.com/onsi/gomega"
 
@@ -95,16 +96,27 @@ func (f *Framework) ListNodePoolShapes() []string {
 }
 
 // ListNodePoolImages return the set of images available to nodepools.
-func (f *Framework) ListNodePoolImages() []string {
+func (f *Framework) ListNodePoolImages() map[string]string {
 	nodePoolOptions := f.GetNodePoolOptions("all")
-
 	sources := nodePoolOptions.Sources
 	Expect(len(sources) > 0).To(BeTrue())
-	imageIds := make([]string, 0, len(sources))
+	images := make(map[string]string)
 	for _, source := range sources {
-		imageIds = append(imageIds, *source.(oke.NodeSourceViaImageOption).ImageId)
+		sourceName := *source.(oke.NodeSourceViaImageOption).SourceName
+		imageId := *source.(oke.NodeSourceViaImageOption).ImageId
+		images[sourceName] = imageId
 	}
-	return imageIds
+	return images
+}
+
+
+func (f *Framework) PickNonGPUImage(images map[string]string) (bool,string) {
+	for sourceName, imageId := range images {
+		if !strings.Contains(sourceName, "GPU") {
+			return true,imageId
+		}
+	}
+	return false,""
 }
 
 // IsValidaNodePoolShape return true if the specified nodeShape is valid.
@@ -284,9 +296,10 @@ func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentI
 			})
 	}
 
-	imageIds := f.ListNodePoolImages()
+	nonGPUImageFound, imageId := f.PickNonGPUImage(f.ListNodePoolImages())
+	Expect(nonGPUImageFound).To(BeTrue())
 	nodeSourceViaImageDetails := &oke.NodeSourceViaImageDetails{
-		ImageId: common.String(imageIds[0]),
+		ImageId: common.String(imageId),
 	}
 
 	cfg := &NodePoolCreateConfig{
