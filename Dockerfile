@@ -12,7 +12,7 @@ WORKDIR $SRC
 
 RUN COMPONENT=${COMPONENT} make clean build
 
-FROM oraclelinux:7-slim
+FROM docker-remote.artifactory.oci.oraclecorp.com/oraclelinux:7-slim
 
 RUN yum install -y util-linux \
   && yum install -y e2fsprogs \
