@@ -110,6 +110,10 @@ func (c *client) CreateVolume(ctx context.Context, details core.CreateVolumeDeta
 
 	resp, err := c.bs.CreateVolume(ctx, core.CreateVolumeRequest{CreateVolumeDetails: details,
 		RequestMetadata: c.requestMetadata})
+
+	logger := c.logger.With("AvailabilityDomain", details.AvailabilityDomain, "CompartmentId", details.CompartmentId)
+        logger.With("volumeName", details.DisplayName, "OpcRequestId",resp.OpcRequestId).Info("OPC Request ID recorded while creating volume.")
+
 	incRequestCounter(err, createVerb, volumeResource)
 
 	if err != nil {
@@ -146,6 +150,8 @@ func (c *client) GetVolumesByName(ctx context.Context, volumeName, compartmentID
 			CompartmentId:   &compartmentID,
 			DisplayName:     &volumeName,
 			RequestMetadata: c.requestMetadata})
+	logger := c.logger.With("volumeName", volumeName, "compartmentID", compartmentID)
+	logger.With("OpcRequestId",listVolumeResponse.OpcRequestId).Info("OPC Request ID recorded while fetching volumes by name.")
 	if err != nil {
 		return nil, err
 	}
