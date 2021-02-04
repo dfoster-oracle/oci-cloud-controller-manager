@@ -111,8 +111,12 @@ func (c *client) CreateVolume(ctx context.Context, details core.CreateVolumeDeta
 	resp, err := c.bs.CreateVolume(ctx, core.CreateVolumeRequest{CreateVolumeDetails: details,
 		RequestMetadata: c.requestMetadata})
 
-	logger := c.logger.With("AvailabilityDomain", details.AvailabilityDomain, "CompartmentId", details.CompartmentId)
-        logger.With("VolumeName", details.DisplayName, "OpcRequestId",resp.OpcRequestId).Info("OPC Request ID recorded while creating volume.")
+	if err == nil {
+		logger := c.logger.With("AvailabilityDomain", *(details.AvailabilityDomain),
+			"CompartmentId", *(details.CompartmentId), "VolumeName", *(details.DisplayName),
+			"OpcRequestId",*(resp.OpcRequestId))
+		logger.Info("OPC Request ID recorded while creating volume.")
+	}
 
 	incRequestCounter(err, createVerb, volumeResource)
 
@@ -150,8 +154,13 @@ func (c *client) GetVolumesByName(ctx context.Context, volumeName, compartmentID
 			CompartmentId:   &compartmentID,
 			DisplayName:     &volumeName,
 			RequestMetadata: c.requestMetadata})
-	logger := c.logger.With("VolumeName", volumeName, "CompartmentID", compartmentID)
-	logger.With("OpcRequestId",listVolumeResponse.OpcRequestId).Info("OPC Request ID recorded while fetching volumes by name.")
+
+	if err == nil {
+		logger := c.logger.With("VolumeName", volumeName, "CompartmentID", compartmentID,
+			"OpcRequestId",*(listVolumeResponse.OpcRequestId))
+		logger.Info("OPC Request ID recorded while fetching volumes by name.")
+	}
+
 	if err != nil {
 		return nil, err
 	}
