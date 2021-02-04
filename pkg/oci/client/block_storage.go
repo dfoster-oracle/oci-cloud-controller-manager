@@ -159,9 +159,7 @@ func (c *client) GetVolumesByName(ctx context.Context, volumeName, compartmentID
 		logger := c.logger.With("VolumeName", volumeName, "CompartmentID", compartmentID,
 			"OpcRequestId",*(listVolumeResponse.OpcRequestId))
 		logger.Info("OPC Request ID recorded while fetching volumes by name.")
-	}
-
-	if err != nil {
+	} else {
 		return nil, err
 	}
 	return listVolumeResponse.Items, nil
