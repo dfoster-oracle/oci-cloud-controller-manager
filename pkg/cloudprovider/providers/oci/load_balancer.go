@@ -372,17 +372,16 @@ func (cp *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName str
 		return nil, err
 	}
 	exists := !client.IsNotFound(err)
-	// lbOCID := ""
-	// if lb.Id != nil {
-	// 	lbOCID = *lb.Id
-	// }
+	lbOCID := ""
+	if lb != nil && lb.Id != nil {
+		lbOCID = *lb.Id
+	}
 
 	var sslConfig *SSLConfig
 	if requiresCertificate(service) {
 		ports, err := getSSLEnabledPorts(service)
 		if err != nil {
-			// TODO: Uncomment once we know our T2 limits are not getting breached
-			// metrics.SendMetricData(cp.metricPusher, lbUpdateFailureMetricName, time.Since(startTime).Seconds(),loadBalancer, lbOCID)
+			metrics.SendMetricData(cp.metricPusher, metrics.LBUpdateFailure, time.Since(startTime).Seconds(), loadBalancer, lbOCID)
 			return nil, err
 		}
 		secretListenerString := service.Annotations[ServiceAnnotationLoadBalancerTLSSecret]
@@ -392,16 +391,14 @@ func (cp *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName str
 	subnets, err := cp.getLoadBalancerSubnets(ctx, logger, service)
 	if err != nil {
 		logger.With(zap.Error(err)).Error("Failed to get Load balancer Subnets.")
-		// TODO: Uncomment once we know our T2 limits are not getting breached
-		// metrics.SendMetricData(cp.metricPusher, lbUpdateFailureMetricName, time.Since(startTime).Seconds(),loadBalancer, lbOCID)
+		metrics.SendMetricData(cp.metricPusher, metrics.LBUpdateFailure, time.Since(startTime).Seconds(), loadBalancer, lbOCID)
 		return nil, err
 	}
 
 	spec, err := NewLBSpec(logger, service, nodes, subnets, sslConfig, cp.securityListManagerFactory)
 	if err != nil {
 		logger.With(zap.Error(err)).Error("Failed to derive LBSpec")
-		// TODO: Uncomment once we know our T2 limits are not getting breached
-		// metrics.SendMetricData(cp.metricPusher, lbUpdateFailureMetricName, time.Since(startTime).Seconds(),loadBalancer, lbOCID)
+		metrics.SendMetricData(cp.metricPusher, metrics.LBUpdateFailure, time.Since(startTime).Seconds(), loadBalancer, lbOCID)
 		return nil, err
 	}
 
@@ -430,13 +427,12 @@ func (cp *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName str
 	}
 
 	if err := cp.updateLoadBalancer(ctx, lb, spec); err != nil {
-		// TODO: Uncomment once we know our T2 limits are not getting breached
-		// metrics.SendMetricData(cp.metricPusher, lbUpdateFailureMetricName, time.Since(startTime).Seconds(),loadBalancer, lbOCID)
+		metrics.SendMetricData(cp.metricPusher, metrics.LBUpdateFailure, time.Since(startTime).Seconds(), loadBalancer, lbOCID)
 		return nil, err
 	}
 
-	// syncTime := time.Since(startTime).Seconds()
-	// 	metrics.SendMetricData(cp.metricPusher,lbUpdateSuccessMetricName, syncTime, loadBalancer, lbOCID)
+	syncTime := time.Since(startTime).Seconds()
+	metrics.SendMetricData(cp.metricPusher, metrics.LBUpdateSuccess, syncTime, loadBalancer, lbOCID)
 
 	return loadBalancerToStatus(lb)
 }
