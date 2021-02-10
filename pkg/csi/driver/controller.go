@@ -253,7 +253,7 @@ func (d *ControllerDriver) DeleteVolume(ctx context.Context, req *csi.DeleteVolu
 
 // ControllerPublishVolume attaches the given volume to the node
 func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
-	// startTime := time.Now()
+	startTime := time.Now()
 
 	if req.VolumeId == "" {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID must be provided")
@@ -272,8 +272,7 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 	id, err := d.util.lookupNodeID(d.KubeClient, req.NodeId)
 	if err != nil {
 		log.With(zap.Error(err)).Error("Failed to lookup node")
-		// TODO: Uncomment once we know our T2 limits are not getting breached
-		// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+		metrics.SendMetricData(d.metricPusher, metrics.PVAttachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 		return nil, status.Errorf(codes.InvalidArgument, "failed to get ProviderID by nodeName. error : %s", err)
 	}
 	id = client.MapProviderIDToInstanceID(id)
@@ -292,6 +291,7 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 	compartmentID, err := util.LookupNodeCompartment(d.KubeClient, req.NodeId)
 	if err != nil {
 		log.With(zap.Error(err)).With("instanceID", id).Errorf("failed to get compartmentID from node annotation: %s", util.CompartmentIDAnnotation)
+		metrics.SendMetricData(d.metricPusher, metrics.PVAttachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 		return nil, status.Errorf(codes.Unknown, "failed to get compartmentID from node annotation:. error : %s", err)
 	}
 
@@ -299,8 +299,7 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 
 	if err != nil && !client.IsNotFound(err) {
 		log.With(zap.Error(err)).Error("Got error in finding volume attachment: %s", err)
-		// TODO: Uncomment once we know our T2 limits are not getting breached
-		// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+		metrics.SendMetricData(d.metricPusher, metrics.PVAttachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 		return nil, err
 	}
 
@@ -311,15 +310,13 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 			err = d.client.Compute().WaitForVolumeDetached(ctx, *volumeAttached.GetId())
 			if err != nil {
 				log.With(zap.Error(err)).Error("Error while waiting for volume to get detached before attaching: %s", err)
-				// TODO: Uncomment once we know our T2 limits are not getting breached
-				// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+				metrics.SendMetricData(d.metricPusher, metrics.PVAttachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 				return nil, status.Errorf(codes.Internal, "Error while waiting for volume to get detached before attaching: %s", err)
 			}
 		} else {
 			if id != *volumeAttached.GetInstanceId() {
 				log.Error("Volume is already attached to another node: %s", *volumeAttached.GetInstanceId())
-				// TODO: Uncomment once we know our T2 limits are not getting breached
-				// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+				metrics.SendMetricData(d.metricPusher, metrics.PVAttachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 				return nil, status.Errorf(codes.Internal, "Failed to attach volume to node. "+
 					"The volume is already attached to another node.")
 			}
@@ -328,8 +325,7 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 				volumeAttached, err = d.client.Compute().WaitForVolumeAttached(ctx, *volumeAttached.GetId())
 				if err != nil {
 					log.With(zap.Error(err)).Error("Error while waiting: failed to attach volume to the node: %s.", err)
-					// TODO: Uncomment once we know our T2 limits are not getting breached
-					// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+					metrics.SendMetricData(d.metricPusher, metrics.PVAttachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 					return nil, status.Errorf(codes.Internal, "Failed to attach volume to the node: %s", err)
 				}
 				log.Info("Volume is already ATTACHED to node.")
@@ -344,16 +340,14 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 		volumeAttached, err = d.client.Compute().AttachParavirtualizedVolume(context.Background(), id, req.VolumeId, volumeAttachmentOptions.enableInTransitEncryption)
 		if err != nil {
 			log.With(zap.Error(err)).Info("failed paravirtualized attachment instance to volume.")
-			// TODO: Uncomment once we know our T2 limits are not getting breached
-			// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+			metrics.SendMetricData(d.metricPusher, metrics.PVAttachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 			return nil, status.Errorf(codes.Internal, "failed paravirtualized attachment instance to volume. error : %s", err)
 		}
 	} else {
 		volumeAttached, err = d.client.Compute().AttachVolume(context.Background(), id, req.VolumeId)
 		if err != nil {
 			log.With(zap.Error(err)).Info("failed iscsi attachment instance to volume.")
-			// TODO: Uncomment once we know our T2 limits are not getting breached
-			// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+			metrics.SendMetricData(d.metricPusher, metrics.PVAttachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 			return nil, status.Errorf(codes.Internal, "failed iscsi attachment instance to volume : %s", err)
 		}
 	}
@@ -361,13 +355,11 @@ func (d *ControllerDriver) ControllerPublishVolume(ctx context.Context, req *csi
 	volumeAttached, err = d.client.Compute().WaitForVolumeAttached(ctx, *volumeAttached.GetId())
 	if err != nil {
 		log.With(zap.Error(err)).Error("Failed to attach volume to the node.")
-		// TODO: Uncomment once we know our T2 limits are not getting breached
-		// metrics.SendMetricData(d.metricPusher, pvAttachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+		metrics.SendMetricData(d.metricPusher, metrics.PVAttachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 		return nil, status.Errorf(codes.Internal, "Failed to attach volume to the node %s", err)
 	}
 
-	// TODO: Uncomment once we know our T2 limits are not getting breached
-	// metrics.SendMetricData(d.metricPusher, pvAttachSuccessMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+	metrics.SendMetricData(d.metricPusher, metrics.PVAttachSuccess, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 	return generatePublishContext(volumeAttachmentOptions, log, volumeAttached), nil
 
 }
@@ -398,7 +390,7 @@ func generatePublishContext(volumeAttachmentOptions VolumeAttachmentOption, log 
 
 // ControllerUnpublishVolume deattaches the given volume from the node
 func (d *ControllerDriver) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
-	// startTime := time.Now()
+	startTime := time.Now()
 	log := d.logger.With("volumeID", req.VolumeId)
 
 	if req.VolumeId == "" {
@@ -408,6 +400,7 @@ func (d *ControllerDriver) ControllerUnpublishVolume(ctx context.Context, req *c
 	compartmentID, err := util.LookupNodeCompartment(d.KubeClient, req.NodeId)
 	if err != nil {
 		log.With(zap.Error(err)).Errorf("failed to get compartmentID from node annotation: %s", util.CompartmentIDAnnotation)
+		metrics.SendMetricData(d.metricPusher, metrics.PVDetachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 		return nil, status.Errorf(codes.Unknown, "failed to get compartmentID from node annotation:. error : %s", err)
 	}
 
@@ -419,7 +412,7 @@ func (d *ControllerDriver) ControllerUnpublishVolume(ctx context.Context, req *c
 			return &csi.ControllerUnpublishVolumeResponse{}, nil
 		}
 		log.With(zap.Error(err)).With("nodeId", req.NodeId).Error("Volume is not detached from the node.")
-		// metrics.SendDataMetric(d.metricPusher, pvDetachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+		metrics.SendMetricData(d.metricPusher, metrics.PVDetachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 		return nil, err
 	}
 
@@ -427,20 +420,20 @@ func (d *ControllerDriver) ControllerUnpublishVolume(ctx context.Context, req *c
 	err = d.client.Compute().DetachVolume(context.Background(), *attachedVolume.GetId())
 	if err != nil {
 		log.With(zap.Error(err)).With("nodeId", req.NodeId).Error("Volume can not be detached.")
-		// metrics.SendDataMetric(d.metricPusher, pvDetachFailureMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+		metrics.SendMetricData(d.metricPusher, metrics.PVDetachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 		return nil, status.Errorf(codes.Unknown, "volume can not be detached %s", err)
 	}
 
 	err = d.client.Compute().WaitForVolumeDetached(context.Background(), *attachedVolume.GetId())
 	if err != nil {
 		log.With(zap.Error(err)).With("nodeId", req.NodeId).Error("timed out waiting for volume to be detached.")
+		metrics.SendMetricData(d.metricPusher, metrics.PVDetachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 		return nil, status.Errorf(codes.Unknown, "timed out waiting for volume to be detached %s", err)
 	}
 
 	log.With("volumeAttachedId", attachedVolume.GetId()).Info("Un-publishing Volume Completed.")
 
-	// TODO: Uncomment once we know our T2 limits are not getting breached
-	// metrics.SendMetricData(d.metricPusher, pvDetachSuccessMetric, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+	metrics.SendMetricData(d.metricPusher, metrics.PVDetachSuccess, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
 
