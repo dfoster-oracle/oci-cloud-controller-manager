@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	kubeAPI "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	errors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/metrics"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
@@ -399,9 +399,15 @@ func (d *ControllerDriver) ControllerUnpublishVolume(ctx context.Context, req *c
 
 	compartmentID, err := util.LookupNodeCompartment(d.KubeClient, req.NodeId)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Infof("Node with nodeID %s is not found, volume is likely already detached", req.NodeId)
+			// https://jira.oci.oraclecorp.com/browse/OKE-13873 : Cleanup of dangling volumeAttachments is deferred.
+			metrics.SendMetricData(d.metricPusher, metrics.PVDetachSuccess, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
+			return &csi.ControllerUnpublishVolumeResponse{}, nil
+		}
 		log.With(zap.Error(err)).Errorf("failed to get compartmentID from node annotation: %s", util.CompartmentIDAnnotation)
 		metrics.SendMetricData(d.metricPusher, metrics.PVDetachFailure, time.Since(startTime).Seconds(), csiDriver, req.VolumeId)
-		return nil, status.Errorf(codes.Unknown, "failed to get compartmentID from node annotation:. error : %s", err)
+		return nil, status.Errorf(codes.Unknown, "failed to get compartmentID from node annotation:: error : %s", err)
 	}
 
 	attachedVolume, err := d.client.Compute().FindVolumeAttachment(context.Background(), compartmentID, req.VolumeId)
