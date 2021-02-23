@@ -288,7 +288,7 @@ func (cp *CloudProvider) ensureSSLCertificates(ctx context.Context, lb *loadbala
 }
 
 // createLoadBalancer creates a new OCI load balancer based on the given spec.
-func (cp *CloudProvider) createLoadBalancer(ctx context.Context, spec *LBSpec) (*v1.LoadBalancerStatus, string, error) {
+func (cp *CloudProvider) createLoadBalancer(ctx context.Context, spec *LBSpec) (lbStatus *v1.LoadBalancerStatus, lbOCID string, err error) {
 	logger := cp.logger.With("loadBalancerName", spec.Name)
 	logger.Info("Attempting to create a new load balancer")
 
@@ -351,7 +351,6 @@ func (cp *CloudProvider) createLoadBalancer(ctx context.Context, spec *LBSpec) (
 		}
 	}
 
-	lbOCID := ""
 	if lb.Id != nil {
 		lbOCID = *lb.Id
 	}
@@ -375,6 +374,10 @@ func (cp *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName str
 	lbOCID := ""
 	if lb != nil && lb.Id != nil {
 		lbOCID = *lb.Id
+	} else {
+		// if the LB does not exist already use the k8s service UID for reference
+		// in logs and metrics
+		lbOCID = GetLoadBalancerName(service)
 	}
 
 	var sslConfig *SSLConfig
@@ -405,7 +408,7 @@ func (cp *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName str
 	if !exists {
 		lbStatus, newLBOCID, err := cp.createLoadBalancer(ctx, spec)
 		if err != nil {
-			metrics.SendMetricData(cp.metricPusher, metrics.LBProvisionFailure, time.Since(startTime).Seconds(), loadBalancer, newLBOCID)
+			metrics.SendMetricData(cp.metricPusher, metrics.LBProvisionFailure, time.Since(startTime).Seconds(), loadBalancer, lbOCID)
 		} else {
 			metrics.SendMetricData(cp.metricPusher, metrics.LBProvisionSuccess, time.Since(startTime).Seconds(), loadBalancer, newLBOCID)
 		}

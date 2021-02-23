@@ -140,32 +140,32 @@ func (d *ControllerDriver) CreateVolume(ctx context.Context, req *csi.CreateVolu
 		}
 	}
 
+	volumeName := req.Name
+
 	if availableDomainShortName == "" {
-		metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, "")
+		metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, volumeName)
 		log.Error("Available domain short name is not found")
 		return nil, status.Errorf(codes.InvalidArgument, "%s is required in PreferredTopologies or allowedTopologies", kubeAPI.LabelZoneFailureDomain)
 	}
-
-	volumeName := req.Name
 
 	//make sure this method is idempotent by checking existence of volume with same name.
 	volumes, err := d.client.BlockStorage().GetVolumesByName(context.Background(), volumeName, d.config.CompartmentID)
 	if err != nil {
 		log.Error("Failed to find existence of volume %s", err)
-		metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, "")
+		metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, volumeName)
 		return nil, status.Errorf(codes.Internal, "failed to check existence of volume %v", err)
 	}
 
 	if len(volumes) > 1 {
 		log.Error("Duplicate volume exists")
-		metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, "")
+		metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, volumeName)
 		return nil, fmt.Errorf("duplicate volume %q exists", volumeName)
 	}
 
 	volumeParams, err := extractVolumeParameters(req.GetParameters())
 	if err != nil {
 		log.Error("Failed to parse storageclass parameters %s", err)
-		metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, "")
+		metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, volumeName)
 		return nil, status.Errorf(codes.InvalidArgument, "failed to parse storageclass parameters %v", err)
 	}
 
@@ -182,14 +182,14 @@ func (d *ControllerDriver) CreateVolume(ctx context.Context, req *csi.CreateVolu
 		ad, err := d.client.Identity().GetAvailabilityDomainByName(context.Background(), d.config.CompartmentID, availableDomainShortName)
 		if err != nil {
 			log.With("Compartment Id", d.config.CompartmentID).Error("Failed to get available domain %s", err)
-			metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, "")
+			metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, volumeName)
 			return nil, status.Errorf(codes.InvalidArgument, "invalid available domain: %s or compartment ID: %s", availableDomainShortName, d.config.CompartmentID)
 		}
 
 		provisionedVolume, err = provision(log, d.client, volumeName, size, *ad.Name, d.config.CompartmentID, "", volumeParams.diskEncryptionKey, timeout)
 		if err != nil {
 			log.With("Ad name", *ad.Name, "Compartment Id", d.config.CompartmentID).Error("New volume creation failed %s", err)
-			metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, "")
+			metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, volumeName)
 			return nil, status.Errorf(codes.Internal, "New volume creation failed %v", err.Error())
 		}
 	}
@@ -198,12 +198,12 @@ func (d *ControllerDriver) CreateVolume(ctx context.Context, req *csi.CreateVolu
 	_, err = d.client.BlockStorage().AwaitVolumeAvailableORTimeout(ctx, *provisionedVolume.Id)
 	if err != nil {
 		log.With("volumeName", volumeName).Error("Create volume failed with time out")
-		metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, "")
+		metrics.SendMetricData(d.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), csiDriver, volumeName)
 		status.Errorf(codes.DeadlineExceeded, "Create volume failed with time out")
 		return nil, err
 	}
 
-	volumeOCID := ""
+	volumeOCID := volumeName
 	if provisionedVolume.Id != nil {
 		volumeOCID = *provisionedVolume.Id
 	}
