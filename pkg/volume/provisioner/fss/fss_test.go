@@ -372,6 +372,10 @@ func (c *MockLoadBalancerClient) AwaitWorkRequest(ctx context.Context, id string
 	return nil, nil
 }
 
+func (c *MockLoadBalancerClient) UpdateNetworkSecurityGroups(ctx context.Context, s string, details loadbalancer.UpdateNetworkSecurityGroupsDetails) (string, error) {
+	return "", nil
+}
+
 // NewClientProvisioner creates an OCI client from the given configuration.
 func NewClientProvisioner(pcData client.Interface, storage *MockBlockStorageClient) client.Interface {
 	return &MockProvisionerClient{Storage: storage}

@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"github.com/oracle/oci-go-sdk/v31/common"
+	"github.com/oracle/oci-go-sdk/v31/loadbalancer"
 	"reflect"
 	"testing"
 
@@ -387,6 +388,52 @@ func TestCloudProvider_GetLoadBalancer(t *testing.T) {
 			}
 			if got1 != tt.exists {
 				t.Errorf("GetLoadBalancer() got1 = %v, want %v", got1, tt.exists)
+			}
+		})
+	}
+}
+
+func TestUpdateLoadBalancerNetworkSecurityGroups(t *testing.T) {
+	var tests = map[string]struct {
+		spec         *LBSpec
+		loadbalancer *loadbalancer.LoadBalancer
+		wantErr      error
+	}{
+		"Update NSG when there's an issue with LB": {
+			spec: &LBSpec{
+				Name:                    "test",
+				NetworkSecurityGroupIds: []string{"ocid1"},
+			},
+			loadbalancer: &loadbalancer.LoadBalancer{
+				Id:          common.String(""),
+				DisplayName: common.String("privateLB"),
+			},
+			wantErr: errors.New("failed to update loadbalancer Network Security Group: provided LB ID is empty"),
+		},
+		"Update NSG to existing LB": {
+			spec: &LBSpec{
+				Name:                    "test",
+				NetworkSecurityGroupIds: []string{"ocid1"},
+			},
+			loadbalancer: &loadbalancer.LoadBalancer{
+				Id:          common.String("ocid1"),
+				DisplayName: common.String("privateLB"),
+			},
+			wantErr: nil,
+		},
+	}
+	cp := &CloudProvider{
+		NodeLister:    &mockNodeLister{},
+		client:        MockOCIClient{},
+		logger:        zap.S(),
+		instanceCache: &mockInstanceCache{},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := cp.updateLoadBalancerNetworkSecurityGroups(context.Background(), tt.loadbalancer, tt.spec)
+			if err != nil && err.Error() != tt.wantErr.Error(){
+				t.Errorf("Expected error = %v, but got %v", err, tt.wantErr)
+				return
 			}
 		})
 	}

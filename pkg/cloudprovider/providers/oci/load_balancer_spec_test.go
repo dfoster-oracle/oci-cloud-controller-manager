@@ -2344,3 +2344,99 @@ func TestIsInternal(t *testing.T) {
 		})
 	}
 }
+
+func Test_getNetworkSecurityGroups(t *testing.T) {
+	testCases := map[string]struct {
+		service *v1.Service
+		nsgList []string
+		err     error
+	}{
+		"empty ServiceAnnotationLoadBalancerNetworkSecurityGroups annotation": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerNetworkSecurityGroups: "",
+					},
+				},
+			},
+			nsgList: nil,
+			err:     nil,
+		},
+		"no ServiceAnnotationLoadBalancerNetworkSecurityGroups annotation": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			nsgList: nil,
+			err:     nil,
+		},
+		"ServiceAnnotationLoadBalancerNetworkSecurityGroups update annotation": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerNetworkSecurityGroups: "ocid1.networksecuritygroup.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+					},
+				},
+			},
+			nsgList: []string{"ocid1.networksecuritygroup.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			err:     nil,
+		},
+		"ServiceAnnotationLoadBalancerNetworkSecurityGroups Allow maximum NSG OCIDS (Max: 5)": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerNetworkSecurityGroups: "ocid1,ocid2,ocid3,ocid4,ocid5",
+					},
+				},
+			},
+			nsgList: []string{"ocid1", "ocid2", "ocid3", "ocid4", "ocid5"},
+			err:     fmt.Errorf("invalid number of Network Security Groups (Max: 5) provided for annotation: oci.oraclecloud.com/oci-network-security-groups"),
+		},
+		"ServiceAnnotationLoadBalancerNetworkSecurityGroups Exceed maximum NSG OCIDS": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerNetworkSecurityGroups: "ocid1,ocid2,ocid3,ocid4,ocid5,ocid6",
+					},
+				},
+			},
+			nsgList: nil,
+			err:     fmt.Errorf("invalid number of Network Security Groups (Max: 5) provided for annotation: oci.oraclecloud.com/oci-network-security-groups"),
+		},
+		"ServiceAnnotationLoadBalancerNetworkSecurityGroups Invalid NSG OCIDS": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerNetworkSecurityGroups: "ocid1.networksecuritygroup.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-;,ocid1.networksecuritygroup.oc1.iad.aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbb",
+					},
+				},
+			},
+			nsgList: []string{"ocid1.networksecuritygroup.oc1.iad.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-;", "ocid1.networksecuritygroup.oc1.iad.aaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbb"},
+			err:     nil,
+		},
+		"ServiceAnnotationLoadBalancerNetworkSecurityGroups duplicate NSG OCIDS": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerNetworkSecurityGroups: "ocid1,ocid2, ocid1",
+					},
+				},
+			},
+			nsgList: []string{"ocid1", "ocid2"},
+			err:     nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			nsgList, err := getNetworkSecurityGroupIds(tc.service)
+			if err != nil && err.Error() != tc.err.Error() {
+				t.Errorf("Expected  NSG List error\n%+v\nbut got\n%+v", tc.err, err)
+			}
+			if !reflect.DeepEqual(nsgList, tc.nsgList) {
+				t.Errorf("Expected NSG List\n%+v\nbut got\n%+v", tc.nsgList, nsgList)
+			}
+		})
+	}
+}

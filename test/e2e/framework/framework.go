@@ -91,7 +91,8 @@ var (
 	busyBoxImage                 string // Image for busyBoxImage
 	centos                       string // Image for centos
 	imagePullRepo                string // Repo to pull images from. Will pull public images if not specified.
-	cmekKMSKey                   string //KMS key for CMEK testing
+	cmekKMSKey                   string // KMS key for CMEK testing
+	nsgOCIDS					 string // Testing CCM NSG feature
 )
 
 func init() {
@@ -140,6 +141,7 @@ func init() {
 
 	flag.StringVar(&imagePullRepo, "image-pull-repo", "", "Repo to pull images from. Will pull public images if not specified.")
 	flag.StringVar(&cmekKMSKey, "cmek-kms-key", "", "KMS key to be used for CMEK testing")
+	flag.StringVar(&nsgOCIDS, "nsg-ocids", "", "NSG OCIDs to be used to associate to LB")
 	flag.Parse()
 }
 
@@ -263,6 +265,7 @@ type Framework struct {
 
 	MntTargetOcid string
 	CMEKKMSKey    string
+	NsgOCIDS      string
 }
 
 // New creates a new a framework that holds the context of the test
@@ -331,6 +334,7 @@ func NewWithConfig(config *FrameworkConfig) *Framework {
 		AdLocation:               adlocation,
 		MntTargetOcid:            mntTargetOCID,
 		CMEKKMSKey:               cmekKMSKey,
+		NsgOCIDS:				  nsgOCIDS,
 	}
 
 	f.EnableCreateCluster = enableCreateCluster
@@ -405,6 +409,8 @@ func (f *Framework) Initialize() {
 	Logf("OCI Mount Target OCID: %s", f.MntTargetOcid)
 	f.CMEKKMSKey = cmekKMSKey
 	Logf("CMEK KMS Key: %s", f.CMEKKMSKey)
+	f.NsgOCIDS = nsgOCIDS
+	Logf("NSG OCIDS: %s", f.NsgOCIDS)
 	f.Compartment1 = compartment1
 	Logf("OCI compartment1 OCID: %s", f.Compartment1)
 	f.setImages()

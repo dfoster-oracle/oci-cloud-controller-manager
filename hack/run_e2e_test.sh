@@ -180,6 +180,8 @@ function run_e2e_tests() {
         --delete-namespace=${DELETE_NAMESPACE} \
         --image-pull-repo=${IMAGE_PULL_REPO} \
         --cmek-kms-key=${CMEK_KMS_KEY} \
+        --nsg-ocids=${NSG_OCIDS} \
+
     retval=$?
     rm -f $OCI_KEY_FILE
     exit $retval
@@ -195,6 +197,7 @@ function run_e2e_tests_existing_cluster() {
         --delete-namespace=${DELETE_NAMESPACE} \
         --image-pull-repo=${IMAGE_PULL_REPO} \
         --cmek-kms-key=${CMEK_KMS_KEY} \
+        --nsg-ocids=${NSG_OCIDS} \
     retval=$?
     exit $retval
 }

@@ -1834,3 +1834,34 @@ func TestHasLoadbalancerShapeChanged(t *testing.T) {
 		})
 	}
 }
+
+func TestHasLoadBalancerNetworkSecurityGroupsChanged(t *testing.T) {
+	var testCases = []struct {
+		name                        string
+		actualNetworkSecurityGroup  []string
+		desiredNetworkSecurityGroup []string
+		expected                    bool
+	}{
+		{
+			name:                        "No Changes",
+			actualNetworkSecurityGroup:  []string{"ocid1"},
+			desiredNetworkSecurityGroup: []string{"ocid1"},
+			expected:                    false,
+		},
+		{
+			name:                        "Has Changes",
+			actualNetworkSecurityGroup:  []string{"ocid1"},
+			desiredNetworkSecurityGroup: []string{"ocid1, ocid2"},
+			expected:                    true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			changed := hasLoadBalancerNetworkSecurityGroupsChanged(context.TODO(), tt.actualNetworkSecurityGroup, tt.desiredNetworkSecurityGroup)
+			if changed != tt.expected {
+				t.Errorf("expected hasLoadBalancerNetworkSecurityGroupsChanged to be %+v\nbut got\n%+v", tt.expected, changed)
+			}
+		})
+	}
+}

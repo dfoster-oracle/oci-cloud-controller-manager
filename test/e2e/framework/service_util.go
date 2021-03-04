@@ -20,12 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	gerrors "github.com/pkg/errors"
@@ -43,6 +37,11 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	imageutils "k8s.io/kubernetes/test/utils/image"
+	"net"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 
 	cloudprovider "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci"
 	"github.com/oracle/oci-go-sdk/v31/loadbalancer"
@@ -96,6 +95,9 @@ const (
 
 	// OCI LB Shape Update Timeout
 	OCILBShapeUpdateTimeout = 5 * time.Minute
+
+	// OCI LB NSG Update Timeout
+	OCILBNSGUpdateTimeout = 5 * time.Minute
 )
 
 // This should match whatever the default/configured range is
@@ -862,6 +864,25 @@ func (f *CloudProviderFramework) VerifyHealthCheckConfig(loadBalancerId string, 
 		Logf("Health Check config did not match expected - will retry")
 	}
 	return gerrors.Errorf("Timeout waiting for Health check config to be as expected.")
+}
+
+// WaitForLoadBalancerNSGChange polls for validating the associated NSGs
+// to be the same as the spec
+func (f *CloudProviderFramework) WaitForLoadBalancerNSGChange(lb *loadbalancer.LoadBalancer, nsgIds []string) error {
+	condition := func() (bool, error) {
+		updatedLB, err := f.Client.LoadBalancer().GetLoadBalancer(context.TODO(), *lb.Id)
+		if err != nil {
+			return false, err
+		}
+		if !cloudprovider.DeepEqualLists(updatedLB.NetworkSecurityGroupIds, nsgIds) {
+			return false, nil
+		}
+		return true, nil
+	}
+	if err := wait.Poll(15*time.Second, OCILBNSGUpdateTimeout, condition); err != nil {
+		return fmt.Errorf("Failed to update LB NSGs, error: %s", err.Error())
+	}
+	return nil
 }
 
 // WaitForLoadBalancerShapeChange polls for the shape of the LB
