@@ -36,6 +36,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util/disk"
 	"github.com/oracle/oci-go-sdk/v31/core"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -306,6 +307,12 @@ func (d OCIFlexvolumeDriver) Detach(logger *zap.SugaredLogger, pvOrVolumeName, n
 
 	compartmentID, err := util.LookupNodeCompartment(d.K, nodeName)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// https://jira.oci.oraclecorp.com/browse/OKE-14168 : Volume detachment is deferred
+			logger.Info("Node is not found, volume is likely already detached.")
+			metrics.SendMetricData(d.metricPusher, metrics.PVDetachSuccess, time.Since(startTime).Seconds(), flexvolumeDriver, "")
+			return flexvolume.Succeed(logger, "Volume detachment completed.")
+		}
 		metrics.SendMetricData(d.metricPusher, metrics.PVDetachFailure, time.Since(startTime).Seconds(), flexvolumeDriver, "")
 		return flexvolume.Fail(logger, "failed to get compartmentID from node annotation: ", err)
 	}
