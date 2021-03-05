@@ -94,8 +94,8 @@ build: build-dirs
 
 .PHONY: build-arm
 build-arm: build-dirs
+	GOOS=$(GOOS) GOARCH=arm64 CGO_ENABLED=0 go build -o dist/arm/oci-csi-node-driver -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/oci-csi-node-driver ;
 	GOOS=$(GOOS) GOARCH=arm64 CGO_ENABLED=0 go build -o dist/arm/oci-flexvolume-driver -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/oci-flexvolume-driver ; \
-
 
 .PHONY: manifests
 manifests: build-dirs
@@ -160,10 +160,13 @@ BUILD_ARGS = --build-arg COMPONENT="$(COMPONENT)"
 image:
 	docker  build $(BUILD_ARGS) \
 		-t $(IMAGE):$(VERSION) .
+	docker build $(BUILD_ARGS) \
+        -t $(IMAGE)-arm:$(VERSION) -f Dockerfile_arm .
 
 .PHONY: push
 push: image
 	docker push $(IMAGE):$(VERSION)
+	docker push $(IMAGE)-arm:$(VERSION)
 
 .PHONY: version
 version:
