@@ -98,10 +98,11 @@ type LBSpec struct {
 	Listeners   map[string]loadbalancer.ListenerDetails
 	BackendSets map[string]loadbalancer.BackendSetDetails
 
-	Ports               map[string]portSpec
-	SourceCIDRs         []string
-	SSLConfig           *SSLConfig
-	securityListManager securityListManager
+	Ports                   map[string]portSpec
+	SourceCIDRs             []string
+	SSLConfig               *SSLConfig
+	securityListManager     securityListManager
+	NetworkSecurityGroupIds []string
 
 	service *v1.Service
 	nodes   []*v1.Node
@@ -143,6 +144,11 @@ func NewLBSpec(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, sub
 		return nil, err
 	}
 
+	networkSecurityGroupIds, err := getNetworkSecurityGroupIds(svc)
+	if err != nil {
+		return nil, err
+	}
+
 	return &LBSpec{
 		Name:        GetLoadBalancerName(svc),
 		Shape:       shape,
@@ -153,9 +159,10 @@ func NewLBSpec(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, sub
 		Listeners:   listeners,
 		BackendSets: backendSets,
 
-		Ports:       ports,
-		SSLConfig:   sslConfig,
-		SourceCIDRs: sourceCIDRs,
+		Ports:                   ports,
+		SSLConfig:               sslConfig,
+		SourceCIDRs:             sourceCIDRs,
+		NetworkSecurityGroupIds: networkSecurityGroupIds,
 
 		service: svc,
 		nodes:   nodes,
@@ -460,6 +467,29 @@ func getSecretParts(secretString string, service *v1.Service) (name string, name
 	}
 	parts := strings.Split(secretString, "/")
 	return parts[1], parts[0]
+}
+
+func getNetworkSecurityGroupIds(svc *v1.Service) ([]string, error) {
+	var nsgList []string
+	networkSecurityGroupIds, ok := svc.Annotations[ServiceAnnotationLoadBalancerNetworkSecurityGroups]
+	if !ok || networkSecurityGroupIds == "" {
+		return nsgList, nil
+	}
+
+	numOfNsgIds := 0
+	for _, nsgOCID := range RemoveDuplicatesFromList(strings.Split(strings.ReplaceAll(networkSecurityGroupIds," ","") , ",")){
+		numOfNsgIds++
+		if numOfNsgIds > lbMaximumNetworkSecurityGroupIds {
+			return nil, fmt.Errorf("invalid number of Network Security Groups (Max: 5) provided for annotation: %s", ServiceAnnotationLoadBalancerNetworkSecurityGroups)
+		}
+		if nsgOCID != "" {
+			nsgList = append(nsgList, nsgOCID)
+			continue
+		}
+		return nil, fmt.Errorf("invalid NetworkSecurityGroups OCID: [%s] provided for annotation: %s", networkSecurityGroupIds, ServiceAnnotationLoadBalancerNetworkSecurityGroups)
+	}
+
+	return nsgList, nil
 }
 
 func isInternalLB(svc *v1.Service) (bool, error) {

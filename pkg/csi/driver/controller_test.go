@@ -213,6 +213,10 @@ func (c *MockLoadBalancerClient) UpdateLoadBalancerShape(ctx context.Context, lb
 	return "", nil
 }
 
+func (c *MockLoadBalancerClient) UpdateNetworkSecurityGroups(ctx context.Context, s string, details loadbalancer.UpdateNetworkSecurityGroupsDetails) (string, error) {
+	return "", nil
+}
+
 // Networking mocks client VirtualNetwork implementation.
 func (p *MockProvisionerClient) LoadBalancer() client.LoadBalancerInterface {
 	return &MockLoadBalancerClient{}

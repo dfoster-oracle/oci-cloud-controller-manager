@@ -49,6 +49,7 @@ type LoadBalancerInterface interface {
 	DeleteListener(ctx context.Context, lbID, name string) (string, error)
 
 	UpdateLoadBalancerShape(context.Context, string, loadbalancer.UpdateLoadBalancerShapeDetails) (string, error)
+	UpdateNetworkSecurityGroups(context.Context, string, loadbalancer.UpdateNetworkSecurityGroupsDetails) (string, error)
 
 	AwaitWorkRequest(ctx context.Context, id string) (*loadbalancer.WorkRequest, error)
 }
@@ -420,6 +421,24 @@ func (c *client) UpdateLoadBalancerShape(ctx context.Context, lbID string, lbSha
 		UpdateLoadBalancerShapeDetails: lbShapeDetails,
 	})
 	incRequestCounter(err, updateVerb, shapeResource)
+
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	return *resp.OpcWorkRequestId, nil
+}
+
+func (c *client) UpdateNetworkSecurityGroups(ctx context.Context, lbID string, lbNetworkSecurityGroupDetails loadbalancer.UpdateNetworkSecurityGroupsDetails) (string, error) {
+	if !c.rateLimiter.Writer.TryAccept() {
+		return "", RateLimitError(true, "UpdateNetworkSecurityGroups")
+	}
+
+	resp, err := c.loadbalancer.UpdateNetworkSecurityGroups(ctx, loadbalancer.UpdateNetworkSecurityGroupsRequest{
+		LoadBalancerId:                     &lbID,
+		UpdateNetworkSecurityGroupsDetails: lbNetworkSecurityGroupDetails,
+	})
+	incRequestCounter(err, updateVerb, nsgResource)
 
 	if err != nil {
 		return "", errors.WithStack(err)

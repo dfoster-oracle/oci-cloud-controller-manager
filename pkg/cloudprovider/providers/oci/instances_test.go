@@ -415,7 +415,14 @@ func (c *MockLoadBalancerClient) UpdateLoadBalancerShape(ctx context.Context, id
 	return "", nil
 }
 
-// MockBlockStorageClient mocks BlockStoargae client implementation
+func (c *MockLoadBalancerClient) UpdateNetworkSecurityGroups(ctx context.Context, lbId string, details loadbalancer.UpdateNetworkSecurityGroupsDetails) (string, error) {
+	if lbId == "" {
+		return "", errors.New("provided LB ID is empty")
+	}
+	return "", nil
+}
+
+// MockBlockStorageClient mocks BlockStorage client implementation
 type MockBlockStorageClient struct{}
 
 func (MockBlockStorageClient) AwaitVolumeAvailableORTimeout(ctx context.Context, id string) (*core.Volume, error) {

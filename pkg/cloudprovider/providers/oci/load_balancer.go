@@ -109,6 +109,10 @@ const (
 	// load balancer listener backend protocol ("TCP", "HTTP").
 	// See: https://docs.cloud.oracle.com/iaas/Content/Balance/Concepts/balanceoverview.htm#concepts
 	ServiceAnnotationLoadBalancerBEProtocol = "service.beta.kubernetes.io/oci-load-balancer-backend-protocol"
+
+	// ServiceAnnotationLoadBalancerNetworkSecurityGroup is a service annotation for
+	// specifying Network security group Ids for the Loadbalancer
+	ServiceAnnotationLoadBalancerNetworkSecurityGroups = "oci.oraclecloud.com/oci-network-security-groups"
 )
 
 // DefaultLoadBalancerPolicy defines the default traffic policy for load
@@ -130,10 +134,11 @@ const (
 
 	// default connection idle timeout per protocol
 	// https://docs.cloud.oracle.com/en-us/iaas/Content/Balance/Reference/connectionreuse.htm#ConnectionConfiguration
-	lbConnectionIdleTimeoutTCP  = 300
-	lbConnectionIdleTimeoutHTTP = 60
-	loadBalancer                = "loadbalancer"
-	flexible                    = "flexible"
+	lbConnectionIdleTimeoutTCP       = 300
+	lbConnectionIdleTimeoutHTTP      = 60
+	loadBalancer                     = "loadbalancer"
+	flexible                         = "flexible"
+	lbMaximumNetworkSecurityGroupIds = 5
 )
 
 // GetLoadBalancerName returns the name of the loadbalancer
@@ -308,15 +313,17 @@ func (cp *CloudProvider) createLoadBalancer(ctx context.Context, spec *LBSpec) (
 	if err != nil {
 		return nil, "", errors.Wrap(err, "get certificates")
 	}
+
 	details := loadbalancer.CreateLoadBalancerDetails{
-		CompartmentId: &cp.config.CompartmentID,
-		DisplayName:   &spec.Name,
-		ShapeName:     &spec.Shape,
-		IsPrivate:     &spec.Internal,
-		SubnetIds:     spec.Subnets,
-		BackendSets:   spec.BackendSets,
-		Listeners:     spec.Listeners,
-		Certificates:  certs,
+		CompartmentId:           &cp.config.CompartmentID,
+		DisplayName:             &spec.Name,
+		ShapeName:               &spec.Shape,
+		IsPrivate:               &spec.Internal,
+		SubnetIds:               spec.Subnets,
+		BackendSets:             spec.BackendSets,
+		Listeners:               spec.Listeners,
+		Certificates:            certs,
+		NetworkSecurityGroupIds: spec.NetworkSecurityGroupIds,
 	}
 
 	if spec.Shape == flexible {
@@ -500,7 +507,6 @@ func (cp *CloudProvider) updateLoadBalancer(ctx context.Context, lb *loadbalance
 	lbID := *lb.Id
 
 	logger := cp.logger.With("loadBalancerID", lbID, "compartmentID", cp.config.CompartmentID)
-
 	actualBackendSets := lb.BackendSets
 	desiredBackendSets := spec.BackendSets
 	backendSetActions := getBackendSetChanges(logger, actualBackendSets, desiredBackendSets)
@@ -522,6 +528,14 @@ func (cp *CloudProvider) updateLoadBalancer(ctx context.Context, lb *loadbalance
 
 	if shapeChanged {
 		err = cp.updateLoadbalancerShape(ctx, lb, spec)
+		if err != nil {
+			return err
+		}
+	}
+
+	nsgChanged := hasLoadBalancerNetworkSecurityGroupsChanged(ctx, lb.NetworkSecurityGroupIds, spec.NetworkSecurityGroupIds)
+	if nsgChanged {
+		err = cp.updateLoadBalancerNetworkSecurityGroups(ctx, lb, spec)
 		if err != nil {
 			return err
 		}
@@ -845,6 +859,20 @@ func (cp *CloudProvider) updateLoadbalancerShape(ctx context.Context, lb *loadba
 	cp.logger.With("old-shape", *lb.ShapeName, "new-shape", spec.Shape,
 		"flexMinimumMbps", spec.FlexMin, "flexMaximumMbps", spec.FlexMax,
 		"opc-request-id", opcRequestID).Info("Successfully created an loadbalancer update shape request")
+	return nil
+}
+
+func (cp *CloudProvider) updateLoadBalancerNetworkSecurityGroups(ctx context.Context, lb *loadbalancer.LoadBalancer, spec *LBSpec) error {
+	nsgDetails := loadbalancer.UpdateNetworkSecurityGroupsDetails{
+		NetworkSecurityGroupIds: spec.NetworkSecurityGroupIds,
+	}
+
+	opcRequestID, err := cp.client.LoadBalancer().UpdateNetworkSecurityGroups(ctx, *lb.Id, nsgDetails)
+	if err != nil {
+		return errors.Wrap(err, "failed to update loadbalancer Network Security Group")
+	}
+	cp.logger.With("existingNSGIds", lb.NetworkSecurityGroupIds, "newNSGIds", spec.NetworkSecurityGroupIds,
+		"opc-request-id", opcRequestID).Info("successfully updated the network security groups")
 	return nil
 }
 
