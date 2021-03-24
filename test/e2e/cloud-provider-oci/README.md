@@ -30,6 +30,8 @@ make run-ccm-e2e-tests-local
 If you already have a cluster and wish to run the tests on your existing cluster. follow the template [here](../../../hack/existing-cluster-dev0-env-template.sh)
 It will not create a new cluster and use the one provided by you. 
 
+CCM E2E tests require two NSGs to run successfully. Please create two NSGs in the cluster's VCN and update NSG_OCIDS [here](../../../hack/existing-cluster-dev0-env-template.sh).
+
 To set the variables, run
 
 ```bash

@@ -119,6 +119,7 @@ else
     check-env "CLUSTER_KUBECONFIG"    $CLUSTER_KUBECONFIG
     check-env "CLOUD_CONFIG"          $CLOUD_CONFIG
     check-env "ADLOCATION"      $ADLOCATION
+    check-env "NSG_OCIDS"       $NSG_OCIDS
 fi
 
 if [ -z "$IMAGE_PULL_REPO" ]; then
