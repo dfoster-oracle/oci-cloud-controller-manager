@@ -181,13 +181,13 @@ func (block *blockProvisioner) Provision(options controller.ProvisionOptions, ad
 	//make sure this method is idempotent by checking existence of volume with same name.
 	volumes, err := block.client.BlockStorage().GetVolumesByName(ctx, string(options.PVC.UID), block.compartmentID)
 	if err != nil {
-		metrics.SendMetricData(block.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), flexvolume, "")
+		metrics.SendMetricData(block.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), flexvolume, string(options.PVC.UID))
 		logger.Error("Failed to find existence of volume %s", err)
 		return nil, fmt.Errorf("failed to check existence of volume %v", err)
 	}
 
 	if len(volumes) > 1 {
-		metrics.SendMetricData(block.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), flexvolume, "")
+		metrics.SendMetricData(block.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), flexvolume, string(options.PVC.UID))
 		logger.Error("Duplicate volume exists")
 		return nil, fmt.Errorf("duplicate volume %q exists", string(options.PVC.UID))
 	}
@@ -205,7 +205,7 @@ func (block *blockProvisioner) Provision(options controller.ProvisionOptions, ad
 		logger.Info("Creating new volume!")
 		volume, err = block.client.BlockStorage().CreateVolume(ctx, volumeDetails)
 		if err != nil {
-			metrics.SendMetricData(block.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), flexvolume, "")
+			metrics.SendMetricData(block.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), flexvolume, string(options.PVC.UID))
 			logger.With("Compartment Id", block.compartmentID).Error("Failed to create volume %s", err)
 			return nil, errors.Wrap(err, "Failed to create volume")
 		}
@@ -214,7 +214,7 @@ func (block *blockProvisioner) Provision(options controller.ProvisionOptions, ad
 	logger.With("volumeID", *volume.Id).Info("Waiting for volume to become available.")
 	volume, err = block.client.BlockStorage().AwaitVolumeAvailableORTimeout(ctx, *volume.Id)
 	if err != nil {
-		metrics.SendMetricData(block.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), flexvolume, *volume.Id)
+		metrics.SendMetricData(block.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), flexvolume, string(options.PVC.UID))
 		_ = block.client.BlockStorage().DeleteVolume(ctx, *volume.Id)
 		return nil, errors.Wrap(err, "waiting for volume to become available")
 	}
@@ -277,7 +277,7 @@ func (block *blockProvisioner) Delete(volume *v1.PersistentVolume) error {
 	}
 
 	if err != nil {
-		metrics.SendMetricData(block.metricPusher, metrics.PVProvisionFailure, time.Since(startTime).Seconds(), flexvolume, id)
+		metrics.SendMetricData(block.metricPusher, metrics.PVDeleteFailure, time.Since(startTime).Seconds(), flexvolume, id)
 	} else {
 		metrics.SendMetricData(block.metricPusher, metrics.PVDeleteSuccess, time.Since(startTime).Seconds(), flexvolume, id)
 	}
