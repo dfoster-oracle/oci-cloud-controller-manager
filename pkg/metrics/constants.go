@@ -2,24 +2,14 @@ package metrics
 
 const (
 	// LBProvisionFailure is the OCI metric suffix for
-	// LB provision failure
-	LBProvisionFailure = "LB_PROVISION_FAILURE"
+	// LB provision
+	LBProvision = "LB_PROVISION"
 	// LBUpdateFailure is the OCI metric suffix for
-	// LB update failure
-	LBUpdateFailure = "LB_UPDATE_FAILURE"
+	// LB update
+	LBUpdate = "LB_UPDATE"
 	// LBDeleteFailure is the OCI metric suffix for
-	// LB delete failure
-	LBDeleteFailure = "LB_DELETE_FAILURE"
-
-	// LBProvisionSuccess is the OCI metric suffix for
-	// LB provision success
-	LBProvisionSuccess = "LB_PROVISION_SUCCESS"
-	// LBUpdateSuccess is the OCI metric suffix for
-	// LB update success
-	LBUpdateSuccess = "LB_UPDATE_SUCCESS"
-	// LBDeleteSuccess is the OCI metric suffix for
-	// LB delete success
-	LBDeleteSuccess = "LB_DELETE_SUCCESS"
+	// LB delete
+	LBDelete = "LB_DELETE"
 )
 
 const (
