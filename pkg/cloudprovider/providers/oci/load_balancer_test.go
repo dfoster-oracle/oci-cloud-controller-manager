@@ -17,10 +17,11 @@ package oci
 import (
 	"context"
 	"errors"
-	"github.com/oracle/oci-go-sdk/v31/common"
-	"github.com/oracle/oci-go-sdk/v31/loadbalancer"
 	"reflect"
 	"testing"
+
+	"github.com/oracle/oci-go-sdk/v31/common"
+	"github.com/oracle/oci-go-sdk/v31/loadbalancer"
 
 	"github.com/oracle/oci-go-sdk/v31/core"
 
@@ -431,8 +432,41 @@ func TestUpdateLoadBalancerNetworkSecurityGroups(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			err := cp.updateLoadBalancerNetworkSecurityGroups(context.Background(), tt.loadbalancer, tt.spec)
-			if err != nil && err.Error() != tt.wantErr.Error(){
+			if err != nil && err.Error() != tt.wantErr.Error() {
 				t.Errorf("Expected error = %v, but got %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
+func TestGetErrorType(t *testing.T) {
+	var tests = map[string]struct {
+		err               error
+		expectedErrorType string
+	}{
+		"4xx": {
+			err:               errors.New("Service error:InvalidParameter. error foo. http status code: 400. foo"),
+			expectedErrorType: lb4XX,
+		},
+		"5xx": {
+			err:               errors.New("Service error:InternalError. error bar. http status code: 500. bar"),
+			expectedErrorType: lb5XX,
+		},
+		"LimitError": {
+			err:               errors.New("Service error:LimitExceeded. error bar. http status code: 400. foo "),
+			expectedErrorType: lbLimitExceeded,
+		},
+		"ValidationError": {
+			err:               errors.New("foo bar error"),
+			expectedErrorType: lbValidationError,
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			actualErrorType := getErrorType(tt.err)
+			if actualErrorType != tt.expectedErrorType {
+				t.Errorf("Expected errorType = %s, but got %s", tt.expectedErrorType, actualErrorType)
 				return
 			}
 		})
