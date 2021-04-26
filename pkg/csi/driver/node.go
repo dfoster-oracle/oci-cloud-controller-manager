@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"os"
 	"regexp"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -229,6 +230,15 @@ func (d *NodeDriver) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 	if !ok {
 		logger.Error("Unable to get the attachmentType from the attribute list, assuming iscsi")
 		attachment = attachmentTypeISCSI
+	}
+
+	// k8s v1.20+ will not create the TargetPath directory
+	// https://github.com/kubernetes/kubernetes/pull/88759
+	// if the path exists already (<v1.20) this is a no op
+	// https://golang.org/pkg/os/#MkdirAll
+	if err := os.MkdirAll(req.TargetPath, 0750); err != nil {
+		logger.With(zap.Error(err)).Error("Failed to create TargetPath directory")
+		return nil, status.Error(codes.Internal, "Failed to create TargetPath directory")
 	}
 
 	var mountHandler disk.Interface
