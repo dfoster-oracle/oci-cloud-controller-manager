@@ -92,7 +92,7 @@ var (
 	centos                       string // Image for centos
 	imagePullRepo                string // Repo to pull images from. Will pull public images if not specified.
 	cmekKMSKey                   string // KMS key for CMEK testing
-	nsgOCIDS					 string // Testing CCM NSG feature
+	nsgOCIDS                     string // Testing CCM NSG feature
 )
 
 func init() {
@@ -142,7 +142,6 @@ func init() {
 	flag.StringVar(&imagePullRepo, "image-pull-repo", "", "Repo to pull images from. Will pull public images if not specified.")
 	flag.StringVar(&cmekKMSKey, "cmek-kms-key", "", "KMS key to be used for CMEK testing")
 	flag.StringVar(&nsgOCIDS, "nsg-ocids", "", "NSG OCIDs to be used to associate to LB")
-	flag.Parse()
 }
 
 func getDefaultOCIUser() OCIUser {
@@ -271,6 +270,7 @@ type Framework struct {
 // New creates a new a framework that holds the context of the test
 // execution.
 func New() *Framework {
+	flag.Parse()
 	return NewWithConfig(&FrameworkConfig{})
 }
 
@@ -334,7 +334,7 @@ func NewWithConfig(config *FrameworkConfig) *Framework {
 		AdLocation:               adlocation,
 		MntTargetOcid:            mntTargetOCID,
 		CMEKKMSKey:               cmekKMSKey,
-		NsgOCIDS:				  nsgOCIDS,
+		NsgOCIDS:                 nsgOCIDS,
 	}
 
 	f.EnableCreateCluster = enableCreateCluster

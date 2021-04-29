@@ -25,7 +25,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-node-driver/nodedriveroptions"
 
 	"k8s.io/klog"
-	registerapi "k8s.io/kubernetes/pkg/kubelet/apis/pluginregistration/v1alpha1"
+	registerapi "k8s.io/kubelet/pkg/apis/pluginregistration/v1"
 )
 
 const (
