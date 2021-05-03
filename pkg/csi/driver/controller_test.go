@@ -142,6 +142,10 @@ func (c *MockVirtualNetworkClient) IsRegionalSubnet(ctx context.Context, id stri
 	return true, nil
 }
 
+func (c *MockVirtualNetworkClient) GetPublicIpByIpAddress(ctx context.Context, id string) (*core.PublicIp, error) {
+	return nil, nil
+}
+
 // Networking mocks client VirtualNetwork implementation.
 func (p *MockProvisionerClient) Networking() client.NetworkingInterface {
 	return &MockVirtualNetworkClient{}

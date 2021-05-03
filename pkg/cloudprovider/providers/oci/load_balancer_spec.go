@@ -16,6 +16,7 @@ package oci
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 
@@ -89,14 +90,15 @@ func NewSSLConfig(secretListenerString string, secretBackendSetString string, se
 // LBSpec holds the data required to build a OCI load balancer from a
 // kubernetes service.
 type LBSpec struct {
-	Name        string
-	Shape       string
-	FlexMin     *int
-	FlexMax     *int
-	Subnets     []string
-	Internal    bool
-	Listeners   map[string]loadbalancer.ListenerDetails
-	BackendSets map[string]loadbalancer.BackendSetDetails
+	Name           string
+	Shape          string
+	FlexMin        *int
+	FlexMax        *int
+	Subnets        []string
+	Internal       bool
+	Listeners      map[string]loadbalancer.ListenerDetails
+	BackendSets    map[string]loadbalancer.BackendSetDetails
+	LoadBalancerIP string
 
 	Ports                   map[string]portSpec
 	SourceCIDRs             []string
@@ -149,15 +151,21 @@ func NewLBSpec(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, sub
 		return nil, err
 	}
 
+	loadbalancerIP, err := getLoadBalancerIP(svc)
+	if err != nil {
+		return nil, err
+	}
+
 	return &LBSpec{
-		Name:        GetLoadBalancerName(svc),
-		Shape:       shape,
-		FlexMin:     flexShapeMinMbps,
-		FlexMax:     flexShapeMaxMbps,
-		Internal:    internal,
-		Subnets:     subnets,
-		Listeners:   listeners,
-		BackendSets: backendSets,
+		Name:           GetLoadBalancerName(svc),
+		Shape:          shape,
+		FlexMin:        flexShapeMinMbps,
+		FlexMax:        flexShapeMaxMbps,
+		Internal:       internal,
+		Subnets:        subnets,
+		Listeners:      listeners,
+		BackendSets:    backendSets,
+		LoadBalancerIP: loadbalancerIP,
 
 		Ports:                   ports,
 		SSLConfig:               sslConfig,
@@ -217,14 +225,6 @@ func validateService(svc *v1.Service) error {
 
 	if svc.Spec.SessionAffinity != v1.ServiceAffinityNone {
 		return errors.New("OCI only supports SessionAffinity \"None\" currently")
-	}
-
-	if svc.Spec.LoadBalancerIP != "" {
-		// TODO(horwitz): We need to figure out in the WG if this should actually log or error.
-		// The docs say: If the loadBalancerIP is specified, but the cloud provider does not support the feature, the field will be ignored.
-		// But no one does that...
-		// https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
-		return errors.New("OCI does not support setting LoadBalancerIP")
 	}
 
 	return nil
@@ -591,4 +591,23 @@ func getLoadBalancerPolicy(svc *v1.Service) (string, error) {
 	}
 
 	return "", fmt.Errorf("loadbalancer policy \"%s\" is not valid", svc.Annotations[ServiceAnnotationLoadBalancerPolicy])
+}
+
+func getLoadBalancerIP(svc *v1.Service) (string, error) {
+	ipAddress := svc.Spec.LoadBalancerIP
+	if ipAddress == "" {
+		return "", nil
+	}
+
+	//checks the validity of loadbalancerIP format
+	if net.ParseIP(ipAddress) == nil {
+		return "", fmt.Errorf("invalid value %q provided for LoadBalancerIP", ipAddress)
+	}
+
+	//checks if private loadbalancer is trying to use reservedIP
+	isInternal, err := isInternalLB(svc)
+	if isInternal {
+		return "", fmt.Errorf("invalid service: cannot create a private load balancer with Reserved IP")
+	}
+	return ipAddress, err
 }

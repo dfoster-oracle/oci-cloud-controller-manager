@@ -115,6 +115,9 @@ export CMEK_KMS_KEY="ocid1.key.oc1.iad.bbpvrcsaaaeuk.abuwcljsav7rilbt6bnu3dqoakp
 #NSG Network security group created in above VCN
 export NSG_OCIDS="ocid1.networksecuritygroup.oc1.iad.aaaaaaaaq25u6h23lfr4l43jxzscandzjkr2dweiyan76smxivx6dqg3akua,ocid1.networksecuritygroup.oc1.iad.aaaaaaaaufey2pqy5lvafmyyqyatid3bkergck56ou6rgiz76hv6f44nubpa"
 
+#Reserved IP created in above compartment
+export RESERVED_IP="144.25.98.32"
+
 # ------------------------------------------------------------------------------------------------
 # Bonus: other stuff to tweak if you know what they mean
 # ------------------------------------------------------------------------------------------------
