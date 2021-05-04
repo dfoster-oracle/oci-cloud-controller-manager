@@ -84,12 +84,18 @@ check: gofmt govet golint
 .PHONY: build-dirs
 build-dirs:
 	@mkdir -p dist/
+	@mkdir -p dist/arm/
 
 .PHONY: build
 build: build-dirs
 	@for component in $(COMPONENT); do \
 		GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
     done
+
+.PHONY: build-arm
+build-arm: build-dirs
+	GOOS=$(GOOS) GOARCH=arm64 CGO_ENABLED=0 go build -o dist/arm/oci-flexvolume-driver -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/oci-flexvolume-driver ; \
+
 
 .PHONY: manifests
 manifests: build-dirs
