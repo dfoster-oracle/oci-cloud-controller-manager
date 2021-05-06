@@ -1213,3 +1213,36 @@ func EnableAndDisableInternalLB() (enable func(svc *v1.Service), disable func(sv
 
 	return
 }
+
+func (f *CloudProviderFramework) VerifyLoadBalancerPolicy(loadBalancerId string, loadbalancerPolicy string) error {
+	pollFunc := func() (done bool, err error) {
+		loadBalancer, err := f.Client.LoadBalancer().GetLoadBalancer(context.TODO(), loadBalancerId)
+		if err != nil {
+			return false, err
+		}
+		success, err := testLoadBalancerPolicy(loadBalancer, loadbalancerPolicy)
+		if err != nil {
+			return false, err
+		}
+		if success {
+			Logf("loadbalancer policy matches expected policy.")
+			return true, nil
+		}
+		Logf("loadbalancer policy did not match expected - will retry")
+		return false, nil
+	}
+	return wait.PollImmediate(5*time.Second, 5*time.Minute, pollFunc)
+}
+
+func testLoadBalancerPolicy(loadBalancer *loadbalancer.LoadBalancer, loadbalancerPolicy string) (bool, error) {
+	if loadBalancer == nil || len(loadBalancer.BackendSets) == 0 {
+		return false, gerrors.Errorf("Could not find load balancer policy.")
+	}
+
+	for _, backendSet := range loadBalancer.BackendSets {
+		if *backendSet.Policy != loadbalancerPolicy {
+			return false, nil
+		}
+	}
+	return true, nil
+}
