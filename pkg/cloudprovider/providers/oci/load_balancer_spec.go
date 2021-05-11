@@ -284,6 +284,10 @@ func getBackends(logger *zap.SugaredLogger, nodes []*v1.Node, nodePort int32) []
 
 func getBackendSets(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, sslCfg *SSLConfig) (map[string]loadbalancer.BackendSetDetails, error) {
 	backendSets := make(map[string]loadbalancer.BackendSetDetails)
+	loadbalancerPolicy, err := getLoadBalancerPolicy(svc)
+	if err != nil {
+		return nil, err
+	}
 	for _, servicePort := range svc.Spec.Ports {
 		name := getBackendSetName(string(servicePort.Protocol), int(servicePort.Port))
 		port := int(servicePort.Port)
@@ -296,7 +300,7 @@ func getBackendSets(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node
 			return nil, err
 		}
 		backendSets[name] = loadbalancer.BackendSetDetails{
-			Policy:           common.String(DefaultLoadBalancerPolicy),
+			Policy:           common.String(loadbalancerPolicy),
 			Backends:         getBackends(logger, nodes, servicePort.NodePort),
 			HealthChecker:    healthChecker,
 			SslConfiguration: getSSLConfiguration(sslCfg, secretName, port),
@@ -477,7 +481,7 @@ func getNetworkSecurityGroupIds(svc *v1.Service) ([]string, error) {
 	}
 
 	numOfNsgIds := 0
-	for _, nsgOCID := range RemoveDuplicatesFromList(strings.Split(strings.ReplaceAll(networkSecurityGroupIds," ","") , ",")){
+	for _, nsgOCID := range RemoveDuplicatesFromList(strings.Split(strings.ReplaceAll(networkSecurityGroupIds, " ", ""), ",")) {
 		numOfNsgIds++
 		if numOfNsgIds > lbMaximumNetworkSecurityGroupIds {
 			return nil, fmt.Errorf("invalid number of Network Security Groups (Max: 5) provided for annotation: %s", ServiceAnnotationLoadBalancerNetworkSecurityGroups)
@@ -569,4 +573,22 @@ func getLBShape(svc *v1.Service) (string, *int, *int, error) {
 	}
 
 	return shape, &flexShapeMinMbps, &flexShapeMaxMbps, nil
+}
+
+func getLoadBalancerPolicy(svc *v1.Service) (string, error) {
+	lbPolicy, ok := svc.Annotations[ServiceAnnotationLoadBalancerPolicy]
+	if !ok {
+		return DefaultLoadBalancerPolicy, nil
+	}
+	knownLBPolicies := map[string]struct{}{
+		IPHashLoadBalancerPolicy:           struct{}{},
+		LeastConnectionsLoadBalancerPolicy: struct{}{},
+		RoundRobinLoadBalancerPolicy:       struct{}{},
+	}
+
+	if _, ok := knownLBPolicies[lbPolicy]; ok {
+		return lbPolicy, nil
+	}
+
+	return "", fmt.Errorf("loadbalancer policy \"%s\" is not valid", svc.Annotations[ServiceAnnotationLoadBalancerPolicy])
 }

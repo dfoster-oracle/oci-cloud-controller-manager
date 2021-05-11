@@ -116,11 +116,19 @@ const (
 	// ServiceAnnotationLoadBalancerNetworkSecurityGroup is a service annotation for
 	// specifying Network security group Ids for the Loadbalancer
 	ServiceAnnotationLoadBalancerNetworkSecurityGroups = "oci.oraclecloud.com/oci-network-security-groups"
+
+	// ServiceAnnotationLoadBalancerPolicy is a service annotation for specifying
+	// loadbalancer traffic policy("ROUND_ROBIN", "LEAST_CONNECTION", "IP_HASH")
+	ServiceAnnotationLoadBalancerPolicy = "oci.oraclecloud.com/loadbalancer-policy"
 )
 
-// DefaultLoadBalancerPolicy defines the default traffic policy for load
-// balancers created by the CCM.
-const DefaultLoadBalancerPolicy = "ROUND_ROBIN"
+// Defines the traffic policy for load balancers created by the CCM.
+const (
+	DefaultLoadBalancerPolicy          = "ROUND_ROBIN"
+	RoundRobinLoadBalancerPolicy       = "ROUND_ROBIN"
+	LeastConnectionsLoadBalancerPolicy = "LEAST_CONNECTIONS"
+	IPHashLoadBalancerPolicy           = "IP_HASH"
+)
 
 // DefaultLoadBalancerBEProtocol defines the default protocol for load
 // balancer listeners created by the CCM.
