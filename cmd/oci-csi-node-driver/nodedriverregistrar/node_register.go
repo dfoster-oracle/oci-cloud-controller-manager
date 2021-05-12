@@ -16,14 +16,15 @@ package nodedriverregistrar
 
 import (
 	"fmt"
+	"net"
+	"os"
+	"runtime"
+
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-node-driver/nodedriveroptions"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	"k8s.io/klog"
-	registerapi "k8s.io/kubernetes/pkg/kubelet/apis/pluginregistration/v1alpha1"
-	"net"
-	"os"
-	"runtime"
+	registerapi "k8s.io/kubelet/pkg/apis/pluginregistration/v1"
 )
 
 //nodeRegister is the main function to start node register

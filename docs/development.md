@@ -5,7 +5,7 @@ using [`go mod`][2].
 
 ## Setup
  1. Ensure you have the aforementioned development tools installed as well as
-    as well as the release 1.13< of [Go][3].
+    as well as the release 1.13.x of [Go][3].
 
  2. Clone the repo under `/src/github.com/oracle/`
  
