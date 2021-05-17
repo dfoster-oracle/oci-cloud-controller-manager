@@ -345,6 +345,10 @@ func (c *MockVirtualNetworkClient) UpdateSecurityList(ctx context.Context, id st
 	return core.UpdateSecurityListResponse{}, nil
 }
 
+func (c *MockVirtualNetworkClient) GetPublicIpByIpAddress(ctx context.Context, id string) (*core.PublicIp, error) {
+	return nil, nil
+}
+
 //// MockFileStorageClient mocks FileStorage client implementation.
 type MockLoadBalancerClient struct{}
 

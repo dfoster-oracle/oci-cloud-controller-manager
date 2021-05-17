@@ -37,6 +37,9 @@ export CMEK_KMS_KEY="ocid1.key.oc1.iad.bbpvrcsaaaeuk.abuwcljsav7rilbt6bnu3dqoakp
 #NSG Network security group created in cluster's VCN
 export NSG_OCIDS=""
 
+#Reserved IP created in e2e test compartment
+export RESERVED_IP="144.25.98.32"
+
 # For debugging the tests in existing cluster, do not turn it off by default.
 # export DELETE_NAMESPACE=false
 

@@ -78,6 +78,7 @@ run_tests() {
           -e KMS_SECRETS_KEY \
           -e CMEK_KMS_KEY \
           -e NSG_OCIDS \
+          -e RESERVED_IP \
           -e OKE_TEST_COMMAND \
           oke-ccm-e2e-tests-pop /bin/bash -c "./images/e2e-tests/e2e_pop_run.sh" 2>&1
 }

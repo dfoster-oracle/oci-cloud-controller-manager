@@ -195,6 +195,18 @@ func getSubnets(ctx context.Context, subnetIDs []string, n client.NetworkingInte
 	return subnets, nil
 }
 
+// getReservedIpOcidByIpAddress returns the OCID of public reserved IP if it is in Available state.
+func getReservedIpOcidByIpAddress(ctx context.Context, ipAddress string, n client.NetworkingInterface) (*string, error) {
+	publicIp, err := n.GetPublicIpByIpAddress(ctx, ipAddress)
+	if err != nil {
+		return nil, err
+	}
+	if publicIp.LifecycleState != core.PublicIpLifecycleStateAvailable {
+		return nil, errors.Errorf("The IP address provided is not available for use.")
+	}
+	return publicIp.Id, nil
+}
+
 // getSubnetsForNodes returns the de-duplicated subnets in which the given
 // internal IP addresses reside.
 func getSubnetsForNodes(ctx context.Context, nodes []*v1.Node, client client.Interface) ([]*core.Subnet, error) {
@@ -345,6 +357,19 @@ func (cp *CloudProvider) createLoadBalancer(ctx context.Context, spec *LBSpec) (
 		details.ShapeDetails = &loadbalancer.ShapeDetails{
 			MinimumBandwidthInMbps: spec.FlexMin,
 			MaximumBandwidthInMbps: spec.FlexMax,
+		}
+	}
+
+	if spec.LoadBalancerIP != "" {
+		reservedIpOCID, err := getReservedIpOcidByIpAddress(ctx, spec.LoadBalancerIP, cp.client.Networking())
+		if err != nil {
+			return nil, "", err
+		}
+
+		details.ReservedIps = []loadbalancer.ReservedIp{
+			loadbalancer.ReservedIp{
+				Id: reservedIpOCID,
+			},
 		}
 	}
 
@@ -545,6 +570,27 @@ func (cp *CloudProvider) updateLoadBalancer(ctx context.Context, lb *loadbalance
 	lbID := *lb.Id
 
 	logger := cp.logger.With("loadBalancerID", lbID, "compartmentID", cp.config.CompartmentID)
+
+	var actualPublicReservedIP *string
+
+	//identify the public reserved IP in IP addresses list
+	for _, ip := range lb.IpAddresses {
+		if ip.IpAddress == nil {
+			continue // should never happen but appears to when EnsureLoadBalancer is called with 0 nodes.
+		}
+		if ip.ReservedIp != nil && *ip.IsPublic {
+			actualPublicReservedIP = ip.IpAddress
+			break
+		}
+	}
+
+	//check if the reservedIP has changed in spec
+	if spec.LoadBalancerIP != "" || actualPublicReservedIP != nil {
+		if actualPublicReservedIP == nil || *actualPublicReservedIP != spec.LoadBalancerIP {
+			return errors.Errorf("The Load Balancer service reserved IP cannot be updated after the Load Balancer is created.")
+		}
+	}
+
 	actualBackendSets := lb.BackendSets
 	desiredBackendSets := spec.BackendSets
 	backendSetActions := getBackendSetChanges(logger, actualBackendSets, desiredBackendSets)

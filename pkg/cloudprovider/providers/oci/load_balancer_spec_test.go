@@ -1471,6 +1471,66 @@ func TestNewLBSpecSuccess(t *testing.T) {
 				securityListManager: newSecurityListManagerNOOP(),
 			},
 		},
+		"load balancer with reserved ip": {
+			defaultSubnetOne: "one",
+			defaultSubnetTwo: "two",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					UID:       "test-uid",
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerShape: "8000Mbps",
+					},
+				},
+				Spec: v1.ServiceSpec{
+					LoadBalancerIP:  "10.0.0.0",
+					SessionAffinity: v1.ServiceAffinityNone,
+					Ports: []v1.ServicePort{
+						{
+							Protocol: v1.ProtocolTCP,
+							Port:     int32(80),
+						},
+					},
+				},
+			},
+			expected: &LBSpec{
+				Name:     "test-uid",
+				Shape:    "8000Mbps",
+				Internal: false,
+				Subnets:  []string{"one", "two"},
+				Listeners: map[string]loadbalancer.ListenerDetails{
+					"TCP-80": {
+						DefaultBackendSetName: common.String("TCP-80"),
+						Port:                  common.Int(80),
+						Protocol:              common.String("TCP"),
+					},
+				},
+				BackendSets: map[string]loadbalancer.BackendSetDetails{
+					"TCP-80": {
+						Backends: []loadbalancer.BackendDetails{},
+						HealthChecker: &loadbalancer.HealthCheckerDetails{
+							Protocol:         common.String("HTTP"),
+							Port:             common.Int(10256),
+							UrlPath:          common.String("/healthz"),
+							Retries:          common.Int(3),
+							TimeoutInMillis:  common.Int(3000),
+							IntervalInMillis: common.Int(10000),
+						},
+						Policy: common.String("ROUND_ROBIN"),
+					},
+				},
+				SourceCIDRs: []string{"0.0.0.0/0"},
+				Ports: map[string]portSpec{
+					"TCP-80": {
+						ListenerPort:      80,
+						HealthCheckerPort: 10256,
+					},
+				},
+				securityListManager: newSecurityListManagerNOOP(),
+				LoadBalancerIP:      "10.0.0.0",
+			},
+		},
 	}
 
 	cp := &CloudProvider{
@@ -1629,18 +1689,6 @@ func TestNewLBSpecFailure(t *testing.T) {
 				},
 			},
 			expectedErrMsg: "invalid service: OCI load balancers do not support UDP",
-		},
-		"unsupported LB IP": {
-			service: &v1.Service{
-				Spec: v1.ServiceSpec{
-					LoadBalancerIP:  "127.0.0.1",
-					SessionAffinity: v1.ServiceAffinityNone,
-					Ports: []v1.ServicePort{
-						{Protocol: v1.ProtocolTCP},
-					},
-				},
-			},
-			expectedErrMsg: "invalid service: OCI does not support setting LoadBalancerIP",
 		},
 		"unsupported session affinity": {
 			service: &v1.Service{
@@ -1835,6 +1883,35 @@ func TestNewLBSpecFailure(t *testing.T) {
 				},
 			},
 			expectedErrMsg: `loadbalancer policy "not-valid-loadbalancer-policy" is not valid`,
+		},
+		"invalid loadBalancerIP format": {
+			service: &v1.Service{
+				Spec: v1.ServiceSpec{
+					LoadBalancerIP:  "non-ip-format",
+					SessionAffinity: v1.ServiceAffinityNone,
+				},
+			},
+			expectedErrMsg: "invalid value \"non-ip-format\" provided for LoadBalancerIP",
+		},
+		"unsupported loadBalancerIP for internal load balancer": {
+			defaultSubnetOne: "one",
+			defaultSubnetTwo: "two",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					UID:       "test-uid",
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerInternal: "true",
+					},
+				},
+				Spec: v1.ServiceSpec{
+					LoadBalancerIP:  "10.0.0.0",
+					SessionAffinity: v1.ServiceAffinityNone,
+					Ports:           []v1.ServicePort{},
+				},
+			},
+			expectedErrMsg: `invalid service: cannot create a private load balancer with Reserved IP`,
 		},
 	}
 

@@ -182,6 +182,7 @@ function run_e2e_tests() {
         --image-pull-repo=${IMAGE_PULL_REPO} \
         --cmek-kms-key=${CMEK_KMS_KEY} \
         --nsg-ocids=${NSG_OCIDS} \
+        --reserved-ip=${RESERVED_IP} \
 
     retval=$?
     rm -f $OCI_KEY_FILE
@@ -199,6 +200,7 @@ function run_e2e_tests_existing_cluster() {
         --image-pull-repo=${IMAGE_PULL_REPO} \
         --cmek-kms-key=${CMEK_KMS_KEY} \
         --nsg-ocids=${NSG_OCIDS} \
+        --reserved-ip=${RESERVED_IP} \
     retval=$?
     exit $retval
 }
