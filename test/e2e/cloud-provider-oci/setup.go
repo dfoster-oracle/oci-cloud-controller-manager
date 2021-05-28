@@ -4,6 +4,7 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	sharedfw "github.com/oracle/oci-cloud-controller-manager/test/e2e/framework"
+	oke "github.com/oracle/oci-go-sdk/v31/containerengine"
 )
 
 var setupF *sharedfw.Framework
@@ -33,8 +34,18 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 		err = setupF.SaveCloudConfig(cloudConfig)
 		Expect(err).Should(BeNil())
 
+		var ocpus = float32(1.0)
+		var memoryInGBs = float32(6.0)
+		var NodeShapeConfig = oke.CreateNodeShapeConfigDetails{
+			Ocpus:       &ocpus,
+			MemoryInGBs: &memoryInGBs,
+		}
+
 		size := 3
-		nodepool := setupF.CreateNodePool(clusterOCID, setupF.Compartment1, "Oracle-Linux-7.6", setupF.NodeShape, size, setupF.OkeNodePoolK8sVersion, []string{setupF.Rgnsubnet, setupF.Subnet1, setupF.Subnet2})
+		nodepool := setupF.CreateNodePool(clusterOCID, setupF.Compartment1, "Oracle-Linux-7.6",
+										  setupF.NodeShape, size, setupF.OkeNodePoolK8sVersion,
+										  []string{setupF.NodeSubnet, setupF.NodeSubnet, setupF.NodeSubnet},
+										  NodeShapeConfig)
 		Expect(nodepool).ShouldNot(BeNil())
 		sharedfw.Logf(" Created cluster %s with nodepool %s ", clusterOCID, *nodepool.Id)
 		setupF.CrossValidateCluster(clusterOCID, setupF.ValidateChildResources)

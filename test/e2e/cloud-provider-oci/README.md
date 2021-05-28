@@ -8,11 +8,12 @@ You need to have [ginkgo][2] installed and configured.
 
 ## Running the tests locally
 
-There are 2 options to run the tests. 
+There are 2 options to run the tests : create cluster mode and existing cluster mode.
+It is suggested to use existing cluster mode with updated CCM image while testing features.
 
 ## Option 1.
 For a simpler way to run e2e tests locally, follow the template [here](../../../hack/cluster-create-dev0-env-template.sh). This template is intended for running e2e-tests against dev0-iad but can be modified to run against your dev environment.
-Option 1 creates a cluster using the environment variables set by you. All the tests are then run on this newly created cluster.
+Please make sure that the CCM image is pushed and updated. Option 1 creates a cluster using the environment variables set by you. All the tests are then run on this newly created cluster.
 
 To set the variables, run
 
@@ -44,7 +45,7 @@ Then run
 make run-ccm-e2e-tests-local
 ```
 
-An example of cloud-provider.yaml - See [provider-config-example.yaml](../../../manifests/provider-config-example.yaml)
+An example of cloudconfig (cloud-provider.yaml) - See [provider-config-example.yaml](../../../manifests/provider-config-example.yaml)
 For accessing you cluster's kubeconfig refer [organize-cluster-access-kubeconfig][3]
 
 NOTE: Test suite will fail if executed behind a `$HTTP_PROXY` that returns a
@@ -52,11 +53,17 @@ NOTE: Test suite will fail if executed behind a `$HTTP_PROXY` that returns a
 
 ## Additional option to specify test image pull repo
 
-The tests use below images - 
+The tests use below images for AMD tests - 
 *   nginx:stable-alpine
 *   agnhost:2.6
 *   centos:latest
 *   busybox:latest
+
+The tests use below images for ARM tests -
+*   nginx-arm:latest
+*   agnhost-arm:2.6
+*   centos-arm:latest
+*   busybox-arm:latest
 
 By default, public images are used. But if your Cluster's environment cannot access above public images then below option can be used to specify an accessible repo.
 
@@ -88,6 +95,24 @@ $ ginkgo -v -progress test/e2e/cloud-provider-oci -- \
 ```
 
 ---
+
+### Running Architecture specific CPO E2E tests (scoped tests)
+
+You can run a subset of tests manually by setting the 'SCOPE' shell variable to be the filter to target tests for specific architecture.
+By default, the test suite runs all the AMD tests followed by all the ARM tests via the default value of SCOPE="BOTH".
+To run ARM scoped tests,
+
+```bash
+export SCOPE="ARM"
+make run-ccm-e2e-tests-local
+```
+
+Similarly to run AMD scoped tests,
+
+```bash
+export SCOPE="AMD"
+make run-ccm-e2e-tests-local
+```
 
 ### Running subsets of the cloud-provider-oci-e2e-tests (focused tests)
 

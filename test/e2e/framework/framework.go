@@ -43,10 +43,6 @@ const (
 	MinVolumeBlock    = "50Gi"
 	MaxVolumeBlock    = "100Gi"
 	VolumeFss         = "1Gi"
-	Agnhost           = "agnhost:2.6"
-	BusyBoxImage      = "busybox:latest"
-	Nginx             = "nginx:stable-alpine"
-	Centos            = "centos:latest"
 )
 
 var (
@@ -66,7 +62,8 @@ var (
 	subnet1                      string
 	subnet2                      string
 	subnet3                      string
-	rgnsubnet                    string
+	k8ssubnet                    string
+	nodesubnet					 string
 	okeClusterK8sVersionIndex    int
 	okeNodePoolK8sVersionIndex   int
 	pubsshkey                    string
@@ -94,6 +91,7 @@ var (
 	cmekKMSKey                   string // KMS key for CMEK testing
 	nsgOCIDS                     string // Testing CCM NSG feature
 	reservedIP                   string // Testing public reserved IP feature
+	architecture				 string
 )
 
 func init() {
@@ -113,7 +111,8 @@ func init() {
 	flag.StringVar(&subnet1, "subnet1", "", "OCID of the 1st worker subnet.")
 	flag.StringVar(&subnet2, "subnet2", "", "OCID of the 2nd worker subnet.")
 	flag.StringVar(&subnet3, "subnet3", "", "OCID of the 3rd worker subnet.")
-	flag.StringVar(&rgnsubnet, "rgnsubnet", "", "OCID of the regional subnet worker subnet.")
+	flag.StringVar(&k8ssubnet, "k8ssubnet", "", "OCID of the K8s API endpoint subnet.")
+	flag.StringVar(&nodesubnet, "nodesubnet", "", "OCID of the nodepool subnet.")
 	flag.IntVar(&okeClusterK8sVersionIndex, "okeClusterK8sVersionIndex", -1, "The index of k8s versionList (0 means the 1st version, 1 means the 2nd version. -1 means the latest version. versionList is like ['1.10.11', 1.11.8', '1.12.6']) used when create cluster")
 	flag.IntVar(&okeNodePoolK8sVersionIndex, "okeNodePoolK8sVersionIndex", -1, "The index of k8s versionList (0 means the 1st version, 1 means the 2nd version. -1 means the latest version. versionList is like ['1.10.11', 1.11.8', '1.12.6']) used when create nodepool")
 	flag.StringVar(&pubsshkey, "pubsshkey", "", "Public SSH Key for node access.")
@@ -144,6 +143,7 @@ func init() {
 	flag.StringVar(&cmekKMSKey, "cmek-kms-key", "", "KMS key to be used for CMEK testing")
 	flag.StringVar(&nsgOCIDS, "nsg-ocids", "", "NSG OCIDs to be used to associate to LB")
 	flag.StringVar(&reservedIP, "reserved-ip", "", "Public reservedIP to be used for testing loadbalancer with reservedIP")
+	flag.StringVar(&architecture, "architecture", "", "CPU architecture to be used for testing.")
 	flag.Parse()
 }
 
@@ -215,8 +215,10 @@ type Framework struct {
 	Subnet2 string
 	// NodePool subnet 3.
 	Subnet3 string
-	// NodePool regional subnet
-	Rgnsubnet string
+	// K8s API endpoint regional subnet
+	K8sSubnet string
+	// Nodepool subnet
+	NodeSubnet string
 
 	//k8s version value (eg. v1.10.11, v1.11.8) used when create cluster
 	OkeClusterK8sVersion string
@@ -269,6 +271,7 @@ type Framework struct {
 	CMEKKMSKey    string
 	NsgOCIDS      string
 	ReservedIP    string
+	Architecture  string
 }
 
 // New creates a new a framework that holds the context of the test
@@ -331,7 +334,8 @@ func NewWithConfig(config *FrameworkConfig) *Framework {
 		Subnet1:                  subnet1,
 		Subnet2:                  subnet2,
 		Subnet3:                  subnet3,
-		Rgnsubnet:                rgnsubnet,
+		K8sSubnet:                k8ssubnet,
+		NodeSubnet:				  nodesubnet,
 		NodeShape:                nodeshape,
 		DelegationTargetServices: "oke",
 		AdLocation:               adlocation,
@@ -339,6 +343,7 @@ func NewWithConfig(config *FrameworkConfig) *Framework {
 		CMEKKMSKey:               cmekKMSKey,
 		NsgOCIDS:                 nsgOCIDS,
 		ReservedIP:               reservedIP,
+		Architecture:			  architecture,
 	}
 
 	f.EnableCreateCluster = enableCreateCluster
@@ -417,6 +422,8 @@ func (f *Framework) Initialize() {
 	Logf("NSG OCIDS: %s", f.NsgOCIDS)
 	f.ReservedIP = reservedIP
 	Logf("Reserved IP: %s", f.ReservedIP)
+	f.Architecture = architecture
+	Logf("Architecture: %s", f.Architecture)
 	f.Compartment1 = compartment1
 	Logf("OCI compartment1 OCID: %s", f.Compartment1)
 	f.setImages()
@@ -444,8 +451,10 @@ func (f *Framework) Initialize() {
 	Logf("OCI Subnet2 OCID: %s", f.Subnet2)
 	f.Subnet3 = subnet3
 	Logf("OCI Subnet3 OCID: %s", f.Subnet3)
-	f.Rgnsubnet = rgnsubnet
-	Logf("OCI Rgnsubnet OCID: %s", f.Rgnsubnet)
+	f.K8sSubnet = k8ssubnet
+	Logf("OCI K8sSubnet OCID: %s", f.K8sSubnet)
+	f.NodeSubnet = nodesubnet
+	Logf("OCI NodeSubnet OCID: %s", f.NodeSubnet)
 	f.NodeShape = nodeshape
 	Logf("Nodepool NodeShape: %s", f.NodeShape)
 
@@ -470,7 +479,7 @@ func (f *Framework) Initialize() {
 			var cfg SecretValuesConfig
 
 			if err := yaml.Unmarshal(cfgBytes, &cfg); err != nil {
-				Failf("Error ubmarshaling '%s' : %s", f.instanceConfigFile, err)
+				Failf("Error unmarshaling '%s' : %s", f.instanceConfigFile, err)
 			}
 
 			instanceCfg = &cfg.BMCSCredentials.DelegationPrincipalConfig
@@ -530,6 +539,9 @@ func (f *Framework) Initialize() {
 
 		Logf("OkeClusterK8sVersion=%v", f.OkeClusterK8sVersion)
 		Logf("OkeNodePoolK8sVersion=%v", f.OkeNodePoolK8sVersion)
+		if compareVersions(f.OkeClusterK8sVersion,f.OkeNodePoolK8sVersion) < 0 {
+			Failf("Cluster K8s Version is less than Nodepool K8s version")
+		}
 
 		//below NodePoolK8sVersion* would be deprecated if OkeNodePoolK8sVersion is used in test code
 		numNodePoolVersions := len(nodePoolVersions)
@@ -743,6 +755,18 @@ func (f *Framework) SaveKubeConfig(kubeconfig string) error {
 }
 
 func (f *Framework) setImages() {
+	var Agnhost           = "agnhost:2.6"
+	var BusyBoxImage      = "busybox:latest"
+	var Nginx             = "nginx:stable-alpine"
+	var Centos            = "centos:latest"
+
+	if architecture == "ARM" {
+		Agnhost           = "agnhost-arm:2.6"
+		BusyBoxImage      = "busybox-arm:latest"
+		Nginx             = "nginx-arm:latest"
+		Centos            = "centos-arm:latest"
+	}
+
 	if imagePullRepo != "" {
 		agnhost = fmt.Sprintf("%s%s", imagePullRepo, Agnhost)
 		busyBoxImage = fmt.Sprintf("%s%s", imagePullRepo, BusyBoxImage)

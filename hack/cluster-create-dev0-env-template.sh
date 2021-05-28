@@ -60,7 +60,11 @@ if [ -z $TM_ID ]; then
     return
 fi
 
-export OKE_ENDPOINT=api-${TM_ID}-apiserver.dev.api.${OCI_REGION}.clusters.oci.oc-test.com
+# This allows you to create a cluster
+export ENABLE_CREATE_CLUSTER=true
+
+export OKE_ENDPOINT_AMD=api-${TM_ID}-apiserver.dev.api.${OCI_REGION}.clusters.oci.oc-test.com
+export OKE_ENDPOINT_ARM=containerengine-dev.us-ashburn-1.oci.oc-test.com
 
 # The path to your okei/secrets directory
 export SECRETS_LOCAL=${GOPATH}/src/bitbucket.oci.oraclecorp.com/okei/secrets
@@ -79,7 +83,8 @@ export COMPARTMENT="ocid1.compartment.oc1..aaaaaaaa6pfueflc6fc364vopfw3yielvcq4c
 # - VCN
 
 # The ocid for the VCN in your the above compartment that cluster will use
-export VCN="ocid1.vcn.oc1.iad.amaaaaaa2ahbgkyaqfn6l2tpwak6o4cyfdlzw6imwapkjhrl6ejm5hh4hdba"
+export VCN_AMD="ocid1.vcn.oc1.iad.amaaaaaa2ahbgkyaqfn6l2tpwak6o4cyfdlzw6imwapkjhrl6ejm5hh4hdba"
+export VCN_ARM="ocid1.vcn.oc1.iad.amaaaaaa2ahbgkyarummo3h65nbxmux6yuieagxga7krgww4eknjuvciiufq"
 
 # - Subnets
 
@@ -87,14 +92,17 @@ export VCN="ocid1.vcn.oc1.iad.amaaaaaa2ahbgkyaqfn6l2tpwak6o4cyfdlzw6imwapkjhrl6e
 export USE_REGIONALSUBNET=true
 
 # The ocid for the lb subnet created in your vcn
-export LBRGNSUBNET=ocid1.subnet.oc1.iad.aaaaaaaanf2waxfnrjhhes4xgi7e2jfrr7p3cuaufukkaznzsgtgy3i6ykqq
+export LBRGNSUBNET_AMD=ocid1.subnet.oc1.iad.aaaaaaaanf2waxfnrjhhes4xgi7e2jfrr7p3cuaufukkaznzsgtgy3i6ykqq
+export LBRGNSUBNET_ARM=ocid1.subnet.oc1.iad.aaaaaaaaaxobptakdpu6lnpfmi6mjib7f7snuzbxzug63elfzf2jt3tjullq
 
 # The following are ignored for USE_REGIONALSUBNET=true, but may be required to be defined for validation checks
 export LBSUBNET1=dummy
 export LBSUBNET2=dummy
 
 # The ocid for the non-lb subnet created in your vcn
-export OCI_RGNSUBNET=ocid1.subnet.oc1.iad.aaaaaaaawxtdowo3evyuo7djwveulq2d3ecrfvihgendviqlgwy4wtvqx2xq
+export OCI_NODESUBNET_AMD=ocid1.subnet.oc1.iad.aaaaaaaawxtdowo3evyuo7djwveulq2d3ecrfvihgendviqlgwy4wtvqx2xq
+export OCI_K8SSUBNET=ocid1.subnet.oc1.iad.aaaaaaaaz3ooghtjttys3gi7rwngc5o7loehexvjvg5xp6m46sl6oez3cwwq
+export OCI_NODESUBNET_ARM=ocid1.subnet.oc1.iad.aaaaaaaa7mporr3zacmjolenki4k6ruvwy4dhixunnl6sg3tvpyrswhj2bya
 
 # The following are ignored for USE_REGIONALSUBNET=true, but may be required to be defined for validation checks
 export OCI_SUBNET1=dummy
@@ -102,7 +110,8 @@ export OCI_SUBNET2=dummy
 export OCI_SUBNET3=dummy
 
 # The shape of nodes to create
-export NODE_SHAPE=VM.Standard1.2
+export NODE_SHAPE_AMD="VM.Standard1.2"
+export NODE_SHAPE_ARM="VM.Standard.A1.Flex"
 
 # The secrets to use
 export REGION_SECRETS=dev0-iad
@@ -113,10 +122,18 @@ export ADLOCATION="IqDk:US-ASHBURN-AD-1"
 export CMEK_KMS_KEY="ocid1.key.oc1.iad.bbpvrcsaaaeuk.abuwcljsav7rilbt6bnu3dqoakpzdtxhfk27uixzdz3yk7jrwngptfwg5u5a"
 
 #NSG Network security group created in above VCN
-export NSG_OCIDS="ocid1.networksecuritygroup.oc1.iad.aaaaaaaaq25u6h23lfr4l43jxzscandzjkr2dweiyan76smxivx6dqg3akua,ocid1.networksecuritygroup.oc1.iad.aaaaaaaaufey2pqy5lvafmyyqyatid3bkergck56ou6rgiz76hv6f44nubpa"
+export NSG_OCIDS_AMD="ocid1.networksecuritygroup.oc1.iad.aaaaaaaaq25u6h23lfr4l43jxzscandzjkr2dweiyan76smxivx6dqg3akua,ocid1.networksecuritygroup.oc1.iad.aaaaaaaaufey2pqy5lvafmyyqyatid3bkergck56ou6rgiz76hv6f44nubpa"
+export NSG_OCIDS_ARM="ocid1.networksecuritygroup.oc1.iad.aaaaaaaa3nacpqxf3eyjix6s2so5gyvvb3apces7efx56q7ob45hts6d6vua,ocid1.networksecuritygroup.oc1.iad.aaaaaaaakfa2mpjgfntnwncshsmgfaojao4tyf25a3nwbauavsqcs5vt43na"
 
 #Reserved IP created in above compartment
 export RESERVED_IP="144.25.98.32"
+
+#Architecture to run tests on
+export ARCHITECTURE_AMD="AMD"
+export ARCHITECTURE_ARM="ARM"
+
+#Focus the tests : ARM, AMD or BOTH
+export SCOPE="BOTH"
 
 # ------------------------------------------------------------------------------------------------
 # Bonus: other stuff to tweak if you know what they mean
@@ -126,11 +143,11 @@ export DELEGATION_GROUP_ID=NA
 export OKE_WAIT_TIME=120
 
 # Will affect the version of k8s that is installed
-# export OKE_CLUSTER_K8S_VERSION_INDEX=-2
+export OKE_CLUSTER_K8S_VERSION_INDEX=-2
 # export OKE_CLUSTER_K8S_VERSION_INDEX_UPGRADE_TO=-1
 
 # Will affect the version of k8s in the nodepool
-# export OKE_NODEPOOL_K8S_VERSION_INDEX=-2
+export OKE_NODEPOOL_K8S_VERSION_INDEX=-2
 # export OKE_NODEPOOL_K8S_VERSION_INDEX_UPGRADE_TO=-1
 
 

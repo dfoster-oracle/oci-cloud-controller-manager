@@ -1,4 +1,4 @@
-FROM golang:1.12
+FROM iad.ocir.io/odx-oke/oke/golang:1.12
 
 ARG OCI_CLI_VERSION
 ARG KUBECTL_VERSION

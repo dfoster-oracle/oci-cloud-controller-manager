@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -305,6 +306,15 @@ func (f *Framework) createClusterFromConfig(cfg *ClusterCreateConfig) (response 
 				},
 			},
 		},
+	}
+
+	isPublicIpEnabled := true
+	if f.Architecture == "ARM" {
+		request.CreateClusterDetails.EndpointConfig = &oke.CreateClusterEndpointConfigDetails{
+			SubnetId: &f.K8sSubnet,
+			NsgIds: strings.Split(f.NsgOCIDS, ","),
+			IsPublicIpEnabled : &isPublicIpEnabled,
+		}
 	}
 
 	if cfg.KMSKeyID != "" {
