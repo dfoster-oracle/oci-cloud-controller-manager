@@ -38,7 +38,7 @@ import (
 	cloudControllerManager "k8s.io/kubernetes/cmd/cloud-controller-manager/app"
 	cloudControllerManagerConfig "k8s.io/kubernetes/cmd/cloud-controller-manager/app/config"
 	"k8s.io/kubernetes/cmd/cloud-controller-manager/app/options"
-	"k8s.io/component-base/version/verflag"
+	"k8s.io/kubernetes/pkg/version/verflag"
 
 	csicontroller "github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"

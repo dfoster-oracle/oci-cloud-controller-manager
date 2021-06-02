@@ -1,15 +1,22 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+package(default_visibility = ["//visibility:public"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_library",
+    "go_test",
+)
 
 go_library(
     name = "go_default_library",
     srcs = [
-        "controller.go",
         "doc.go",
         "patch.go",
+        "service_controller.go",
     ],
     importpath = "k8s.io/kubernetes/pkg/controller/service",
-    visibility = ["//visibility:public"],
     deps = [
+        "//pkg/apis/core/v1/helper:go_default_library",
+        "//pkg/util/metrics:go_default_library",
         "//staging/src/k8s.io/api/core/v1:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/api/errors:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/types:go_default_library",
@@ -28,7 +35,6 @@ go_library(
         "//staging/src/k8s.io/client-go/util/workqueue:go_default_library",
         "//staging/src/k8s.io/cloud-provider:go_default_library",
         "//staging/src/k8s.io/cloud-provider/service/helpers:go_default_library",
-        "//staging/src/k8s.io/component-base/metrics/prometheus/ratelimiter:go_default_library",
         "//vendor/k8s.io/klog:go_default_library",
     ],
 )
@@ -36,8 +42,8 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "controller_test.go",
         "patch_test.go",
+        "service_controller_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -75,5 +81,4 @@ filegroup(
         "//pkg/controller/service/config:all-srcs",
     ],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )
