@@ -1,5 +1,5 @@
 
-FROM iad.ocir.io/odx-oke/oke/golang-buildbox:1.13.15-fips as builder
+FROM iad.ocir.io/odx-oke/oke/golang-buildbox:1.12.7-fips as builder
 
 ARG COMPONENT
 

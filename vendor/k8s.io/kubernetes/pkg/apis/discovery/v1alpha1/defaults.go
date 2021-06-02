@@ -23,12 +23,19 @@ import (
 )
 
 var (
-	defaultPortName = ""
-	defaultProtocol = v1.ProtocolTCP
+	defaultAddressType = discoveryv1alpha1.AddressTypeIP
+	defaultPortName    = ""
+	defaultProtocol    = v1.ProtocolTCP
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
+}
+
+func SetDefaults_EndpointSlice(obj *discoveryv1alpha1.EndpointSlice) {
+	if obj.AddressType == nil {
+		obj.AddressType = &defaultAddressType
+	}
 }
 
 func SetDefaults_EndpointPort(obj *discoveryv1alpha1.EndpointPort) {

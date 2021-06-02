@@ -63,7 +63,6 @@ func NewBaseHandler(c *componentbaseconfig.DebuggingConfiguration, checks ...hea
 		}
 	}
 	configz.InstallHandler(mux)
-	//lint:ignore SA1019 See the Metrics Stability Migration KEP
 	mux.Handle("/metrics", legacyregistry.Handler())
 
 	return mux

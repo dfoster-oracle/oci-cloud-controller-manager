@@ -144,6 +144,7 @@ func init() {
 	flag.StringVar(&cmekKMSKey, "cmek-kms-key", "", "KMS key to be used for CMEK testing")
 	flag.StringVar(&nsgOCIDS, "nsg-ocids", "", "NSG OCIDs to be used to associate to LB")
 	flag.StringVar(&reservedIP, "reserved-ip", "", "Public reservedIP to be used for testing loadbalancer with reservedIP")
+	flag.Parse()
 }
 
 func getDefaultOCIUser() OCIUser {
@@ -273,7 +274,6 @@ type Framework struct {
 // New creates a new a framework that holds the context of the test
 // execution.
 func New() *Framework {
-	flag.Parse()
 	return NewWithConfig(&FrameworkConfig{})
 }
 
