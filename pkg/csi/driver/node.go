@@ -16,6 +16,7 @@ import (
 
 const (
 	maxVolumesPerNode = 32
+	volumeOperationAlreadyExistsFmt = "An operation with the given Volume ID %s already exist"
 )
 
 // NodeStageVolume mounts the volume to a staging path on the node.
@@ -73,6 +74,12 @@ func (d *NodeDriver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolu
 		logger.Error("unknown attachment type. supported attachment types are iscsi and paravirtualized")
 		return nil, status.Error(codes.InvalidArgument, "unknown attachment type. supported attachment types are iscsi and paravirtualized")
 	}
+
+	if acquired := d.volumeLocks.TryAcquire(req.VolumeId); !acquired {
+		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, req.VolumeId)
+	}
+
+	defer d.volumeLocks.Release(req.VolumeId)
 
 	isMounted, oErr := mountHandler.DeviceOpened(devicePath)
 	if oErr != nil {
@@ -135,6 +142,11 @@ func (d *NodeDriver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstage
 	}
 
 	logger := d.logger.With("volumeId", req.VolumeId, "stagingPath", req.StagingTargetPath)
+
+	if acquired := d.volumeLocks.TryAcquire(req.VolumeId); !acquired {
+		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, req.VolumeId)
+	}
+	defer d.volumeLocks.Release(req.VolumeId)
 
 	diskPath, err := disk.GetDiskPathFromMountPath(d.logger, req.GetStagingTargetPath())
 
