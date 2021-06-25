@@ -16,6 +16,7 @@ import (
 
 const (
 	maxVolumesPerNode = 32
+	volumeOperationAlreadyExistsFmt = "An operation for the volume: %s already exists."
 )
 
 // NodeStageVolume mounts the volume to a staging path on the node.
@@ -73,6 +74,13 @@ func (d *NodeDriver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolu
 		logger.Error("unknown attachment type. supported attachment types are iscsi and paravirtualized")
 		return nil, status.Error(codes.InvalidArgument, "unknown attachment type. supported attachment types are iscsi and paravirtualized")
 	}
+
+	if acquired := d.volumeLocks.TryAcquire(req.VolumeId); !acquired {
+		logger.Error("Could not acquire lock for NodeStageVolume.")
+		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, req.VolumeId)
+	}
+
+	defer d.volumeLocks.Release(req.VolumeId)
 
 	isMounted, oErr := mountHandler.DeviceOpened(devicePath)
 	if oErr != nil {
@@ -136,6 +144,13 @@ func (d *NodeDriver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstage
 
 	logger := d.logger.With("volumeId", req.VolumeId, "stagingPath", req.StagingTargetPath)
 
+	if acquired := d.volumeLocks.TryAcquire(req.VolumeId); !acquired {
+		logger.Error("Could not acquire lock for NodeUnstageVolume.")
+		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, req.VolumeId)
+	}
+
+	defer d.volumeLocks.Release(req.VolumeId)
+
 	diskPath, err := disk.GetDiskPathFromMountPath(d.logger, req.GetStagingTargetPath())
 
 	if err != nil {
@@ -162,10 +177,10 @@ func (d *NodeDriver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstage
 			return &csi.NodeUnstageVolumeResponse{}, nil
 		}
 		mountHandler = disk.NewFromISCSIDisk(d.logger, scsiInfo)
-		logger.Info("starting to unsatge iscsi Mounting.")
+		logger.Info("starting to unstage iscsi Mounting.")
 	case attachmentTypeParavirtualized:
 		mountHandler = disk.NewFromPVDisk(d.logger)
-		logger.Info("starting to unsatge paravirtualized Mounting.")
+		logger.Info("starting to unstage paravirtualized Mounting.")
 	default:
 		logger.Error("unknown attachment type. supported attachment types are iscsi and paravirtualized")
 		return nil, status.Error(codes.InvalidArgument, "unknown attachment type. supported attachment types are iscsi and paravirtualized")
@@ -232,6 +247,13 @@ func (d *NodeDriver) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 		attachment = attachmentTypeISCSI
 	}
 
+	if acquired := d.volumeLocks.TryAcquire(req.VolumeId); !acquired {
+		logger.Error("Could not acquire lock for NodePublishVolume.")
+		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, req.VolumeId)
+	}
+
+	defer d.volumeLocks.Release(req.VolumeId)
+
 	// k8s v1.20+ will not create the TargetPath directory
 	// https://github.com/kubernetes/kubernetes/pull/88759
 	// if the path exists already (<v1.20) this is a no op
@@ -293,6 +315,13 @@ func (d *NodeDriver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 	}
 
 	logger := d.logger.With("volumeId", req.VolumeId, "targetPath", req.TargetPath)
+
+	if acquired := d.volumeLocks.TryAcquire(req.VolumeId); !acquired {
+		logger.Error("Could not acquire lock for NodeUnpublishVolume.")
+		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, req.VolumeId)
+	}
+
+	defer d.volumeLocks.Release(req.VolumeId)
 
 	diskPath, err := disk.GetDiskPathFromMountPath(d.logger, req.TargetPath)
 	if err != nil {
