@@ -136,10 +136,9 @@ const (
 	// Fallback value if annotation on service is not set
 	lbDefaultShape = "100Mbps"
 
-	lbNodesHealthCheckPath      = "/healthz"
-	lbNodesHealthCheckPort      = k8sports.ProxyHealthzPort
-	lbNodesHealthCheckProtoHTTP = "HTTP"
-	lbNodesHealthCheckProtoTCP  = "TCP"
+	lbNodesHealthCheckPath  = "/healthz"
+	lbNodesHealthCheckPort  = k8sports.ProxyHealthzPort
+	lbNodesHealthCheckProto = "HTTP"
 
 	// default connection idle timeout per protocol
 	// https://docs.cloud.oracle.com/en-us/iaas/Content/Balance/Reference/connectionreuse.htm#ConnectionConfiguration
