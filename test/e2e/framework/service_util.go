@@ -60,7 +60,7 @@ const (
 
 	// LoadBalancerLagTimeoutDefault is the maximum time a load balancer is allowed to
 	// not respond after creation.
-	LoadBalancerLagTimeoutDefault = 2 * time.Minute
+	LoadBalancerLagTimeoutDefault = 5 * time.Minute
 
 	// LoadBalancerLagTimeoutAWS is the delay between ELB creation and serving traffic
 	// on AWS. A few minutes is typical, so use 10m.
@@ -712,7 +712,7 @@ func (j *ServiceTestJig) waitForPdbReady(namespace string) error {
 }
 
 func (j *ServiceTestJig) waitForPodsCreated(namespace string, replicas int) ([]string, error) {
-	timeout := 2 * time.Minute
+	timeout := 5 * time.Minute
 	// List the pods, making sure we observe all the replicas.
 	label := labels.SelectorFromSet(labels.Set(j.Labels))
 	Logf("Waiting up to %v for %d pods to be created", timeout, replicas)

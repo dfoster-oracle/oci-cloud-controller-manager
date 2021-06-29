@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -62,6 +64,39 @@ func checkForExpectedError(err error, expectedError common.ServiceError) {
 	Expect(serviceError.GetHTTPStatusCode()).To(Equal(expectedError.GetHTTPStatusCode()))
 	Expect(serviceError.GetMessage()).To(Equal(expectedError.GetMessage()))
 	Expect(serviceError.GetCode()).To(Equal(expectedError.GetCode()))
+}
+
+func compareVersions(v1 string, v2 string) (ret int) {
+	v1Arr := strings.Split(v1, ".")
+	v2Arr := strings.Split(v2, ".")
+	num := len(v2Arr)
+	if len(v1Arr) > len(v2Arr) {
+		num = len(v1Arr)
+	}
+	for i := 0; i < num; i++ {
+		var x, y string
+		if len(v1Arr) > i {
+			x = v1Arr[i]
+		}
+		if len(v2Arr) > i {
+			y = v2Arr[i]
+		}
+		if x == y {
+			ret = 0
+		} else {
+			xi,_ := strconv.Atoi(x)
+			yi,_ := strconv.Atoi(y)
+			if xi > yi {
+				ret = 1
+			} else if xi < yi {
+				ret = -1
+			}
+		}
+		if ret != 0 {
+			break
+		}
+	}
+	return
 }
 
 

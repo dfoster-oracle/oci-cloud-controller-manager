@@ -38,6 +38,8 @@ type NodePoolCreateConfig struct {
 
 	NodeSourceDetails oke.NodeSourceDetails
 
+	NodeShapeConfig oke.CreateNodeShapeConfigDetails
+
 	// Options contain the test related options that are to be used when doing Cluster create operations.
 	Options TestOptions
 }
@@ -110,17 +112,27 @@ func (f *Framework) ListNodePoolImages() map[string]string {
 }
 
 
-func (f *Framework) PickNonGPUImage(images map[string]string) (bool,string) {
+func (f *Framework) PickNonGPUImageWithAMDCompatibility (images map[string]string) (string, string, bool) {
 	for sourceName, imageId := range images {
-		if !strings.Contains(sourceName, "GPU") {
-			return true,imageId
+		if !strings.Contains(sourceName, "GPU") && !strings.Contains(sourceName, "-aarch64") {
+			return imageId,sourceName,true
 		}
 	}
-	return false,""
+	return "","",false
 }
 
-// IsValidaNodePoolShape return true if the specified nodeShape is valid.
-func (f *Framework) IsValidaNodePoolShape(shape string) bool {
+func (f *Framework) PickArmCompatibleImage (images map[string]string) (string, string, bool) {
+	for sourceName, imageId := range images {
+		// Hardcoding OL 7.x for now. Needs to be filtered for FIPS compatibility
+		if strings.Contains(sourceName, "7.9-aarch64") {
+			return imageId,sourceName,true
+		}
+	}
+	return "","",false
+}
+
+// IsValidNodePoolShape return true if the specified nodeShape is valid.
+func (f *Framework) IsValidNodePoolShape(shape string) bool {
 	nodePoolShapes := f.ListNodePoolShapes()
 	for _, nodePoolShape := range nodePoolShapes {
 		if nodePoolShape == shape {
@@ -260,24 +272,33 @@ func (f *Framework) DeleteNodePool(nodepoolID string, waitForDeleted bool) {
 
 // CreateNodePool creates a nodepool with the specified characteristics. This function
 // will block until the nodepool is provisioned and active. Defaults to latest cluster k8s version
-func (f *Framework) CreateNodePool(clusterID, compartmentID string, nodeImageName, nodeShape string, size int, k8sversion string, subnets []string) (np *oke.NodePool) {
+func (f *Framework) CreateNodePool(clusterID, compartmentID string, nodeImageName, nodeShape string, size int,
+								   k8sversion string, subnets []string,
+								   nodeShapeConfig oke.CreateNodeShapeConfigDetails) (np *oke.NodePool) {
 
 	if k8sversion == "" {
 		k8sversion = f.OkeNodePoolK8sVersion
 	}
 	if os.Getenv("USE_REGIONALSUBNET") == "true" {
-		return f.CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentID, nodeImageName, nodeShape, &size, subnets[0], k8sversion, nil, nil)
+		return f.CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentID, nodeShape, &size,
+													  subnets[0], k8sversion, nil,
+													  nodeShapeConfig)
 	}
 
 	return f.CreateNodePoolWithVersion(clusterID, nodeImageName, nodeShape, size/(len(subnets)-1), subnets[1:], k8sversion, nil)
 }
 
 // CreateNodePoolInRgnSubnetWithVersion use the NodeConfigDetails property
-func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentID string, nodeImageName, nodeShape string, size *int, rgnSubnet string, kubeVersion string, nodeSourceDetail oke.NodeSourceDetails, expectedError common.ServiceError) *oke.NodePool {
+func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentID string, nodeShape string,
+														 size *int, rgnSubnet string, kubeVersion string,
+														 expectedError common.ServiceError, nodeShapeConfig oke.CreateNodeShapeConfigDetails) *oke.NodePool {
 	ctx, cancel := context.WithTimeout(f.context, f.timeout)
 	defer cancel()
 	ads := f.ListADs()
 	var poolSize *int
+	var imageId string
+	var imageName string
+
 	if size == nil {
 		poolSize = common.Int(len(ads))
 	} else {
@@ -296,8 +317,18 @@ func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentI
 			})
 	}
 
-	nonGPUImageFound, imageId := f.PickNonGPUImage(f.ListNodePoolImages())
-	Expect(nonGPUImageFound).To(BeTrue())
+	imageId = ""
+	imageName = ""
+	var nonGPUImageFound = false
+	var armCompatibleImageFound = false
+	if f.Architecture == "AMD" {
+		imageId, imageName, nonGPUImageFound = f.PickNonGPUImageWithAMDCompatibility(f.ListNodePoolImages())
+		Expect(nonGPUImageFound).To(BeTrue())
+	} else {
+		imageId, imageName, armCompatibleImageFound = f.PickArmCompatibleImage(f.ListNodePoolImages())
+		Expect(armCompatibleImageFound).To(BeTrue())
+	}
+
 	nodeSourceViaImageDetails := &oke.NodeSourceViaImageDetails{
 		ImageId: common.String(imageId),
 	}
@@ -305,12 +336,16 @@ func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentI
 	cfg := &NodePoolCreateConfig{
 		ClusterID : clusterID,
 		CompartmentID: compartmentID,
-		NodeImageName: nodeImageName,
+		NodeImageName: imageName,
 		NodeShape: nodeShape,
 		KubeVersion: kubeVersion,
 		NodeConfigDetails: &nodeConfigDetails,
 		NodeSourceDetails: nodeSourceViaImageDetails,
 		Options: TestOptions{ExpectedError:expectedError},
+	}
+
+	if f.Architecture == "ARM" {
+		cfg.NodeShapeConfig = nodeShapeConfig
 	}
 
 	response, _ := f.createNodePoolWithConfig(cfg, ctx)
@@ -372,6 +407,9 @@ func (f *Framework) createNodePoolWithConfig(cfg *NodePoolCreateConfig, ctx cont
 			NodeConfigDetails: cfg.NodeConfigDetails,
 			NodeSourceDetails: cfg.NodeSourceDetails,
 		},
+	}
+	if f.Architecture == "ARM" {
+		request.CreateNodePoolDetails.NodeShapeConfig = &cfg.NodeShapeConfig
 	}
 	requestB, _ := json.MarshalIndent(request, "", "  ")
 	Logf("Creating nodepool, name: '%s' with request %s", nodepoolName, requestB)
@@ -475,7 +513,7 @@ func (f *Framework) waitForNodePool(response oke.CreateNodePoolResponse) (*oke.N
 // WaitForActiveStateInNodePool checks and waits for all nodes in the node pool to be active.
 // This is used specifically when calling 'update' against an existing cluster that causes OKE
 // components to be updated in each of the nodes.
-func (f *Framework) WaitForActiveStateInNodePool(clusterID string, nodePoolID string) *oke.NodePool {
+func (f *Framework) WaitForActiveStateInNodePool(nodePoolID string) *oke.NodePool {
 	// Waits for all nodes in the nodepool to be in "ACTIVE" state.
 	timeout := 25 * time.Minute
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(Poll) {
