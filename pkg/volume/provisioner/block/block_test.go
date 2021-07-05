@@ -20,8 +20,6 @@ import (
 	"testing"
 	"time"
 
-	v12 "k8s.io/api/storage/v1"
-
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	"github.com/oracle/oci-go-sdk/v31/common"
 	"github.com/oracle/oci-go-sdk/v31/core"
@@ -29,7 +27,8 @@ import (
 	"github.com/oracle/oci-go-sdk/v31/identity"
 	"github.com/oracle/oci-go-sdk/v31/loadbalancer"
 	"go.uber.org/zap"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
+	v12 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
@@ -346,14 +345,6 @@ func (c *MockLoadBalancerClient) UpdateBackendSet(ctx context.Context, lbID, nam
 }
 
 func (c *MockLoadBalancerClient) DeleteBackendSet(ctx context.Context, lbID, name string) (string, error) {
-	return "", nil
-}
-
-func (c *MockLoadBalancerClient) CreateBackend(ctx context.Context, lbID, bsName string, details loadbalancer.BackendDetails) (string, error) {
-	return "", nil
-}
-
-func (c *MockLoadBalancerClient) DeleteBackend(ctx context.Context, lbID, bsName, name string) (string, error) {
 	return "", nil
 }
 
