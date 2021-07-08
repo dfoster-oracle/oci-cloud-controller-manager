@@ -861,66 +861,15 @@ func (cp *CloudProvider) EnsureLoadBalancerDeleted(ctx context.Context, clusterN
 
 	id := *lb.Id
 	logger = logger.With("loadBalancerID", id)
-
-	nodeIPs := sets.NewString()
-	for _, backendSet := range lb.BackendSets {
-		for _, backend := range backendSet.Backends {
-			nodeIPs.Insert(*backend.IpAddress)
-		}
-	}
-	nodes, err := cp.getNodesByIPs(nodeIPs.List())
-	if err != nil {
-		errorType = util.GetError(err)
-		lbMetricDimension = util.GetMetricDimensionForComponent(errorType, util.LoadBalancerType)
-		logger.With(zap.Error(err)).Error("Failed to fetch nodes by internal ips")
-		metrics.SendMetricData(cp.metricPusher, metrics.LBDelete, time.Since(startTime).Seconds(), lbMetricDimension, id)
-		return errors.Wrap(err, "fetching nodes by internal ips")
-	}
-	nodeSubnets, err := getSubnetsForNodes(ctx, nodes, cp.client)
-	if err != nil {
-		errorType = util.GetError(err)
-		lbMetricDimension = util.GetMetricDimensionForComponent(errorType, util.LoadBalancerType)
-		logger.With(zap.Error(err)).Error("Failed to get subnets for nodes")
-		metrics.SendMetricData(cp.metricPusher, metrics.LBDelete, time.Since(startTime).Seconds(), lbMetricDimension, id)
-		return errors.Wrap(err, "getting subnets for nodes")
-	}
-
-	lbSubnets, err := getSubnets(ctx, lb.SubnetIds, cp.client.Networking())
-	if err != nil {
-		errorType = util.GetError(err)
-		lbMetricDimension = util.GetMetricDimensionForComponent(errorType, util.LoadBalancerType)
-		logger.With(zap.Error(err)).Error("Failed to get subnets for load balancers")
-		metrics.SendMetricData(cp.metricPusher, metrics.LBDelete, time.Since(startTime).Seconds(), lbMetricDimension, id)
-		return errors.Wrap(err, "getting subnets for load balancers")
-	}
-
-	securityListManager := cp.securityListManagerFactory(
-		service.Annotations[ServiceAnnotaionLoadBalancerSecurityListManagementMode])
-
-	for listenerName, listener := range lb.Listeners {
-		backendSetName := *listener.DefaultBackendSetName
-		bs, ok := lb.BackendSets[backendSetName]
-		if !ok {
-			logger.With(zap.Error(err)).Errorf("Failed to delete loadbalencer as backend set %q missing (loadbalancer=%q)", backendSetName, id)
-			lbMetricDimension = util.GetMetricDimensionForComponent(util.ErrValidation, util.LoadBalancerType)
-			metrics.SendMetricData(cp.metricPusher, metrics.LBDelete, time.Since(startTime).Seconds(), lbMetricDimension, id)
-			return errors.Errorf("backend set %q missing (loadbalancer=%q)", backendSetName, id) // Should never happen.
-		}
-
-		ports := portsFromBackendSet(cp.logger, backendSetName, &bs)
-		ports.ListenerPort = *listener.Port
-
-		logger.With("listenerName", listenerName, "ports", ports).Debug("Deleting security rules for listener")
-
-		if err := securityListManager.Delete(ctx, lbSubnets, nodeSubnets, ports); err != nil {
-			logger.With(zap.Error(err)).Errorf("Failed to delete security rules for listener %q on load balancer %q", listenerName, name)
+	if service.Annotations[ServiceAnnotaionLoadBalancerSecurityListManagementMode] != ManagementModeNone {
+		err := cp.cleanupSecListForLoadBalancerDelete(lb, logger, ctx, service, name)
+		if err != nil {
 			errorType = util.GetError(err)
 			lbMetricDimension = util.GetMetricDimensionForComponent(errorType, util.LoadBalancerType)
 			metrics.SendMetricData(cp.metricPusher, metrics.LBDelete, time.Since(startTime).Seconds(), lbMetricDimension, id)
-			return errors.Wrapf(err, "delete security rules for listener %q on load balancer %q", listenerName, name)
+			return err
 		}
 	}
-
 	logger.Info("Deleting load balancer")
 
 	workReqID, err := cp.client.LoadBalancer().DeleteLoadBalancer(ctx, id)
@@ -944,6 +893,55 @@ func (cp *CloudProvider) EnsureLoadBalancerDeleted(ctx context.Context, clusterN
 	lbMetricDimension = util.GetMetricDimensionForComponent(util.Success, util.LoadBalancerType)
 	metrics.SendMetricData(cp.metricPusher, metrics.LBDelete, time.Since(startTime).Seconds(), lbMetricDimension, id)
 
+	return nil
+}
+
+func (cp *CloudProvider) cleanupSecListForLoadBalancerDelete(lb *loadbalancer.LoadBalancer, logger *zap.SugaredLogger, ctx context.Context, service *v1.Service, name string) error {
+	id := *lb.Id
+	nodeIPs := sets.NewString()
+	for _, backendSet := range lb.BackendSets {
+		for _, backend := range backendSet.Backends {
+			nodeIPs.Insert(*backend.IpAddress)
+		}
+	}
+	nodes, err := cp.getNodesByIPs(nodeIPs.List())
+	if err != nil {
+		logger.With(zap.Error(err)).Error("Failed to fetch nodes by internal ips")
+		return errors.Wrap(err, "fetching nodes by internal ips")
+	}
+	nodeSubnets, err := getSubnetsForNodes(ctx, nodes, cp.client)
+	if err != nil {
+		logger.With(zap.Error(err)).Error("Failed to get subnets for nodes")
+		return errors.Wrap(err, "getting subnets for nodes")
+	}
+
+	lbSubnets, err := getSubnets(ctx, lb.SubnetIds, cp.client.Networking())
+	if err != nil {
+		logger.With(zap.Error(err)).Error("Failed to get subnets for load balancers")
+		return errors.Wrap(err, "getting subnets for load balancers")
+	}
+
+	securityListManager := cp.securityListManagerFactory(
+		service.Annotations[ServiceAnnotaionLoadBalancerSecurityListManagementMode])
+
+	for listenerName, listener := range lb.Listeners {
+		backendSetName := *listener.DefaultBackendSetName
+		bs, ok := lb.BackendSets[backendSetName]
+		if !ok {
+			logger.With(zap.Error(err)).Errorf("Failed to delete loadbalencer as backend set %q missing (loadbalancer=%q)", backendSetName, id)
+			return errors.Errorf("backend set %q missing (loadbalancer=%q)", backendSetName, id) // Should never happen.
+		}
+
+		ports := portsFromBackendSet(cp.logger, backendSetName, &bs)
+		ports.ListenerPort = *listener.Port
+
+		logger.With("listenerName", listenerName, "ports", ports).Debug("Deleting security rules for listener")
+
+		if err := securityListManager.Delete(ctx, lbSubnets, nodeSubnets, ports); err != nil {
+			logger.With(zap.Error(err)).Errorf("Failed to delete security rules for listener %q on load balancer %q", listenerName, name)
+			return errors.Wrapf(err, "delete security rules for listener %q on load balancer %q", listenerName, name)
+		}
+	}
 	return nil
 }
 

@@ -439,3 +439,115 @@ func TestUpdateLoadBalancerNetworkSecurityGroups(t *testing.T) {
 		})
 	}
 }
+
+func TestCloudProvider_EnsureLoadBalancerDeleted(t *testing.T) {
+	tests := []struct {
+		name string
+		service *v1.Service
+		err  string
+		wantErr bool
+	}{
+		{
+			name: "Security List Management mode 'None' - no err",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					UID:       "test-uid",
+					Annotations: map[string]string{
+						ServiceAnnotaionLoadBalancerSecurityListManagementMode: "None",
+					},
+				},
+			},
+			err:    "",
+			wantErr: false,
+		},
+		{
+			name: "Security List Management mode 'None' - delete err",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					UID:       "test-uid-delete-err",
+					Annotations: map[string]string{
+						ServiceAnnotaionLoadBalancerSecurityListManagementMode: "None",
+					},
+				},
+			},
+			err:    "delete load balancer \"test-uid-delete-err\"",
+			wantErr: true,
+		},
+		{
+			name: "Security List Management mode 'All' - no err",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					UID:       "test-uid",
+					Annotations: map[string]string{
+						ServiceAnnotaionLoadBalancerSecurityListManagementMode: "All",
+					},
+				},
+			},
+			err:    "",
+			wantErr: false,
+		},
+		{
+			name: "Security List Management mode 'All' - fetch node failure",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					UID:       "test-uid-node-err",
+					Annotations: map[string]string{
+						ServiceAnnotaionLoadBalancerSecurityListManagementMode: "All",
+					},
+				},
+			},
+			err:    "fetching nodes by internal ips",
+			wantErr: true,
+		},
+		{
+			name: "no management mode provided in annotation - no err",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					UID:       "test-uid",
+				},
+			},
+			err:    "",
+			wantErr: false,
+		},
+		{
+			name: "no management mode provided in annotation - delete err",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					UID:       "test-uid-delete-err",
+				},
+			},
+			err:    "delete load balancer \"test-uid-delete-err\"",
+			wantErr: true,
+		},
+	}
+	cp := &CloudProvider{
+		NodeLister:                 &mockNodeLister{},
+		client:                     MockOCIClient{},
+		securityListManagerFactory: func(mode string) securityListManager {
+										return MockSecurityListManager{}
+									},
+		config:                     &providercfg.Config{CompartmentID: "testCompartment"},
+		logger:                     zap.S(),
+		instanceCache:              &mockInstanceCache{},
+		metricPusher:               nil,
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := cp.EnsureLoadBalancerDeleted(context.Background(), "test", tt.service); (err != nil) != tt.wantErr {
+				t.Errorf("EnsureLoadBalancerDeleted() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
