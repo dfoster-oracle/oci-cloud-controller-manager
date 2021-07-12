@@ -1,5 +1,5 @@
 
-FROM iad.ocir.io/odx-oke/oke/golang-buildbox:1.12.7-fips as builder
+FROM odo-docker-signed-local.artifactory.oci.oraclecorp.com/odx-oke/oke/golang-buildbox:1.12.7-fips-471967d48d010fd56ace221381853f4709484717-40 as builder
 
 ARG COMPONENT
 
@@ -13,6 +13,8 @@ WORKDIR $SRC
 RUN COMPONENT=${COMPONENT} make clean build
 
 FROM docker-remote.artifactory.oci.oraclecorp.com/oraclelinux:7-slim
+
+RUN yum-config-manager --disable \* && yum-config-manager --add-repo https://artifactory.oci.oraclecorp.com/io-ol7-latest-yum-local && yum repolist enabled
 
 RUN yum install -y util-linux \
   && yum install -y e2fsprogs \
