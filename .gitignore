@@ -52,3 +52,7 @@ config.yaml
 /coverage.out
 /coverage.html
 /coverage.txt
+
+input_ocibuild/
+output_ocibuild_dockerize_ccm/
+output_ocibuild_dockerize_ccm_arm/
