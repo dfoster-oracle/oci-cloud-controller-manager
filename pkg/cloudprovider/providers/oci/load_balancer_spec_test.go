@@ -1197,7 +1197,7 @@ func TestNewLBSpecSuccess(t *testing.T) {
 					"TCP-443": {
 						Backends: []loadbalancer.BackendDetails{},
 						HealthChecker: &loadbalancer.HealthCheckerDetails{
-							Protocol:         common.String("TCP"),
+							Protocol:         common.String("HTTP"),
 							Port:             common.Int(10256),
 							UrlPath:          common.String("/healthz"),
 							Retries:          common.Int(3),

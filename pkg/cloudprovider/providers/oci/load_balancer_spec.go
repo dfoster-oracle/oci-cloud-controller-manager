@@ -252,7 +252,7 @@ func getPorts(svc *v1.Service) (map[string]portSpec, error) {
 	ports := make(map[string]portSpec)
 	for _, servicePort := range svc.Spec.Ports {
 		name := getBackendSetName(string(servicePort.Protocol), int(servicePort.Port))
-		healthChecker, err := getHealthChecker(nil, int(servicePort.Port), svc)
+		healthChecker, err := getHealthChecker(svc)
 		if err != nil {
 			return nil, err
 		}
@@ -295,7 +295,7 @@ func getBackendSets(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node
 		if sslCfg != nil && len(sslCfg.BackendSetSSLSecretName) != 0 {
 			secretName = sslCfg.BackendSetSSLSecretName
 		}
-		healthChecker, err := getHealthChecker(sslCfg, port, svc)
+		healthChecker, err := getHealthChecker(svc)
 		if err != nil {
 			return nil, err
 		}
@@ -309,12 +309,7 @@ func getBackendSets(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node
 	return backendSets, nil
 }
 
-func getHealthChecker(cfg *SSLConfig, port int, svc *v1.Service) (*loadbalancer.HealthCheckerDetails, error) {
-	// If the health-check has SSL enabled use TCP rather than HTTP.
-	protocol := lbNodesHealthCheckProtoHTTP
-	if cfg != nil && cfg.Ports.Has(port) {
-		protocol = lbNodesHealthCheckProtoTCP
-	}
+func getHealthChecker(svc *v1.Service) (*loadbalancer.HealthCheckerDetails, error) {
 	// Setting default values as per defined in the doc (https://docs.cloud.oracle.com/en-us/iaas/Content/Balance/Tasks/editinghealthcheck.htm#console)
 	var retries = 3
 	if r, ok := svc.Annotations[ServiceAnnotationLoadBalancerHealthCheckRetries]; ok {
@@ -345,7 +340,7 @@ func getHealthChecker(cfg *SSLConfig, port int, svc *v1.Service) (*loadbalancer.
 	checkPath, checkPort := apiservice.GetServiceHealthCheckPathPort(svc)
 	if checkPath != "" {
 		return &loadbalancer.HealthCheckerDetails{
-			Protocol:         &protocol,
+			Protocol:         common.String(lbNodesHealthCheckProto),
 			UrlPath:          &checkPath,
 			Port:             common.Int(int(checkPort)),
 			Retries:          &retries,
@@ -355,7 +350,7 @@ func getHealthChecker(cfg *SSLConfig, port int, svc *v1.Service) (*loadbalancer.
 	}
 
 	return &loadbalancer.HealthCheckerDetails{
-		Protocol:         &protocol,
+		Protocol:         common.String(lbNodesHealthCheckProto),
 		UrlPath:          common.String(lbNodesHealthCheckPath),
 		Port:             common.Int(lbNodesHealthCheckPort),
 		Retries:          &retries,
