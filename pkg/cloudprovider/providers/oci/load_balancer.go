@@ -22,7 +22,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v31/loadbalancer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -648,13 +648,6 @@ func (cp *CloudProvider) updateLoadBalancer(ctx context.Context, lb *loadbalance
 			if err != nil {
 				return errors.Wrap(err, "updating BackendSet")
 			}
-
-		case *BackendAction:
-			err := cp.updateBackend(ctx, lbID, a)
-			if err != nil {
-				return errors.Wrap(err, "updating Backend")
-			}
-
 		case *ListenerAction:
 			backendSetName := *a.Listener.DefaultBackendSetName
 			var ports portSpec
@@ -712,37 +705,6 @@ func (cp *CloudProvider) updateBackendSet(ctx context.Context, lbID string, acti
 		}
 
 		workRequestID, err = cp.client.LoadBalancer().DeleteBackendSet(ctx, lbID, action.Name())
-	}
-
-	if err != nil {
-		return err
-	}
-
-	_, err = cp.client.LoadBalancer().AwaitWorkRequest(ctx, workRequestID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (cp *CloudProvider) updateBackend(ctx context.Context, lbID string, action *BackendAction) error {
-	var (
-		workRequestID string
-		err           error
-	)
-
-	cp.logger.With(
-		"actionType", action.Type(),
-		"backendSetName", action.bsName,
-		"backendName", action.Name(),
-		"loadBalancerID", lbID).Info("Applying action on backend")
-
-	switch action.Type() {
-	case Create:
-		workRequestID, err = cp.client.LoadBalancer().CreateBackend(ctx, lbID, action.bsName, action.Backend)
-	case Delete:
-		workRequestID, err = cp.client.LoadBalancer().DeleteBackend(ctx, lbID, action.bsName, action.name)
 	}
 
 	if err != nil {
