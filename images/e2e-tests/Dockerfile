@@ -1,24 +1,29 @@
-FROM iad.ocir.io/odx-oke/oke/golang:1.12
+FROM docker-remote.artifactory.oci.oraclecorp.com/oraclelinux:7-slim
 
-ARG OCI_CLI_VERSION
+#install latest oci cli from yum repo
+#ARG OCI_CLI_VERSION
 ARG KUBECTL_VERSION
 
-RUN apt-get update && apt-get install -y python3 python3-venv python3-distutils openssl locales
-RUN locale-gen C.UTF-8
+#enable devo repo for oci-cli installation. oci-cli installation will have python3 installed.
+#reinstall glibc-common to populate /usr/share/i18n/charmap so lcoaledef can work
+#TODO confirm whether python3-distutils is needed.
+#TODO I don't think OCL_CLI_VERSION matters so python36-oci-cli should be sufficient.
+RUN yum install -y oraclelinux-developer-release-el7 oracle-epel-release-el7 && \
+    yum install -y python36-oci-cli openssl go && \
+    yum reinstall -y glibc-common && \
+    yum clean all
+
+#set locale
+RUN localedef -i C -f UTF-8 C.UTF-8
+
 ENV LC_ALL="C.UTF-8"
 ENV LANG="C.UTF-8"
+
 # Install test runner
 RUN go get github.com/onsi/ginkgo/ginkgo
 
-# Install OCI cli
-RUN mkdir -p oci-cli-install && \
-    curl -L "https://raw.githubusercontent.com/oracle/oci-cli/${OCI_CLI_VERSION}/scripts/install/install.sh" > oci-cli-install/install.sh && \
-    chmod u+x ./oci-cli-install/install.sh && \
-    ./oci-cli-install/install.sh --install-dir /usr/local/oci --accept-all-defaults && \
-    ln -s /root/bin/oci /usr/local/bin/oci
-
 # Install kubectl
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
+RUN curl -LO https://artifactory.oci.oraclecorp.com:443/build-service-test-generic-local/oci-cloud-controller-manager/kubectl/kubectl-${KUBECTL_VERSION}/kubectl && \
     chmod +x ./kubectl && \
     mv ./kubectl /usr/local/bin/kubectl
 
