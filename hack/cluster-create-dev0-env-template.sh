@@ -128,6 +128,10 @@ export NSG_OCIDS_ARM="ocid1.networksecuritygroup.oc1.iad.aaaaaaaa3nacpqxf3eyjix6
 #Reserved IP created in above compartment
 export RESERVED_IP="144.25.98.32"
 
+# FSS volume handle
+# format is FileSystemOCID:serverIP:path
+export FSS_VOLUME_HANDLE="ocid1.filesystem.oc1.iad.aaaaaaaaaaa5wj2infqwillqojxwiotjmfsc2ylefuzqaaaa:10.0.10.104:/FileSystem-20210820-0454-50"
+
 #Architecture to run tests on
 export ARCHITECTURE_AMD="AMD"
 export ARCHITECTURE_ARM="ARM"

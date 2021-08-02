@@ -103,6 +103,7 @@ function check_environment () {
         check-env "SECRETS_LOCAL"       $SECRETS_LOCAL
         check-env "REGION_SECRETS"      $REGION_SECRETS
         check-env "DELEGATION_GROUP_ID" $DELEGATION_GROUP_ID
+        check-env "FSS_VOLUME_HANDLE"   $FSS_VOLUME_HANDLE
         check-env-k8s-version-index-exist
         if [ -z "$CLUSTER_KUBECONFIG" ]; then
             CLUSTER_KUBECONFIG="/tmp/clusterkubeconfig"
@@ -182,6 +183,7 @@ function run_e2e_tests() {
         --nsg-ocids=${NSG_OCIDS} \
         --reserved-ip=${RESERVED_IP} \
         --architecture=${ARCHITECTURE} \
+        --volume-handle=${FSS_VOLUME_HANDLE} \
 
     retval=$?
     rm -f $OCI_KEY_FILE
@@ -201,6 +203,7 @@ function run_e2e_tests_existing_cluster() {
         --nsg-ocids=${NSG_OCIDS} \
         --reserved-ip=${RESERVED_IP} \
         --architecture=${ARCHITECTURE} \
+        --volume-handle=${FSS_VOLUME_HANDLE} \
     retval=$?
     return $retval
 }

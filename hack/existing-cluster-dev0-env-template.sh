@@ -52,3 +52,7 @@ export SCOPE="BOTH"
 
 # For debugging the tests in existing cluster, do not turn it off by default.
 # export DELETE_NAMESPACE=false
+
+# FSS volume handle
+# format is FileSystemOCID:serverIP:path
+export FSS_VOLUME_HANDLE="ocid1.filesystem.oc1.iad.aaaaaaaaaaa5wj2infqwillqojxwiotjmfsc2ylefuzqaaaa:10.0.10.104:/FileSystem-20210820-0454-50"
