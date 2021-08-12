@@ -33,7 +33,7 @@ REGISTRY ?= odo-docker-signed-local.artifactory.oci.oraclecorp.com
 IMAGE ?= $(REGISTRY)/oke-public-cloud-provider-oci
 COMPONENT ?= oci-cloud-controller-manager oci-volume-provisioner oci-flexvolume-driver cloud-provider-oci oci-csi-controller-driver oci-csi-node-driver
 OCI_CLI_VERSION ?= master
-KUBECTL_VERSION ?= v1.11.0
+KUBECTL_VERSION ?= 1.11.0
 
 GIT_COMMIT := $(shell GCOMMIT=`git rev-parse --short HEAD`; if [ -n "`git status . --porcelain`" ]; then echo "$$GCOMMIT-dirty"; else echo $$GCOMMIT; fi)
 DOCKER_REPO_ROOT?=/go/src/github.com/oracle/oci-cloud-controller-manager
