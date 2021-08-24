@@ -20,23 +20,23 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/klog"
-
 	v1 "k8s.io/api/core/v1"
-	storage "k8s.io/api/storage/v1beta1"
+	storage "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	coreinformers "k8s.io/client-go/informers/core/v1"
-	storageinformers "k8s.io/client-go/informers/storage/v1beta1"
+	storageinformers "k8s.io/client-go/informers/storage/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	storagelisters "k8s.io/client-go/listers/storage/v1beta1"
+	storagelisters "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
 )
 
 // CSIAttachController is a controller that attaches / detaches CSI volumes using provided Handler interface
@@ -217,10 +217,7 @@ func (ctrl *CSIAttachController) syncVA() {
 }
 
 func (ctrl *CSIAttachController) processFinalizers(pv *v1.PersistentVolume) bool {
-	if pv.Spec.CSI != nil && pv.Spec.CSI.Driver == ctrl.attacherName {
-		return true
-	}
-	return false
+	return pv.DeletionTimestamp != nil && sets.NewString(pv.Finalizers...).Has(GetFinalizerName(ctrl.attacherName))
 }
 
 // syncPV deals with one key off the queue.  It returns false when it's time to quit.

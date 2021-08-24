@@ -149,7 +149,6 @@ func init() {
 	flag.StringVar(&nsgOCIDS, "nsg-ocids", "", "NSG OCIDs to be used to associate to LB")
 	flag.StringVar(&reservedIP, "reserved-ip", "", "Public reservedIP to be used for testing loadbalancer with reservedIP")
 	flag.StringVar(&architecture, "architecture", "", "CPU architecture to be used for testing.")
-	flag.Parse()
 }
 
 func getDefaultOCIUser() OCIUser {
@@ -284,6 +283,7 @@ type Framework struct {
 // New creates a new a framework that holds the context of the test
 // execution.
 func New() *Framework {
+	flag.Parse()
 	return NewWithConfig(&FrameworkConfig{})
 }
 

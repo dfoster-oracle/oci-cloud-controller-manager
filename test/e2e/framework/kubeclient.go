@@ -2,6 +2,7 @@ package framework
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -32,7 +33,6 @@ import (
 	restclient "k8s.io/client-go/rest"
 	clientcmd "k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/kubernetes/pkg/api/testapi"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	appsinternal "k8s.io/kubernetes/pkg/apis/apps"
 	batchinternal "k8s.io/kubernetes/pkg/apis/batch"
@@ -41,7 +41,7 @@ import (
 	extensionsinternal "k8s.io/kubernetes/pkg/apis/extensions"
 	"k8s.io/kubernetes/pkg/controller"
 	"k8s.io/kubernetes/pkg/controller/nodelifecycle"
-	schedulercache "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	"k8s.io/kubernetes/pkg/scheduler/framework/v1alpha1"
 	testutil "k8s.io/kubernetes/test/utils"
 	uexec "k8s.io/utils/exec"
 )
@@ -159,7 +159,7 @@ func NewKubeClient(kubeConfig string) *KubeClient {
 }
 
 func (kc *KubeClient) NamespaceExists(ns string) bool {
-	namespaces, err := kc.Client.CoreV1().Namespaces().List(metav1.ListOptions{})
+	namespaces, err := kc.Client.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	for _, namespace := range namespaces.Items {
 		if namespace.Name == ns {
@@ -171,7 +171,7 @@ func (kc *KubeClient) NamespaceExists(ns string) bool {
 
 func (kc *KubeClient) DeletePod(namespace string, name string, timeout time.Duration) error {
 	Logf("deleting pod %s/%s", namespace, name)
-	err := kc.Client.CoreV1().Pods(namespace).Delete(name, nil)
+	err := kc.Client.CoreV1().Pods(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
 	if apierrs.IsNotFound(err) {
 		return nil
 	}
@@ -180,7 +180,7 @@ func (kc *KubeClient) DeletePod(namespace string, name string, timeout time.Dura
 	}
 
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(Poll) {
-		_, err := kc.Client.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+		_, err := kc.Client.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
 		if apierrs.IsNotFound(err) {
 			return nil
 		}
@@ -193,13 +193,13 @@ func (kc *KubeClient) DeletePod(namespace string, name string, timeout time.Dura
 }
 
 func (kc *KubeClient) GetPodIP(namespace string, name string) string {
-	pod, err := kc.Client.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
+	pod, err := kc.Client.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	Expect(err).To(BeNil())
 	return pod.Status.PodIP
 }
 
 func (kc *KubeClient) CreatePod(pod *v1.Pod) (*v1.Pod, error) {
-	return kc.Client.CoreV1().Pods(pod.Namespace).Create(pod)
+	return kc.Client.CoreV1().Pods(pod.Namespace).Create(context.Background(), pod, metav1.CreateOptions{})
 }
 
 func (kc *KubeClient) WaitForPodRunning(namespace string, name string, timeout time.Duration) {
@@ -261,7 +261,7 @@ func (kc *KubeClient) WaitForPodFailure(namespace string, name string, errorMess
 
 func (kc *KubeClient) PodLogs(namespace string, name string) (string, error) {
 	req := kc.Client.CoreV1().Pods(namespace).GetLogs(name, &v1.PodLogOptions{})
-	reader, err := req.Stream()
+	reader, err := req.Stream(context.Background())
 	if err != nil {
 		return "", errors.Wrap(err, "unable to open log stream")
 	}
@@ -275,7 +275,7 @@ func (kc *KubeClient) PodLogs(namespace string, name string) (string, error) {
 }
 
 func (kc *KubeClient) CheckNodes(expectedNumNodes int) {
-	nodes, err := kc.Client.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodes, err := kc.Client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(nodes.Items)).To(Equal(expectedNumNodes))
 	for _, node := range nodes.Items {
@@ -285,7 +285,7 @@ func (kc *KubeClient) CheckNodes(expectedNumNodes int) {
 
 // Check the number of pods reported by k8s in the cluster
 func (kc *KubeClient) CheckPods(expectedNumPods int) {
-	pods, err := kc.Client.CoreV1().Pods("").List(metav1.ListOptions{})
+	pods, err := kc.Client.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	//	Expect(len(pods.Items)).To(Equal(expectedNumPods))
 	// TODO: after debug, make this a fatal error again
@@ -393,7 +393,7 @@ type podCondition func(pod *v1.Pod) (bool, error)
 func (kc *KubeClient) AddLabelsToNode(nodeName string, labelValues map[string]string) {
 	Logf("Retrieving kubernetes node with hostname %s", nodeName)
 	labelSelector := metav1.LabelSelector{MatchLabels: map[string]string{"hostname": nodeName}}
-	nodes, err := kc.Client.CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: labels.Set(labelSelector.MatchLabels).String()})
+	nodes, err := kc.Client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: labels.Set(labelSelector.MatchLabels).String()})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(nodes.Items)).Should(BeNumerically(">", 0))
 
@@ -403,7 +403,7 @@ func (kc *KubeClient) AddLabelsToNode(nodeName string, labelValues map[string]st
 		node.Labels[k] = v
 	}
 
-	resultNode, err := kc.Client.CoreV1().Nodes().Update(node)
+	resultNode, err := kc.Client.CoreV1().Nodes().Update(context.Background(), node, metav1.UpdateOptions{})
 	if err != nil {
 		Logf("Could not label node %q with labels %+v. Error: %v", nodeName, labelValues, err)
 	}
@@ -453,7 +453,7 @@ func CheckPodsCondition(c clientset.Interface, ns string, podNames []string, tim
 func WaitForPodCondition(c clientset.Interface, ns, podName, desc string, timeout time.Duration, condition podCondition) error {
 	Logf("Waiting up to %v for pod %q in namespace %q to be %q", timeout, podName, ns, desc)
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(K8sResourcePoll) {
-		pod, err := c.CoreV1().Pods(ns).Get(podName, metav1.GetOptions{})
+		pod, err := c.CoreV1().Pods(ns).Get(context.Background(), podName, metav1.GetOptions{})
 		if err != nil {
 			if apierrs.IsNotFound(err) {
 				Logf("Pod %q in namespace %q not found. Error: %v", podName, ns, err)
@@ -494,7 +494,7 @@ func waitListSchedulableNodesOrDie(c clientset.Interface) *v1.NodeList {
 	var nodes *v1.NodeList
 	var err error
 	if wait.PollImmediate(K8sResourcePoll, SingleCallTimeout, func() (bool, error) {
-		nodes, err = c.CoreV1().Nodes().List(metav1.ListOptions{FieldSelector: fields.Set{
+		nodes, err = c.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{FieldSelector: fields.Set{
 			"spec.unschedulable": "false",
 		}.AsSelector().String()})
 		if err != nil {
@@ -595,7 +595,7 @@ func isNodeUntainted(node *v1.Node) bool {
 	fakePod := &v1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
-			APIVersion: testapi.Groups[v1.GroupName].GroupVersion().String(),
+			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fake-not-scheduled",
@@ -610,7 +610,7 @@ func isNodeUntainted(node *v1.Node) bool {
 			},
 		},
 	}
-	nodeInfo := schedulercache.NewNodeInfo()
+	nodeInfo := v1alpha1.NewNodeInfo()
 	nodeInfo.SetNode(node)
 	fit, err := PodToleratesNodeTaints(fakePod, nodeInfo)
 	if err != nil {
@@ -620,7 +620,7 @@ func isNodeUntainted(node *v1.Node) bool {
 	return fit
 }
 
-func PodToleratesNodeTaints(pod *v1.Pod, nodeInfo *schedulercache.NodeInfo) (bool, error) {
+func PodToleratesNodeTaints(pod *v1.Pod, nodeInfo *v1alpha1.NodeInfo) (bool, error) {
 	if nodeInfo == nil || nodeInfo.Node() == nil {
 		return false, nil
 	}
@@ -631,10 +631,10 @@ func PodToleratesNodeTaints(pod *v1.Pod, nodeInfo *schedulercache.NodeInfo) (boo
 	})
 }
 
-func podToleratesNodeTaints(pod *v1.Pod, nodeInfo *schedulercache.NodeInfo, filter func(t *v1.Taint) bool) (bool, error) {
-	taints, err := nodeInfo.Taints()
-	if err != nil {
-		return false, err
+func podToleratesNodeTaints(pod *v1.Pod, nodeInfo *v1alpha1.NodeInfo, filter func(t *v1.Taint) bool) (bool, error) {
+	taints := nodeInfo.Node().Spec.Taints
+	if len(taints) == 0 {
+		return true, nil
 	}
 
 	if v1helper.TolerationsTolerateTaintsWithFilter(pod.Spec.Tolerations, taints, filter) {
@@ -691,10 +691,10 @@ func CreateExecPodOrFail(client clientset.Interface, ns, generateName string, tw
 	if tweak != nil {
 		tweak(execPod)
 	}
-	created, err := client.CoreV1().Pods(ns).Create(execPod)
+	created, err := client.CoreV1().Pods(ns).Create(context.Background(), execPod, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	err = wait.PollImmediate(K8sResourcePoll, 5*time.Minute, func() (bool, error) {
-		retrievedPod, err := client.CoreV1().Pods(execPod.Namespace).Get(created.Name, metav1.GetOptions{})
+		retrievedPod, err := client.CoreV1().Pods(execPod.Namespace).Get(context.Background(), created.Name, metav1.GetOptions{})
 		if err != nil {
 			if IsRetryableAPIError(err) {
 				return false, nil
@@ -833,17 +833,17 @@ func RunHostCmd(ns, name, cmd string) (string, error) {
 func getRuntimeObjectForKind(c clientset.Interface, kind schema.GroupKind, ns, name string) (runtime.Object, error) {
 	switch kind {
 	case api.Kind("ReplicationController"):
-		return c.CoreV1().ReplicationControllers(ns).Get(name, metav1.GetOptions{})
+		return c.CoreV1().ReplicationControllers(ns).Get(context.Background(), name, metav1.GetOptions{})
 	case api.Kind("Secrets"):
-		return c.CoreV1().Secrets(ns).Get(name, metav1.GetOptions{})
+		return c.CoreV1().Secrets(ns).Get(context.Background(), name, metav1.GetOptions{})
 	case extensionsinternal.Kind("ReplicaSet"), appsinternal.Kind("ReplicaSet"):
-		return c.ExtensionsV1beta1().ReplicaSets(ns).Get(name, metav1.GetOptions{})
+		return c.ExtensionsV1beta1().ReplicaSets(ns).Get(context.Background(), name, metav1.GetOptions{})
 	case extensionsinternal.Kind("Deployment"), appsinternal.Kind("Deployment"):
-		return c.ExtensionsV1beta1().Deployments(ns).Get(name, metav1.GetOptions{})
+		return c.ExtensionsV1beta1().Deployments(ns).Get(context.Background(), name, metav1.GetOptions{})
 	case extensionsinternal.Kind("DaemonSet"):
-		return c.ExtensionsV1beta1().DaemonSets(ns).Get(name, metav1.GetOptions{})
+		return c.ExtensionsV1beta1().DaemonSets(ns).Get(context.Background(), name, metav1.GetOptions{})
 	case batchinternal.Kind("Job"):
-		return c.BatchV1().Jobs(ns).Get(name, metav1.GetOptions{})
+		return c.BatchV1().Jobs(ns).Get(context.Background(), name, metav1.GetOptions{})
 	default:
 		return nil, fmt.Errorf("Unsupported kind when getting runtime object: %v", kind)
 	}
@@ -852,17 +852,17 @@ func getRuntimeObjectForKind(c clientset.Interface, kind schema.GroupKind, ns, n
 func deleteResource(c clientset.Interface, kind schema.GroupKind, ns, name string, deleteOption *metav1.DeleteOptions) error {
 	switch kind {
 	case api.Kind("ReplicationController"):
-		return c.CoreV1().ReplicationControllers(ns).Delete(name, deleteOption)
+		return c.CoreV1().ReplicationControllers(ns).Delete(context.Background(), name, *deleteOption)
 	case api.Kind("Secrets"):
-		return c.CoreV1().Secrets(ns).Delete(name, deleteOption)
+		return c.CoreV1().Secrets(ns).Delete(context.Background(), name, *deleteOption)
 	case extensionsinternal.Kind("ReplicaSet"), appsinternal.Kind("ReplicaSet"):
-		return c.ExtensionsV1beta1().ReplicaSets(ns).Delete(name, deleteOption)
+		return c.ExtensionsV1beta1().ReplicaSets(ns).Delete(context.Background(), name, *deleteOption)
 	case extensionsinternal.Kind("Deployment"), appsinternal.Kind("Deployment"):
-		return c.ExtensionsV1beta1().Deployments(ns).Delete(name, deleteOption)
+		return c.ExtensionsV1beta1().Deployments(ns).Delete(context.Background(), name, *deleteOption)
 	case extensionsinternal.Kind("DaemonSet"):
-		return c.ExtensionsV1beta1().DaemonSets(ns).Delete(name, deleteOption)
+		return c.ExtensionsV1beta1().DaemonSets(ns).Delete(context.Background(), name, *deleteOption)
 	case batchinternal.Kind("Job"):
-		return c.BatchV1().Jobs(ns).Delete(name, deleteOption)
+		return c.BatchV1().Jobs(ns).Delete(context.Background(), name, *deleteOption)
 	default:
 		return fmt.Errorf("Unsupported kind when deleting: %v", kind)
 	}
@@ -991,7 +991,7 @@ func DeleteResourceAndWaitForGC(c clientset.Interface, kind schema.GroupKind, ns
 	falseVar := false
 	deleteOption := &metav1.DeleteOptions{OrphanDependents: &falseVar}
 	startTime := time.Now()
-	if err := testutil.DeleteResourceWithRetries(c, kind, ns, name, deleteOption); err != nil {
+	if err := testutil.DeleteResourceWithRetries(c, kind, ns, name, *deleteOption); err != nil {
 		return err
 	}
 	deleteTime := time.Since(startTime)

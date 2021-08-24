@@ -17,18 +17,20 @@ limitations under the License.
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/evanphx/json-patch"
-	"k8s.io/api/core/v1"
-	storage "k8s.io/api/storage/v1beta1"
+	jsonpatch "github.com/evanphx/json-patch"
+	v1 "k8s.io/api/core/v1"
+	storage "k8s.io/api/storage/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 func markAsAttached(client kubernetes.Interface, va *storage.VolumeAttachment, metadata map[string]string) (*storage.VolumeAttachment, error) {
@@ -41,7 +43,8 @@ func markAsAttached(client kubernetes.Interface, va *storage.VolumeAttachment, m
 	if err != nil {
 		return va, err
 	}
-	newVA, err := client.StorageV1beta1().VolumeAttachments().Patch(va.Name, types.MergePatchType, patch)
+	newVA, err := client.StorageV1().VolumeAttachments().Patch(context.TODO(), va.Name, types.MergePatchType, patch,
+		metav1.PatchOptions{}, "status")
 	if err != nil {
 		return va, err
 	}
@@ -75,7 +78,6 @@ func markAsDetached(client kubernetes.Interface, va *storage.VolumeAttachment) (
 
 	klog.V(4).Infof("Marking as detached %q", va.Name)
 	clone := va.DeepCopy()
-	clone.Finalizers = newFinalizers
 	clone.Status.Attached = false
 	clone.Status.DetachError = nil
 	clone.Status.AttachmentMetadata = nil
@@ -83,9 +85,22 @@ func markAsDetached(client kubernetes.Interface, va *storage.VolumeAttachment) (
 	if err != nil {
 		return va, err
 	}
-	newVA, err := client.StorageV1beta1().VolumeAttachments().Patch(va.Name, types.MergePatchType, patch)
+	newVA, err := client.StorageV1().VolumeAttachments().Patch(context.TODO(), va.Name, types.MergePatchType, patch,
+		metav1.PatchOptions{}, "status")
 	if err != nil {
 		return va, err
+	}
+
+	// As Finalizers is not in the status subresource it must be patched separately. It is removed after the status update so the resource is not prematurely deleted.
+	clone = newVA.DeepCopy()
+	clone.Finalizers = newFinalizers
+	patch, err = createMergePatch(newVA, clone)
+	if err != nil {
+		return newVA, err
+	}
+	newVA, err = client.StorageV1().VolumeAttachments().Patch(context.TODO(), newVA.Name, types.MergePatchType, patch, metav1.PatchOptions{}, "")
+	if err != nil {
+		return newVA, err
 	}
 	klog.V(4).Infof("Finalizer removed from %q", va.Name)
 	return newVA, nil
@@ -93,7 +108,6 @@ func markAsDetached(client kubernetes.Interface, va *storage.VolumeAttachment) (
 
 const (
 	defaultFSType              = "ext4"
-	nodeIDAnnotation           = "csi.volume.kubernetes.io/nodeid"
 	csiVolAttribsAnnotationKey = "csi.volume.kubernetes.io/volume-attributes"
 	vaNodeIDAnnotation         = "csi.alpha.kubernetes.io/node-id"
 )
@@ -112,25 +126,6 @@ func SanitizeDriverName(driver string) string {
 // GetFinalizerName returns Attacher name suitable to be used as finalizer
 func GetFinalizerName(driver string) string {
 	return "external-attacher/" + SanitizeDriverName(driver)
-}
-
-// GetNodeIDFromNode returns nodeID string from node annotations.
-func GetNodeIDFromNode(driver string, node *v1.Node) (string, error) {
-	nodeIDJSON, ok := node.Annotations[nodeIDAnnotation]
-	if !ok {
-		return "", fmt.Errorf("node %q has no NodeID annotation", node.Name)
-	}
-
-	var nodeIDs map[string]string
-	if err := json.Unmarshal([]byte(nodeIDJSON), &nodeIDs); err != nil {
-		return "", fmt.Errorf("cannot parse NodeID annotation on node %q: %s", node.Name, err)
-	}
-	nodeID, ok := nodeIDs[driver]
-	if !ok {
-		return "", fmt.Errorf("cannot find NodeID for driver %q for node %q", driver, node.Name)
-	}
-
-	return nodeID, nil
 }
 
 // GetNodeIDFromCSINode returns nodeID from CSIDriverInfoSpec

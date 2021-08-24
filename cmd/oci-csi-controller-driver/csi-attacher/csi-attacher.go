@@ -132,12 +132,11 @@ func StartCSIAttacher(csioptions csioptions.CSIOptions) {
 		}
 		if supportsAttach {
 			pvLister := factory.Core().V1().PersistentVolumes().Lister()
-			nodeLister := factory.Core().V1().Nodes().Lister()
-			vaLister := factory.Storage().V1beta1().VolumeAttachments().Lister()
-			csiNodeLister := factory.Storage().V1beta1().CSINodes().Lister()
+			vaLister := factory.Storage().V1().VolumeAttachments().Lister()
+			csiNodeLister := factory.Storage().V1().CSINodes().Lister()
 			volAttacher := attacher.NewAttacher(csiConn)
 			CSIVolumeLister := attacher.NewVolumeLister(csiConn)
-			handler = controller.NewCSIHandler(clientset, csiAttacher, volAttacher, CSIVolumeLister, pvLister, nodeLister, csiNodeLister, vaLister, &csioptions.Timeout, supportsReadOnly, csitranslationlib.New())
+			handler = controller.NewCSIHandler(clientset, csiAttacher, volAttacher, CSIVolumeLister, pvLister, csiNodeLister, vaLister, &csioptions.Timeout, supportsReadOnly, csitranslationlib.New())
 			klog.V(2).Infof("CSI driver supports ControllerPublishUnpublish, using real CSI handler")
 		} else {
 			handler = controller.NewTrivialHandler(clientset)
@@ -158,7 +157,7 @@ func StartCSIAttacher(csioptions csioptions.CSIOptions) {
 		clientset,
 		csiAttacher,
 		handler,
-		factory.Storage().V1beta1().VolumeAttachments(),
+		factory.Storage().V1().VolumeAttachments(),
 		factory.Core().V1().PersistentVolumes(),
 		workqueue.NewItemExponentialFailureRateLimiter(csioptions.RetryIntervalStart, csioptions.RetryIntervalMax),
 		workqueue.NewItemExponentialFailureRateLimiter(csioptions.RetryIntervalStart, csioptions.RetryIntervalMax),

@@ -23,18 +23,17 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/klog"
-
 	"github.com/kubernetes-csi/external-attacher/pkg/attacher"
 	v1 "k8s.io/api/core/v1"
-	storage "k8s.io/api/storage/v1beta1"
+	storage "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	storagelisters "k8s.io/client-go/listers/storage/v1beta1"
+	storagelisters "k8s.io/client-go/listers/storage/v1"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
 )
 
 type AttacherCSITranslator interface {
@@ -62,7 +61,6 @@ type csiHandler struct {
 	attacher                attacher.Attacher
 	CSIVolumeLister         VolumeLister
 	pvLister                corelisters.PersistentVolumeLister
-	nodeLister              corelisters.NodeLister
 	csiNodeLister           storagelisters.CSINodeLister
 	vaLister                storagelisters.VolumeAttachmentLister
 	vaQueue, pvQueue        workqueue.RateLimitingInterface
@@ -82,7 +80,6 @@ func NewCSIHandler(
 	attacher attacher.Attacher,
 	CSIVolumeLister VolumeLister,
 	pvLister corelisters.PersistentVolumeLister,
-	nodeLister corelisters.NodeLister,
 	csiNodeLister storagelisters.CSINodeLister,
 	vaLister storagelisters.VolumeAttachmentLister,
 	timeout *time.Duration,
@@ -95,7 +92,6 @@ func NewCSIHandler(
 		attacher:                attacher,
 		CSIVolumeLister:         CSIVolumeLister,
 		pvLister:                pvLister,
-		nodeLister:              nodeLister,
 		csiNodeLister:           csiNodeLister,
 		vaLister:                vaLister,
 		timeout:                 *timeout,
@@ -157,10 +153,18 @@ func (h *csiHandler) ReconcileVA() error {
 		}
 		attachedStatus := va.Status.Attached
 
-		volumeHandle, err = h.translator.RepairVolumeHandle(source.Driver, volumeHandle, nodeID)
+		// If volume driver has corresponding in-tree plugin, generate a correct volumehandle
+		isMig, err := h.isMigratable(va)
 		if err != nil {
-			klog.Warningf("Failed to repair volume handle %s for driver %s: %v", volumeHandle, source.Driver, err)
+			klog.Warningf("Failed to check if migratable for volume handle %s (driver %s): %v", volumeHandle, source.Driver, err)
 			continue
+		}
+		if isMig {
+			volumeHandle, err = h.translator.RepairVolumeHandle(source.Driver, volumeHandle, nodeID)
+			if err != nil {
+				klog.Warningf("Failed to repair volume handle %s for driver %s: %v", volumeHandle, source.Driver, err)
+				continue
+			}
 		}
 
 		// Check whether the volume is published to this node
@@ -188,7 +192,7 @@ func (h *csiHandler) ReconcileVA() error {
 
 // setForceSync sets the intention that next time the VolumeAttachment
 // referenced by vaName is processed on the VA queue that attach or detach will
-// proceed even when the VA.Status.Attached mayalready show the desired state
+// proceed even when the VA.Status.Attached may already show the desired state
 func (h *csiHandler) setForceSync(vaName string) {
 	h.forceSyncMux.Lock()
 	defer h.forceSyncMux.Unlock()
@@ -316,7 +320,7 @@ func (h *csiHandler) prepareVANodeID(va *storage.VolumeAttachment, nodeID string
 }
 
 func (h *csiHandler) saveVA(va *storage.VolumeAttachment, patch []byte) (*storage.VolumeAttachment, error) {
-	newVA, err := h.client.StorageV1beta1().VolumeAttachments().Patch(va.Name, types.MergePatchType, patch)
+	newVA, err := h.client.StorageV1().VolumeAttachments().Patch(context.TODO(), va.Name, types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
 		return va, err
 	}
@@ -356,6 +360,25 @@ func (h *csiHandler) hasVAFinalizer(va *storage.VolumeAttachment) bool {
 		}
 	}
 	return false
+}
+
+// Checks if the PV (or) the inline-volume corresponding to the VA could have migrated from
+// in-tree to CSI.
+func (h *csiHandler) isMigratable(va *storage.VolumeAttachment) (bool, error) {
+	if va.Spec.Source.PersistentVolumeName != nil {
+		pv, err := h.pvLister.Get(*va.Spec.Source.PersistentVolumeName)
+		if err != nil {
+			return false, err
+		}
+		return h.translator.IsPVMigratable(pv), nil
+	} else if va.Spec.Source.InlineVolumeSpec != nil {
+		if va.Spec.Source.InlineVolumeSpec.CSI == nil {
+			return false, errors.New("inline volume spec contains nil CSI source")
+		}
+		return true, nil
+	} else {
+		return false, nil
+	}
 }
 
 func getCSISource(pvSpec *v1.PersistentVolumeSpec) (*v1.CSIPersistentVolumeSource, error) {
@@ -567,7 +590,7 @@ func (h *csiHandler) saveAttachError(va *storage.VolumeAttachment, err error) (*
 	}
 
 	var newVa *storage.VolumeAttachment
-	if newVa, err = h.patchVA(va, clone); err != nil {
+	if newVa, err = h.patchVA(va, clone, "status"); err != nil {
 		return va, err
 	}
 	klog.V(4).Infof("Saved attach error to %q", va.Name)
@@ -583,7 +606,7 @@ func (h *csiHandler) saveDetachError(va *storage.VolumeAttachment, err error) (*
 	}
 
 	var newVa *storage.VolumeAttachment
-	if newVa, err = h.patchVA(va, clone); err != nil {
+	if newVa, err = h.patchVA(va, clone, "status"); err != nil {
 		return va, err
 	}
 	klog.V(4).Infof("Saved detach error to %q", va.Name)
@@ -670,7 +693,7 @@ func (h *csiHandler) getCredentialsFromPV(csiSource *v1.CSIPersistentVolumeSourc
 		return nil, nil
 	}
 
-	secret, err := h.client.CoreV1().Secrets(secretRef.Namespace).Get(secretRef.Name, metav1.GetOptions{})
+	secret, err := h.client.CoreV1().Secrets(secretRef.Namespace).Get(context.TODO(), secretRef.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load secret \"%s/%s\": %s", secretRef.Namespace, secretRef.Name, err)
 	}
@@ -682,7 +705,7 @@ func (h *csiHandler) getCredentialsFromPV(csiSource *v1.CSIPersistentVolumeSourc
 	return credentials, nil
 }
 
-// getNodeID finds node ID from Node API object. If caller wants, it can find
+// getNodeID finds node ID from CSINode API object. If caller wants, it can find
 // node ID stored in VolumeAttachment annotation.
 func (h *csiHandler) getNodeID(driver string, nodeName string, va *storage.VolumeAttachment) (string, error) {
 	// Try to find CSINode first.
@@ -692,19 +715,14 @@ func (h *csiHandler) getNodeID(driver string, nodeName string, va *storage.Volum
 			klog.V(4).Infof("Found NodeID %s in CSINode %s", nodeID, nodeName)
 			return nodeID, nil
 		}
-		klog.V(4).Infof("CSINode %s does not contain driver %s", nodeName, driver)
 		// CSINode exists, but does not have the requested driver.
-		// Fall through to Node annotation.
-	} else {
-		// Can't get CSINode, fall through to Node annotation.
-		klog.V(4).Infof("Can't get CSINode %s: %s", nodeName, err)
+		errMessage := fmt.Sprintf("CSINode %s does not contain driver %s", nodeName, driver)
+		klog.V(4).Info(errMessage)
+		return "", errors.New(errMessage)
 	}
 
-	// Check Node annotation.
-	node, err := h.nodeLister.Get(nodeName)
-	if err == nil {
-		return GetNodeIDFromNode(driver, node)
-	}
+	// Can't get CSINode, check Volume Attachment.
+	klog.V(4).Infof("Can't get CSINode %s: %s", nodeName, err)
 
 	// Check VolumeAttachment annotation as the last resort if caller wants so (i.e. has provided one).
 	if va == nil {
@@ -714,17 +732,19 @@ func (h *csiHandler) getNodeID(driver string, nodeName string, va *storage.Volum
 		return nodeID, nil
 	}
 
-	// return nodeLister.Get error
+	// return csiNodeLister.Get error
 	return "", err
 }
 
-func (h *csiHandler) patchVA(va, clone *storage.VolumeAttachment) (*storage.VolumeAttachment, error) {
+func (h *csiHandler) patchVA(va, clone *storage.VolumeAttachment, subresources ...string) (*storage.VolumeAttachment,
+	error) {
 	patch, err := createMergePatch(va, clone)
 	if err != nil {
 		return va, err
 	}
 
-	newVa, err := h.client.StorageV1beta1().VolumeAttachments().Patch(va.Name, types.MergePatchType, patch)
+	newVa, err := h.client.StorageV1().VolumeAttachments().Patch(context.TODO(), va.Name, types.MergePatchType, patch,
+		metav1.PatchOptions{}, subresources...)
 	if err != nil {
 		return va, err
 	}
@@ -737,7 +757,7 @@ func (h *csiHandler) patchPV(pv, clone *v1.PersistentVolume) (*v1.PersistentVolu
 		return pv, err
 	}
 
-	newPV, err := h.client.CoreV1().PersistentVolumes().Patch(pv.Name, types.MergePatchType, patch)
+	newPV, err := h.client.CoreV1().PersistentVolumes().Patch(context.TODO(), pv.Name, types.MergePatchType, patch, metav1.PatchOptions{})
 	if err != nil {
 		return pv, err
 	}

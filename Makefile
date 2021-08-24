@@ -44,7 +44,8 @@ else
     VERSION_SUFFIX   ?= $(GIT_COMMIT)-$(BUILD_NUMBER)
 endif
 
-VERSION ?= oke-$(VERSION_SUFFIX)
+K8S_VERSION := $(shell cat VERSION)
+VERSION ?= oke-$(K8S_VERSION)-$(VERSION_SUFFIX)
 BUILD = $(VERSION)
 
 GOOS ?= linux
@@ -89,13 +90,13 @@ build-dirs:
 .PHONY: build
 build: build-dirs
 	@for component in $(COMPONENT); do \
-		GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
+		GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -mod vendor -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
     done
 
 .PHONY: build-arm
 build-arm: build-dirs
-	GOOS=$(GOOS) GOARCH=arm64 CGO_ENABLED=0 go build -o dist/arm/oci-csi-node-driver -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/oci-csi-node-driver ;
-	GOOS=$(GOOS) GOARCH=arm64 CGO_ENABLED=0 go build -o dist/arm/oci-flexvolume-driver -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/oci-flexvolume-driver ; \
+	GOOS=$(GOOS) GOARCH=arm64 CGO_ENABLED=0 go build -mod vendor -o dist/arm/oci-csi-node-driver -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/oci-csi-node-driver ;
+	GOOS=$(GOOS) GOARCH=arm64 CGO_ENABLED=0 go build -mod vendor -o dist/arm/oci-flexvolume-driver -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/oci-flexvolume-driver ; \
 
 .PHONY: manifests
 manifests: build-dirs
@@ -114,8 +115,8 @@ test:
 
 .PHONY: coverage
 coverage: test
-	go tool cover -html=coverage.out -o coverage.html
-	go tool cover -func=coverage.out > coverage.txt
+	GO111MODULE=off go tool cover -html=coverage.out -o coverage.html
+	GO111MODULE=off go tool cover -func=coverage.out > coverage.txt
 
 # Run the canary tests - in single run mode.
 .PHONY: canary-run-once
@@ -180,9 +181,9 @@ build-local: build-dirs
 			 -v $(PWD):$(DOCKER_REPO_ROOT) \
 			 -e COMPONENT="$(COMPONENT)" \
 			 -e GOPATH=/go/ \
-			iad.ocir.io/odx-oke/oke/golang-buildbox:1.12.7-fips /bin/bash -c \
+			iad.ocir.io/odx-oke/oke/golang-buildbox:1.13.15-fips /bin/bash -c \
 			'for component in ${COMPONENT}; do \
-				echo building $$component && GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
+				echo building $$component && GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -mod vendor -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
 			 done'
 
 .PHONY: run-ccm-e2e-tests-local
