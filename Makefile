@@ -31,7 +31,7 @@ endif
 PKG := github.com/oracle/oci-cloud-controller-manager
 REGISTRY ?= odo-docker-signed-local.artifactory.oci.oraclecorp.com
 IMAGE ?= $(REGISTRY)/oke-public-cloud-provider-oci
-COMPONENT ?= oci-cloud-controller-manager oci-volume-provisioner oci-flexvolume-driver cloud-provider-oci oci-csi-controller-driver oci-csi-node-driver
+COMPONENT ?= oci-cloud-controller-manager oci-volume-provisioner oci-flexvolume-driver cloud-provider-oci oci-csi-controller-driver oci-csi-node-driver oci-csi-fss-node-driver
 OCI_CLI_VERSION ?= master
 KUBECTL_VERSION ?= 1.11.0
 
@@ -95,6 +95,7 @@ build: build-dirs
 .PHONY: build-arm
 build-arm: build-dirs
 	GOOS=$(GOOS) GOARCH=arm64 CGO_ENABLED=0 go build -o dist/arm/oci-csi-node-driver -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/oci-csi-node-driver ;
+	GOOS=$(GOOS) GOARCH=arm64 CGO_ENABLED=0 go build -o dist/arm/oci-csi-fss-node-driver -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/oci-csi-fss-node-driver ;
 	GOOS=$(GOOS) GOARCH=arm64 CGO_ENABLED=0 go build -o dist/arm/oci-flexvolume-driver -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/oci-flexvolume-driver ; \
 
 .PHONY: manifests

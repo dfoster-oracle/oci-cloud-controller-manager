@@ -63,7 +63,7 @@ var (
 	subnet2                      string
 	subnet3                      string
 	k8ssubnet                    string
-	nodesubnet					 string
+	nodesubnet                   string
 	okeClusterK8sVersionIndex    int
 	okeNodePoolK8sVersionIndex   int
 	pubsshkey                    string
@@ -91,7 +91,8 @@ var (
 	cmekKMSKey                   string // KMS key for CMEK testing
 	nsgOCIDS                     string // Testing CCM NSG feature
 	reservedIP                   string // Testing public reserved IP feature
-	architecture				 string
+	architecture                 string
+	volumeHandle                 string // The FSS mount volume handle
 )
 
 func init() {
@@ -138,6 +139,7 @@ func init() {
 	flag.BoolVar(&deleteNamespace, "delete-namespace", true, "If true tests will delete namespace after completion. It is only designed to make debugging easier, DO NOT turn it off by default.")
 
 	flag.StringVar(&mntTargetOCID, "mnt-target-id", "", "Mount Target ID is specified to identify the mount target to be attached to the volumes")
+	flag.StringVar(&volumeHandle, "volume-handle", "", "FSS volume handle used to mount the File System")
 
 	flag.StringVar(&imagePullRepo, "image-pull-repo", "", "Repo to pull images from. Will pull public images if not specified.")
 	flag.StringVar(&cmekKMSKey, "cmek-kms-key", "", "KMS key to be used for CMEK testing")
@@ -272,6 +274,8 @@ type Framework struct {
 	NsgOCIDS      string
 	ReservedIP    string
 	Architecture  string
+
+	VolumeHandle string
 }
 
 // New creates a new a framework that holds the context of the test
@@ -335,7 +339,7 @@ func NewWithConfig(config *FrameworkConfig) *Framework {
 		Subnet2:                  subnet2,
 		Subnet3:                  subnet3,
 		K8sSubnet:                k8ssubnet,
-		NodeSubnet:				  nodesubnet,
+		NodeSubnet:               nodesubnet,
 		NodeShape:                nodeshape,
 		DelegationTargetServices: "oke",
 		AdLocation:               adlocation,
@@ -343,7 +347,8 @@ func NewWithConfig(config *FrameworkConfig) *Framework {
 		CMEKKMSKey:               cmekKMSKey,
 		NsgOCIDS:                 nsgOCIDS,
 		ReservedIP:               reservedIP,
-		Architecture:			  architecture,
+		Architecture:             architecture,
+		VolumeHandle:             volumeHandle,
 	}
 
 	f.EnableCreateCluster = enableCreateCluster
@@ -416,6 +421,8 @@ func (f *Framework) Initialize() {
 	Logf("OCI AdLabel: %s", f.AdLabel)
 	f.MntTargetOcid = mntTargetOCID
 	Logf("OCI Mount Target OCID: %s", f.MntTargetOcid)
+	f.VolumeHandle = volumeHandle
+	Logf("FSS Volume Handle is : %s", f.VolumeHandle)
 	f.CMEKKMSKey = cmekKMSKey
 	Logf("CMEK KMS Key: %s", f.CMEKKMSKey)
 	f.NsgOCIDS = nsgOCIDS
@@ -539,7 +546,7 @@ func (f *Framework) Initialize() {
 
 		Logf("OkeClusterK8sVersion=%v", f.OkeClusterK8sVersion)
 		Logf("OkeNodePoolK8sVersion=%v", f.OkeNodePoolK8sVersion)
-		if compareVersions(f.OkeClusterK8sVersion,f.OkeNodePoolK8sVersion) < 0 {
+		if compareVersions(f.OkeClusterK8sVersion, f.OkeNodePoolK8sVersion) < 0 {
 			Failf("Cluster K8s Version is less than Nodepool K8s version")
 		}
 
@@ -755,16 +762,16 @@ func (f *Framework) SaveKubeConfig(kubeconfig string) error {
 }
 
 func (f *Framework) setImages() {
-	var Agnhost           = "agnhost:2.6"
-	var BusyBoxImage      = "busybox:latest"
-	var Nginx             = "nginx:stable-alpine"
-	var Centos            = "centos:latest"
+	var Agnhost = "agnhost:2.6"
+	var BusyBoxImage = "busybox:latest"
+	var Nginx = "nginx:stable-alpine"
+	var Centos = "centos:latest"
 
 	if architecture == "ARM" {
-		Agnhost           = "agnhost-arm:2.6"
-		BusyBoxImage      = "busybox-arm:latest"
-		Nginx             = "nginx-arm:latest"
-		Centos            = "centos-arm:latest"
+		Agnhost = "agnhost-arm:2.6"
+		BusyBoxImage = "busybox-arm:latest"
+		Nginx = "nginx-arm:latest"
+		Centos = "centos-arm:latest"
 	}
 
 	if imagePullRepo != "" {
