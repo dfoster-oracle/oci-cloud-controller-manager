@@ -67,6 +67,8 @@ const (
 	K8InstanceUpdateFieldK8SVersion = "K8SVersion"
 	// K8InstanceUpdateFieldPSPEnabled is the affected fields key to indicate that the Pod Security Policy needs updating
 	K8InstanceUpdateFieldPSPEnabled = "PSPEnabled"
+	// K8InstanceUpdateFieldImagePolicyConfig is the affected fields key to indicate that the Image policy config needs updating
+	K8InstanceUpdateFieldImagePolicyConfig = "ImagePolicyConfig"
 	// K8InstanceUpdateFieldUpdateForce is the affected fields key to indicate forced cluster update
 	K8InstanceUpdateFieldUpdateForce = "UpdateForce"
 	// K8InstanceUpdateFieldTKWVersion is the affected fields key to indicate that the TKWVersion needs updating

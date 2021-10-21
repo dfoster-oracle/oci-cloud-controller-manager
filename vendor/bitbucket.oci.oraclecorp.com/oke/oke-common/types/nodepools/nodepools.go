@@ -23,6 +23,8 @@ const (
 	UpdateFieldSubnetsInfo = "SubnetsInfo"
 	// UpdateFieldSize is the affected fields key to indicate that the Size needs updating
 	UpdateFieldSize = "Size"
+	// UpdateFieldNsgIds is the affected fields key to indicate that the NsgIds needs updating
+	UpdateFieldNsgIds = "NsgIds"
 	// UpdateFieldNodeImageID is the affected fields key to indicate that the NodeImageID needs updating
 	UpdateFieldNodeImageID = "NodeImageID"
 	// UpdateFieldNodeImageName is the affected fields key to indicate that the NodeImageName needs updating
@@ -179,7 +181,7 @@ func ValidateInitialNodeLabels(labels string, disallowedPrefixes []string) (int,
 // https://github.com/kubernetes/enhancements/blob/master/keps/sig-auth/0000-20170814-bounding-self-labeling-kubelets.md
 func isAllowedSpecificPrefix(key string) bool {
 
-	if regexp.MustCompile("[.]kubelet.kubernetes.io/").MatchString(key) || regexp.MustCompile("[.]node.kubernetes.io/").MatchString(key) {
+	if regexp.MustCompile("^(.*[.])?kubelet.kubernetes.io/.*$").MatchString(key) || regexp.MustCompile("^(.*[.])?node.kubernetes.io/.*$").MatchString(key) {
 		return true
 	}
 

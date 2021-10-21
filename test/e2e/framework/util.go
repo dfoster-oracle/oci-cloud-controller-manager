@@ -10,7 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/oracle/oci-go-sdk/v31/common"
+	"github.com/oracle/oci-go-sdk/v49/common"
 )
 
 func nowStamp() string {
@@ -84,8 +84,8 @@ func compareVersions(v1 string, v2 string) (ret int) {
 		if x == y {
 			ret = 0
 		} else {
-			xi,_ := strconv.Atoi(x)
-			yi,_ := strconv.Atoi(y)
+			xi, _ := strconv.Atoi(x)
+			yi, _ := strconv.Atoi(y)
 			if xi > yi {
 				ret = 1
 			} else if xi < yi {
@@ -98,6 +98,3 @@ func compareVersions(v1 string, v2 string) (ret int) {
 	}
 	return
 }
-
-
-

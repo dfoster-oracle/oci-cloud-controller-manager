@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/oracle/oci-go-sdk/v31/common"
+	"github.com/oracle/oci-go-sdk/v49/common"
 )
 
 type securityToken interface {

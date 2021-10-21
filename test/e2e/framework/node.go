@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/oracle/oci-go-sdk/v31/core"
+	"github.com/oracle/oci-go-sdk/v49/core"
 )
 
 // GetInstance return the specified instance from OCI compute.
@@ -48,4 +48,3 @@ func (f *Framework) DeleteInstance(instanceID string, waitForDeleted bool) {
 		}
 	}
 }
-
