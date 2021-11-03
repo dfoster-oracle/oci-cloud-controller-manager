@@ -873,3 +873,28 @@ func (j *PVCTestJig) CheckMultiplePodReadWrite(namespace string, pvcName string,
 	By("Creating Pod that can read contents of existing file")
 	j.NewPodForCSIFSSRead(string(uuid2), namespace, pvcName, fileName)
 }
+
+func (j *PVCTestJig) CheckDataPersistenceWithDeployments(pvcName string, ns string){
+	writeCommand := "echo \"Data written\" >> /data/out.txt; while true; do true; done;"
+
+	readCommand := "data=\"Data written\";if [ \"$data\" != \"$(cat /data/out.txt)\"]; then exit 1; fi; while true; do true; done;"
+
+	By("Creating a deployment to write to the volume")
+	writeDeployment := j.createDeploymentAndWait(writeCommand, pvcName, ns, "write-deployment", 1)
+
+	By("Deleting the write deployment")
+	deletePolicy := metav1.DeletePropagationForeground
+	err := j.KubeClient.AppsV1().Deployments(ns).Delete(writeDeployment, &metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	})
+
+	if err != nil{
+		Failf("Error when deleting deployment %v: %v", writeDeployment, err)
+	}
+
+	Logf("Waiting up to %v for deployment %v to be deleted", deploymentDeletionTimeout, writeDeployment)
+	j.waitTimeoutForDeploymentDeleted(writeDeployment, ns, deploymentDeletionTimeout)
+
+	By("Creating a deployment to validate data integrity")
+	j.createDeploymentAndWait(readCommand, pvcName, ns, "read-deployment", 1)
+}
