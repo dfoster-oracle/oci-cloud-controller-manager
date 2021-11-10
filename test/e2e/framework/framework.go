@@ -32,9 +32,7 @@ const (
 	// Some pods can take much longer to get ready due to volume attach/detach latency.
 	slowPodStartTimeout = 2 * time.Minute
 
-	deploymentCompletionTimeout = 2 * time.Minute
-
-	deploymentDeletionTimeout = 2 * time.Minute
+	deploymentAvailableTimeout = 5 * time.Minute
 
 	DefaultClusterKubeconfig = "/tmp/clusterkubeconfig"
 	DefaultCloudConfig       = "/tmp/cloudconfig"
