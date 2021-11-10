@@ -882,7 +882,31 @@ func (j *PVCTestJig) CheckMultiplePodReadWrite(namespace string, pvcName string,
 	j.NewPodForCSIFSSRead(string(uuid2), namespace, pvcName, fileName)
 }
 
-func (j *PVCTestJig) CheckDataPersistenceWithDeployments(pvcName string, ns string){
+func (j *PVCTestJig) CheckDataPersistenceWithDeployment(pvcName string, ns string){
+	nodes, err := j.KubeClient.CoreV1().Nodes().List(metav1.ListOptions{})
+
+	if err!= nil{
+		Failf("Error getting list of nodes: %v", err)
+	}
+
+	if len(nodes.Items) == 0{
+		Failf("No worker nodes are present in the cluster")
+	}
+
+	nodeSelectorLabels := map[string]string{}
+	schedulableNodeFound := false
+
+	for _, node := range nodes.Items {
+		if node.Spec.Unschedulable == false {
+			schedulableNodeFound = true
+			nodeSelectorLabels = node.Labels
+		}
+	}
+
+	if !schedulableNodeFound{
+		Failf("No schedulable nodes found")
+	}
+
 	podRunningCommand := " while true; do true; done;"
 
 	dataWritten := "Data written"
@@ -891,7 +915,7 @@ func (j *PVCTestJig) CheckDataPersistenceWithDeployments(pvcName string, ns stri
 	readCommand := "cat /data/out.txt"
 
 	By("Creating a deployment")
-	deploymentName := j.createDeploymentAndWait(podRunningCommand, pvcName, ns, "data-persistence-deployment", 1)
+	deploymentName := j.createDeploymentOnNodeAndWait(podRunningCommand, pvcName, ns, "data-persistence-deployment", 1, nodeSelectorLabels)
 
 	deployment, err := j.KubeClient.AppsV1().Deployments(ns).Get(deploymentName, metav1.GetOptions{})
 

@@ -65,7 +65,7 @@ var _ = Describe("CSI Volume Creation", func() {
 			scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer")
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil)
 
-			pvcJig.CheckDataPersistenceWithDeployments(pvc.Name, f.Namespace.Name)
+			pvcJig.CheckDataPersistenceWithDeployment(pvc.Name, f.Namespace.Name)
 		})
 	})
 })

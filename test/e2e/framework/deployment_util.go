@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (j *PVCTestJig) createDeploymentAndWait(command string, pvcName string, ns string, name string, replicas int32) string{
+func (j *PVCTestJig) createDeploymentOnNodeAndWait(command string, pvcName string, ns string, name string, replicas int32, nodeSelectorLabels map[string]string) string{
 	deployment, err := j.KubeClient.AppsV1().Deployments(ns).Create(&appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -52,6 +52,7 @@ func (j *PVCTestJig) createDeploymentAndWait(command string, pvcName string, ns 
 							},
 						},
 					},
+					NodeSelector: nodeSelectorLabels,
 				},
 			},
 		},
