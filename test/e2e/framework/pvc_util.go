@@ -900,6 +900,7 @@ func (j *PVCTestJig) CheckDataPersistenceWithDeployment(pvcName string, ns strin
 		if node.Spec.Unschedulable == false {
 			schedulableNodeFound = true
 			nodeSelectorLabels = node.Labels
+			break
 		}
 	}
 
