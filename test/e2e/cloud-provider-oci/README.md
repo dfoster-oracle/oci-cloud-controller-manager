@@ -75,9 +75,9 @@ Note: Above listed <IMAGE>:<TAG> should be available in the provider repo path a
 
 ## Running FSS in-transit encryption tests
 
-The two FSS in-transit encryption tests need the oci-fss-utils package to be installed on the nodes running the tests. The package is needed to be downloaded from [here][4] and installed on the applicable nodes. In addition to this, the below label is to be added to the nodes which have the package installed to help the test suite recognise the applicable nodes.
+The two FSS in-transit encryption tests need the oci-fss-utils package to be installed on the nodes running the tests. The package is needed to be downloaded from [here][4] and installed on the applicable nodes. In addition to this, the below label is to be added using the command for each of the nodes which have the package installed to help the test suite recognise the applicable nodes.
 ```bash
-["oke.oraclecloud.com/e2e.oci-fss-util"] = "installed"
+kubectl label nodes <node-name> oke.oraclecloud.com/e2e.oci-fss-util=installed
 ```
 
 ## Additional Debug Options when running tests on existing cluster
