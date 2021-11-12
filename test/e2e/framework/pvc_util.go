@@ -465,6 +465,8 @@ func (j *PVCTestJig) NewPodForCSI(name string, namespace string, claimName strin
 func (j *PVCTestJig) NewPodForCSIFSSWrite(name string, namespace string, claimName string, fileName string) string {
 	By("Creating a pod with the claiming PVC created by CSI")
 
+	nodeSelectorMap := make(map[string]string)
+	nodeSelectorMap["oke.oraclecloud.com/e2e.oci-fss-util"] = "installed"
 	command := fmt.Sprintf("while true; do echo %s >> /data/%s; sleep 5; done", name, fileName)
 	pod, err := j.KubeClient.CoreV1().Pods(namespace).Create(&v1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -500,6 +502,7 @@ func (j *PVCTestJig) NewPodForCSIFSSWrite(name string, namespace string, claimNa
 					},
 				},
 			},
+			NodeSelector: nodeSelectorMap,
 		},
 	})
 	if err != nil {
@@ -521,6 +524,8 @@ func (j *PVCTestJig) NewPodForCSIFSSWrite(name string, namespace string, claimNa
 func (j *PVCTestJig) NewPodForCSIFSSRead(matchString string, namespace string, claimName string, fileName string) {
 	By("Creating a pod with the claiming PVC created by CSI")
 
+	nodeSelectorMap := make(map[string]string)
+	nodeSelectorMap["oke.oraclecloud.com/e2e.oci-fss-util"] = "installed"
 	command := fmt.Sprintf("grep -q -i %s /data/%s; exit $?", matchString, fileName)
 	pod, err := j.KubeClient.CoreV1().Pods(namespace).Create(&v1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -557,6 +562,7 @@ func (j *PVCTestJig) NewPodForCSIFSSRead(matchString string, namespace string, c
 					},
 				},
 			},
+			NodeSelector: nodeSelectorMap,
 		},
 	})
 	if err != nil {
