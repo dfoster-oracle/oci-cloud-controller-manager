@@ -21,4 +21,3 @@ RUN yum install -y util-linux \
   && yum clean all
 
 COPY --from=0 /go/src/github.com/oracle/oci-cloud-controller-manager/dist/arm/oci-csi-node-driver /usr/local/bin/
-COPY --from=0 /go/src/github.com/oracle/oci-cloud-controller-manager/dist/arm/oci-csi-fss-node-driver /usr/local/bin/

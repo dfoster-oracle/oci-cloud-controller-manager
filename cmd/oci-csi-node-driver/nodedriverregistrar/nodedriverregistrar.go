@@ -22,8 +22,6 @@ import (
 	"github.com/kubernetes-csi/csi-lib-utils/connection"
 	"github.com/kubernetes-csi/csi-lib-utils/metrics"
 	csirpc "github.com/kubernetes-csi/csi-lib-utils/rpc"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-node-driver/nodedriveroptions"
-
 	"k8s.io/klog"
 	registerapi "k8s.io/kubernetes/pkg/kubelet/apis/pluginregistration/v1alpha1"
 )
@@ -49,7 +47,7 @@ type registrationServer struct {
 
 var _ registerapi.RegistrationServer = registrationServer{}
 
-// NewregistrationServer returns an initialized registrationServer instance
+// NewRegistrationServer returns an initialized registrationServer instance
 func newRegistrationServer(driverName string, endpoint string, versions []string) registerapi.RegistrationServer {
 	return &registrationServer{
 		driverName: driverName,
@@ -80,13 +78,13 @@ func (e registrationServer) NotifyRegistrationStatus(ctx context.Context, status
 }
 
 //RunNodeRegistrar is the main method to start run node register
-func RunNodeRegistrar(nodecsioptions nodedriveroptions.NodeCSIOptions) {
-	if nodecsioptions.KubeletRegistrationPath == "" {
-		klog.Error("kubelet-registration-path is a required parameter")
+func RunNodeRegistrar(driverType, csiAddress, registrationPath string, connectionTimeout time.Duration) {
+	if registrationPath == "" {
+		klog.Errorf("Kubelet Registration Path required for driver: %s", driverType)
 		os.Exit(1)
 	}
 
-	if nodecsioptions.ConnectionTimeout != 0 {
+	if connectionTimeout != 0 {
 		klog.Warning("--connection-timeout is deprecated and will have no effect")
 	}
 
@@ -94,27 +92,31 @@ func RunNodeRegistrar(nodecsioptions nodedriveroptions.NodeCSIOptions) {
 	// resolved, if plugin does not support PUBLISH_UNPUBLISH_VOLUME, then we
 	// can skip adding mapping to "csi.volume.kubernetes.io/nodeid" annotation.
 
-	metricsManager := metrics.NewCSIMetricsManager("" /* driverName */)
+	metricsManager := metrics.NewCSIMetricsManager(driverType /* driverName */)
 
-	klog.V(1).Infof("Attempting to open a gRPC connection with: %q", nodecsioptions.CsiAddress)
-	csiConn, err := connection.Connect(nodecsioptions.CsiAddress, metricsManager)
+	RunCSINodeRegistrar(driverType, csiAddress, registrationPath, metricsManager)
+}
+
+func RunCSINodeRegistrar(driverType, csiAddress, registrationPath string, metricsManager metrics.CSIMetricsManager) {
+	klog.V(1).Infof("Attempting to open a gRPC connection with: %q", csiAddress)
+	csiConn, err := connection.Connect(csiAddress, metricsManager)
 	if err != nil {
-		klog.Errorf("error connecting to CSI driver: %v", err)
+		klog.Errorf("error connecting to CSI %s driver: %v", driverType, err)
 		os.Exit(1)
 	}
 
-	klog.V(1).Infof("Calling CSI driver to discover driver name")
+	klog.V(1).Infof("Calling CSI %s driver to discover driver name", driverType)
 	ctx, cancel := context.WithTimeout(context.Background(), csiTimeout)
 	defer cancel()
 
 	csiDriverName, err := csirpc.GetDriverName(ctx, csiConn)
 	if err != nil {
-		klog.Errorf("error retreiving CSI driver name: %v", err)
+		klog.Errorf("error retreiving CSI %s driver name: %v", driverType, err)
 		os.Exit(1)
 	}
 
-	klog.V(2).Infof("CSI driver name: %q", csiDriverName)
+	klog.V(2).Infof("CSI %s driver name: %q", driverType, csiDriverName)
 
 	// Run forever
-	nodeRegister(csiDriverName, nodecsioptions)
+	nodeRegister(csiDriverName, registrationPath)
 }

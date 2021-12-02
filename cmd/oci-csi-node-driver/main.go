@@ -19,6 +19,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-node-driver/nodedriver"
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-node-driver/nodedriveroptions"
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-node-driver/nodedriverregistrar"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/csi/driver"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util/signals"
 	"k8s.io/klog"
 )
@@ -42,9 +43,36 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Set("logtostderr", "true")
 	flag.Parse()
-	stopCh := signals.SetupSignalHandler()
 
-	go nodedriver.RunNodeDriver(nodecsioptions, stopCh)
-	go nodedriverregistrar.RunNodeRegistrar(nodecsioptions)
+	blockvolumeNodeOptions := nodedriveroptions.NodeOptions{
+		Name:                   "BV",
+		Endpoint:               nodecsioptions.Endpoint,
+		NodeID:                 nodecsioptions.NodeID,
+		Kubeconfig:             nodecsioptions.Kubeconfig,
+		Master:                 nodecsioptions.Master,
+		DriverName:             driver.BlockVolumeDriverName,
+		DriverVersion:          driver.BlockVolumeDriverVersion,
+		EnableControllerServer: false,
+	}
+	fssNodeOptions := nodedriveroptions.NodeOptions{
+		Name:                   "FSS",
+		Endpoint:               nodecsioptions.FssEndpoint,
+		NodeID:                 nodecsioptions.NodeID,
+		Kubeconfig:             nodecsioptions.Kubeconfig,
+		Master:                 nodecsioptions.Master,
+		DriverName:             driver.FSSDriverName,
+		DriverVersion:          driver.FSSDriverVersion,
+		EnableControllerServer: false,
+	}
+
+	stopCh := signals.SetupSignalHandler()
+	go nodedriver.RunNodeDriver(blockvolumeNodeOptions, stopCh)
+	if nodecsioptions.EnableFssDriver {
+		go nodedriver.RunNodeDriver(fssNodeOptions, stopCh)
+	}
+	go nodedriverregistrar.RunNodeRegistrar(driver.BlockVolumeDriverName, nodecsioptions.CsiAddress, nodecsioptions.KubeletRegistrationPath, nodecsioptions.ConnectionTimeout)
+	if nodecsioptions.EnableFssDriver {
+		go nodedriverregistrar.RunNodeRegistrar(driver.FSSDriverName, nodecsioptions.FssCsiAddress, nodecsioptions.FssKubeletRegistrationPath, nodecsioptions.ConnectionTimeout)
+	}
 	<-stopCh
 }

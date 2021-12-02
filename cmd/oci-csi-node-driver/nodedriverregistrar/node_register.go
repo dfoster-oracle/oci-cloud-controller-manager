@@ -16,7 +16,6 @@ package nodedriverregistrar
 
 import (
 	"fmt"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-node-driver/nodedriveroptions"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	"k8s.io/klog"
@@ -27,11 +26,11 @@ import (
 )
 
 //nodeRegister is the main function to start node register
-func nodeRegister(csiDriverName string, nodecsioptions nodedriveroptions.NodeCSIOptions) {
+func nodeRegister(csiDriverName string, kubeletRegistrationPath string) {
 	// When kubeletRegistrationPath is specified then driver-registrar ONLY acts
 	// as gRPC server which replies to registration requests initiated by kubelet's
 	// pluginswatcher infrastructure. Node labeling is done by kubelet's csi code.
-	registrar := newRegistrationServer(csiDriverName, nodecsioptions.KubeletRegistrationPath, []string{"1.0.0"})
+	registrar := newRegistrationServer(csiDriverName, kubeletRegistrationPath, []string{"1.0.0"})
 	socketPath := fmt.Sprintf("/registration/%s-reg.sock", csiDriverName)
 	fi, err := os.Stat(socketPath)
 	if err == nil && (fi.Mode()&os.ModeSocket) != 0 {
