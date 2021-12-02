@@ -26,14 +26,18 @@ import (
 func main() {
 	nodecsioptions := nodedriveroptions.NodeCSIOptions{}
 
-	flag.StringVar(&nodecsioptions.Endpoint, "endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	flag.StringVar(&nodecsioptions.Endpoint, "endpoint", "unix://tmp/csi.sock", "Block Volume CSI endpoint")
 	flag.StringVar(&nodecsioptions.NodeID, "nodeid", "", "node id")
 	flag.StringVar(&nodecsioptions.LogLevel, "loglevel", "info", "log level")
 	flag.StringVar(&nodecsioptions.Master, "master", "", "kube master")
 	flag.StringVar(&nodecsioptions.Kubeconfig, "kubeconfig", "", "cluster kubeconfig")
 	flag.DurationVar(&nodecsioptions.ConnectionTimeout, "connection-timeout", 0, "The --connection-timeout flag is deprecated")
-	flag.StringVar(&nodecsioptions.CsiAddress, "csi-address", "/run/csi/socket", "Path of the CSI driver socket that the node-driver-registrar will connect to.")
-	flag.StringVar(&nodecsioptions.KubeletRegistrationPath, "kubelet-registration-path", "", "Path of the CSI driver socket on the Kubernetes host machine.")
+	flag.StringVar(&nodecsioptions.CsiAddress, "csi-address", "/run/csi/socket", "Path of the Block Volume CSI driver socket that the node-driver-registrar will connect to.")
+	flag.StringVar(&nodecsioptions.KubeletRegistrationPath, "kubelet-registration-path", "", "Path of the Block Volume CSI driver socket on the Kubernetes host machine.")
+	flag.StringVar(&nodecsioptions.FssEndpoint, "fss-endpoint", "unix://tmp/fss/csi.sock", "FSS CSI endpoint")
+	flag.StringVar(&nodecsioptions.FssCsiAddress, "fss-csi-address", "/run/fss/socket", "Path of the FSS CSI driver socket that the node-driver-registrar will connect to.")
+	flag.StringVar(&nodecsioptions.FssKubeletRegistrationPath, "fss-kubelet-registration-path", "", "Path of the FSS CSI driver socket on the Kubernetes host machine.")
+	flag.BoolVar(&nodecsioptions.EnableFssDriver, "fss-csi-driver-enabled", false, "Handle flag to enable FSS CSI driver")
 
 	klog.InitFlags(nil)
 	flag.Set("logtostderr", "true")
