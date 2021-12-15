@@ -67,6 +67,15 @@ var _ = Describe("CSI Volume Creation", func() {
 
 			pvcJig.CheckDataPersistenceWithDeployment(pvc.Name, f.Namespace.Name)
 		})
+
+		It("FsGroup test for CSI", func() {
+			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-pod-nginx")
+
+			scName := f.CreateStorageClassOrFail(framework.ClassOCICSI, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer")
+			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil)
+
+			pvcJig.CheckVolumeDirectoryOwnership(f.Namespace.Name, pvc)
+		})
 	})
 })
 
