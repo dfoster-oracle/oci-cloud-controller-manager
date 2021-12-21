@@ -70,6 +70,7 @@ type CloudProviderFramework struct {
 	IsBackup           bool
 	BackupIDs          []string
 	StorageClasses     []string
+	VolumeIds          []string
 
 	// To make sure that this framework cleans up after itself, no matter what,
 	// we install a Cleanup action before each test and clear it after.  If we
@@ -279,6 +280,14 @@ func (f *CloudProviderFramework) AfterEach() {
 		_, err := f.BlockStorageClient.DeleteVolumeBackup(ctx, ocicore.DeleteVolumeBackupRequest{VolumeBackupId: &backupID})
 		if err != nil && !apierrors.IsNotFound(err) {
 			Logf("Failed to delete backup id %q: %v", backupID, err)
+		}
+	}
+
+	for _, volId := range f.VolumeIds {
+		By(fmt.Sprintf("Deleting volumes %q", volId))
+		err := f.ClientSet.CoreV1().PersistentVolumes().Delete(volId, nil)
+		if err != nil && !apierrors.IsNotFound(err) {
+			Logf("Failed to delete persistent volume %q: %v", volId, err)
 		}
 	}
 
