@@ -16,7 +16,7 @@ package framework
 
 import (
 	"context"
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,9 +25,9 @@ import (
 // does not actually create the storage class. The default storage class has the same name
 // as the jig
 func (f *CloudProviderFramework) newStorageClassTemplate(name string, provisionerType string,
-	parameters map[string]string, testLabels map[string]string, volumeBindingMode *storagev1beta1.VolumeBindingMode,
-	allowVolumeExpansion bool) *storagev1beta1.StorageClass {
-	return &storagev1beta1.StorageClass{
+	parameters map[string]string, testLabels map[string]string, volumeBindingMode *storagev1.VolumeBindingMode,
+	allowVolumeExpansion bool) *storagev1.StorageClass {
+	return &storagev1.StorageClass{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StorageClass",
 			APIVersion: "storage.k8s.io/v1beta1",
@@ -55,13 +55,13 @@ func (f* CloudProviderFramework) DeleteStorageClass(name string) error {
 // CreateStorageClassOrFail creates a new storage class based on the jig's defaults.
 func (f *CloudProviderFramework) CreateStorageClassOrFail(name string, provisionerType string,
 	parameters map[string]string, testLabels map[string]string, bindingMode string, allowVolumeExpansion bool) string {
-	volumeBindingMode := storagev1beta1.VolumeBindingImmediate
+	volumeBindingMode := storagev1.VolumeBindingImmediate
 	if bindingMode == "WaitForFirstConsumer" {
-		volumeBindingMode = storagev1beta1.VolumeBindingWaitForFirstConsumer
+		volumeBindingMode = storagev1.VolumeBindingWaitForFirstConsumer
 	}
 	classTemp := f.newStorageClassTemplate(name, provisionerType, parameters, testLabels, &volumeBindingMode, allowVolumeExpansion)
 
-	class, err := f.ClientSet.StorageV1beta1().StorageClasses().Create(context.Background(), classTemp, metav1.CreateOptions{})
+	class, err := f.ClientSet.StorageV1().StorageClasses().Create(context.Background(), classTemp, metav1.CreateOptions{})
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			Logf("Storage Class already exists. Updating existing storage class.")
@@ -77,8 +77,8 @@ func (f *CloudProviderFramework) CreateStorageClassOrFail(name string, provision
 	return class.Name
 }
 
-func (f *CloudProviderFramework) UpdateStorageClassOrFail(storageClass *storagev1beta1.StorageClass, allowVolumeExpansion bool,
-	tweak func(sc *storagev1beta1.StorageClass)) (*storagev1beta1.StorageClass, error) {
+func (f *CloudProviderFramework) UpdateStorageClassOrFail(storageClass *storagev1.StorageClass, allowVolumeExpansion bool,
+	tweak func(sc *storagev1.StorageClass)) (*storagev1.StorageClass, error) {
 
 	if tweak != nil {
 		tweak(storageClass)
@@ -86,7 +86,7 @@ func (f *CloudProviderFramework) UpdateStorageClassOrFail(storageClass *storagev
 
 	Logf("Updating a SC %q", storageClass.Name)
 
-	oldSC, err := f.ClientSet.StorageV1beta1().StorageClasses().Get(context.Background(), storageClass.Name,
+	oldSC, err := f.ClientSet.StorageV1().StorageClasses().Get(context.Background(), storageClass.Name,
 		metav1.GetOptions{})
 	if err != nil {
 		Failf("Failed to find StorageClass %v : %q", storageClass.Name, err)
@@ -95,7 +95,7 @@ func (f *CloudProviderFramework) UpdateStorageClassOrFail(storageClass *storagev
 	newSC := oldSC.DeepCopy()
 	newSC.AllowVolumeExpansion = &allowVolumeExpansion
 
-	class , err := f.ClientSet.StorageV1beta1().StorageClasses().Update(context.Background(), newSC,
+	class , err := f.ClientSet.StorageV1().StorageClasses().Update(context.Background(), newSC,
 		metav1.UpdateOptions{})
 	return class, err
 }
