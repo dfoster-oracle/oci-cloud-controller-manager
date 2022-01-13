@@ -458,6 +458,8 @@ github.com/kubernetes-csi/external-attacher v0.0.0-20201106010650-6d1beabd0fad h
 github.com/kubernetes-csi/external-attacher v0.0.0-20201106010650-6d1beabd0fad/go.mod h1:BvEwHzEIhe8rrlfmDjK9DnxJcBVrw6A+/UYOw/B+EeU=
 github.com/kubernetes-csi/external-provisioner v0.0.0-20210409185916-86c2ba950e76 h1:6PivRDJHpjhgQ0gAtEyutF3xcTJHGEz9lK+7uDGN1iY=
 github.com/kubernetes-csi/external-provisioner v0.0.0-20210409185916-86c2ba950e76/go.mod h1:DRfKaKUhy0HSTZN+ud+M0Wmd+kYgjICP3I1of8/ZJjM=
+github.com/kubernetes-csi/external-resizer v1.0.1 h1:ckhbNE8oReG2PIxiV2eutcOP+sZi1QgY1xLQI01Hpro=
+github.com/kubernetes-csi/external-resizer v1.0.1/go.mod h1:SFNUGoqZzv22d9tlZzBVvFj+eHyiMBvJRmX1BHXPT+4=
 github.com/kubernetes-csi/external-snapshotter/client/v2 v2.2.0-rc3 h1://kqMNFTDX6gD13dbDfIKepSasiPbGMPw+kT90kxV2Y=
 github.com/kubernetes-csi/external-snapshotter/client/v2 v2.2.0-rc3/go.mod h1:speZ9Q5gEevndGNLFUKXCfNYZ9s8BBapHAfPGryOxKE=
 github.com/kylelemons/godebug v0.0.0-20170820004349-d65d576e9348/go.mod h1:B69LEHPfb2qLo0BaaOLcbitczOKLWTsrBG9LczfCD4k=

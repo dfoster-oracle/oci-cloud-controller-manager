@@ -143,6 +143,12 @@ github.com/kubernetes-csi/external-provisioner/pkg/capacity/topology
 github.com/kubernetes-csi/external-provisioner/pkg/controller
 github.com/kubernetes-csi/external-provisioner/pkg/features
 github.com/kubernetes-csi/external-provisioner/pkg/owner
+# github.com/kubernetes-csi/external-resizer v1.0.1
+## explicit
+github.com/kubernetes-csi/external-resizer/pkg/controller
+github.com/kubernetes-csi/external-resizer/pkg/csi
+github.com/kubernetes-csi/external-resizer/pkg/resizer
+github.com/kubernetes-csi/external-resizer/pkg/util
 # github.com/kubernetes-csi/external-snapshotter/client/v2 v2.2.0-rc3
 ## explicit
 github.com/kubernetes-csi/external-snapshotter/client/v2/apis/volumesnapshot/v1beta1
@@ -385,6 +391,7 @@ google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
+## explicit
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.38.0 => google.golang.org/grpc v1.26.0
 ## explicit
