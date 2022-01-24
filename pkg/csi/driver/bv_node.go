@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	maxVolumesPerNode = 32
+	maxVolumesPerNode               = 32
 	volumeOperationAlreadyExistsFmt = "An operation for the volume: %s already exists."
 )
 

@@ -254,7 +254,7 @@ func (d OCIFlexvolumeDriver) Attach(logger *zap.SugaredLogger, opts flexvolume.O
 	attachment, err := c.Compute().FindVolumeAttachment(ctx, compartmentID, volumeOCID)
 	if err != nil && !client.IsNotFound(err) {
 		errorType = util.GetError(err)
-		fvdMetricDimension = util.GetMetricDimensionForComponent(errorType,util.FVDStorageType)
+		fvdMetricDimension = util.GetMetricDimensionForComponent(errorType, util.FVDStorageType)
 		dimensionsMap[metrics.ComponentDimension] = fvdMetricDimension
 		metrics.SendMetricData(d.metricPusher, metrics.PVAttach, time.Since(startTime).Seconds(), dimensionsMap)
 		return flexvolume.Fail(logger, "Got error in finding volume attachment", err)

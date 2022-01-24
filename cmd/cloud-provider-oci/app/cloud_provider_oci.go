@@ -18,6 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	cloudprovider "k8s.io/cloud-provider"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,14 +32,14 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	cloudControllerManager "k8s.io/cloud-provider/app"
+	cloudControllerManagerConfig "k8s.io/cloud-provider/app/config"
+	"k8s.io/cloud-provider/options"
 	cliflag "k8s.io/component-base/cli/flag"
 	utilflag "k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/cli/globalflag"
 	"k8s.io/component-base/term"
 	"k8s.io/component-base/version/verflag"
-	cloudControllerManager "k8s.io/kubernetes/cmd/cloud-controller-manager/app"
-	cloudControllerManagerConfig "k8s.io/kubernetes/cmd/cloud-controller-manager/app/config"
-	"k8s.io/kubernetes/cmd/cloud-controller-manager/app/options"
 
 	csicontroller "github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
@@ -79,7 +80,8 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 				logger.Infof("FLAG: --%s=%q", flag.Name, flag.Value)
 			})
 
-			c, err := s.Config(cloudControllerManager.KnownControllers(), cloudControllerManager.ControllersDisabledByDefault.List())
+			c, err := s.Config(cloudControllerManager.ControllerNames(cloudControllerManager.DefaultInitFuncConstructors),
+				cloudControllerManager.ControllersDisabledByDefault.List())
 			if err != nil {
 				logger.With(zap.Error(err)).Fatalf("Unable to create cloud controller manager config")
 			}
@@ -89,10 +91,8 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 		},
 	}
 
-	namedFlagSets := s.Flags(cloudControllerManager.KnownControllers(), cloudControllerManager.ControllersDisabledByDefault.List())
-	// cloud controller manager flag set
-	//ccmFlagSet := namedFlagSets.flagSet("cloud controller manager")
-	//s.AddFlags(ccmFlagSet)
+	namedFlagSets := s.Flags(cloudControllerManager.ControllerNames(cloudControllerManager.DefaultInitFuncConstructors),
+		cloudControllerManager.ControllersDisabledByDefault.List())
 
 	// logging parameters flagset
 	loggingFlagSet := namedFlagSets.FlagSet("logging variables")
@@ -208,8 +208,10 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 	go func() {
 		defer wg.Done()
 		// Run starts all the cloud controller manager control loops.
+		cloudProvider := cloudInitializer(logger, config)
+		controllerInitializers := cloudControllerManager.ConstructControllerInitializers(cloudControllerManager.DefaultInitFuncConstructors, config, cloudProvider)
 		// TODO move to newer cloudControllerManager dependency that provides a way to pass channel/context
-		if err := cloudControllerManager.Run(config, ctx.Done()); err != nil {
+		if err := cloudControllerManager.Run(config, cloudProvider, controllerInitializers, ctx.Done()); err != nil {
 			logger.With(zap.Error(err)).Error("Error running cloud controller manager")
 		}
 		cancelFunc()
@@ -233,4 +235,26 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 
 	// wait for all the go routines to finish.
 	wg.Wait()
+}
+
+func cloudInitializer(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.CompletedConfig) cloudprovider.Interface {
+	cloudConfig := config.ComponentConfig.KubeCloudShared.CloudProvider
+	// initialize cloud provider with the cloud provider name and config file provided
+	cloud, err := cloudprovider.InitCloudProvider(cloudConfig.Name, cloudConfig.CloudConfigFile)
+	if err != nil {
+		logger.With(zap.Error(err)).Fatalf("Cloud provider could not be initialized: %v", err)
+	}
+	if cloud == nil {
+		logger.With(zap.Error(err)).Fatalf("Cloud provider is nil")
+	}
+
+	if !cloud.HasClusterID() {
+		if config.ComponentConfig.KubeCloudShared.AllowUntaggedCloud {
+			logger.With(zap.Error(err)).Info("detected a cluster without a ClusterID.  A ClusterID will be required in the future.  Please tag your cluster to avoid any future issues")
+		} else {
+			logger.With(zap.Error(err)).Fatalf("no ClusterID found.  A ClusterID is required for the cloud provider to function properly.  This check can be bypassed by setting the allow-untagged-cloud option")
+		}
+	}
+
+	return cloud
 }

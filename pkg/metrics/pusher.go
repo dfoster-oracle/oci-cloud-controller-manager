@@ -22,7 +22,7 @@ const (
 	jitterFactor                  = 0.1
 	configFilePath                = "/etc/oci/config.yaml"
 	telemetryIngestionServiceName = "telemetry-ingestion"
-	configFileName				  = "config.yaml"
+	configFileName                = "config.yaml"
 )
 
 // MonitoringClient is wrapper interface over the oci golang monitoring client

@@ -442,9 +442,9 @@ func TestUpdateLoadBalancerNetworkSecurityGroups(t *testing.T) {
 
 func TestCloudProvider_EnsureLoadBalancerDeleted(t *testing.T) {
 	tests := []struct {
-		name string
+		name    string
 		service *v1.Service
-		err  string
+		err     string
 		wantErr bool
 	}{
 		{
@@ -459,7 +459,7 @@ func TestCloudProvider_EnsureLoadBalancerDeleted(t *testing.T) {
 					},
 				},
 			},
-			err:    "",
+			err:     "",
 			wantErr: false,
 		},
 		{
@@ -474,7 +474,7 @@ func TestCloudProvider_EnsureLoadBalancerDeleted(t *testing.T) {
 					},
 				},
 			},
-			err:    "delete load balancer \"test-uid-delete-err\"",
+			err:     "delete load balancer \"test-uid-delete-err\"",
 			wantErr: true,
 		},
 		{
@@ -489,7 +489,7 @@ func TestCloudProvider_EnsureLoadBalancerDeleted(t *testing.T) {
 					},
 				},
 			},
-			err:    "",
+			err:     "",
 			wantErr: false,
 		},
 		{
@@ -504,7 +504,7 @@ func TestCloudProvider_EnsureLoadBalancerDeleted(t *testing.T) {
 					},
 				},
 			},
-			err:    "fetching nodes by internal ips",
+			err:     "fetching nodes by internal ips",
 			wantErr: true,
 		},
 		{
@@ -516,7 +516,7 @@ func TestCloudProvider_EnsureLoadBalancerDeleted(t *testing.T) {
 					UID:       "test-uid",
 				},
 			},
-			err:    "",
+			err:     "",
 			wantErr: false,
 		},
 		{
@@ -528,20 +528,20 @@ func TestCloudProvider_EnsureLoadBalancerDeleted(t *testing.T) {
 					UID:       "test-uid-delete-err",
 				},
 			},
-			err:    "delete load balancer \"test-uid-delete-err\"",
+			err:     "delete load balancer \"test-uid-delete-err\"",
 			wantErr: true,
 		},
 	}
 	cp := &CloudProvider{
-		NodeLister:                 &mockNodeLister{},
-		client:                     MockOCIClient{},
+		NodeLister: &mockNodeLister{},
+		client:     MockOCIClient{},
 		securityListManagerFactory: func(mode string) securityListManager {
-										return MockSecurityListManager{}
-									},
-		config:                     &providercfg.Config{CompartmentID: "testCompartment"},
-		logger:                     zap.S(),
-		instanceCache:              &mockInstanceCache{},
-		metricPusher:               nil,
+			return MockSecurityListManager{}
+		},
+		config:        &providercfg.Config{CompartmentID: "testCompartment"},
+		logger:        zap.S(),
+		instanceCache: &mockInstanceCache{},
+		metricPusher:  nil,
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
