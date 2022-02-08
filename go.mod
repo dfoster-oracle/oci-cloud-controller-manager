@@ -47,6 +47,7 @@ require (
 	github.com/kubernetes-csi/csi-lib-utils v0.8.1
 	github.com/kubernetes-csi/external-attacher v0.0.0-20201106010650-6d1beabd0fad //v3.0.2
 	github.com/kubernetes-csi/external-provisioner v0.0.0-20210409185916-86c2ba950e76 // v2.0.5
+	github.com/kubernetes-csi/external-resizer v1.0.1 // v1.0.1
 	github.com/kubernetes-csi/external-snapshotter/client/v2 v2.2.0-rc3
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.2
@@ -60,6 +61,7 @@ require (
 	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
 	golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/grpc v1.38.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0

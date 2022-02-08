@@ -15,17 +15,20 @@
 package csicontroller
 
 import (
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-attacher"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller-driver"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-provisioner"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
-	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
+	"time"
+
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"time"
+
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-attacher"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller-driver"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-provisioner"
+	csiresizer "github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-resizer"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
 )
 
 //Run main function to start CSI Controller
@@ -48,6 +51,10 @@ func Run(csioptions csioptions.CSIOptions, stopCh <-chan struct{}) error {
 
 	go csiprovisioner.StartCSIProvisioner(csioptions)
 	go csiattacher.StartCSIAttacher(csioptions)
+	if csioptions.EnableResizer {
+		logger.Info("starting csi-resizer go routine")
+		go csiresizer.StartCSIResizer(csioptions)
+	}
 	go csicontrollerdriver.StartControllerDriver(csioptions)
 	<-stopCh
 	return nil
