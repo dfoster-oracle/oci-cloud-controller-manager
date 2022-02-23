@@ -162,7 +162,7 @@ image:
 	docker  build $(BUILD_ARGS) \
 		-t $(IMAGE):$(VERSION) .
 	docker build $(BUILD_ARGS) \
-        -t $(IMAGE)-arm:$(VERSION) -f Dockerfile_arm .
+		-t $(IMAGE)-arm:$(VERSION) -f Dockerfile_arm .
 
 .PHONY: push
 push: image

@@ -14,10 +14,10 @@ import (
 	imageutils "k8s.io/kubernetes/test/utils/image"
 
 	. "github.com/onsi/gomega"
-	"github.com/oracle/oci-go-sdk/v31/common"
-	oke "github.com/oracle/oci-go-sdk/v31/containerengine"
-	"github.com/oracle/oci-go-sdk/v31/core"
-	"github.com/oracle/oci-go-sdk/v31/identity"
+	"github.com/oracle/oci-go-sdk/v49/common"
+	oke "github.com/oracle/oci-go-sdk/v49/containerengine"
+	"github.com/oracle/oci-go-sdk/v49/core"
+	"github.com/oracle/oci-go-sdk/v49/identity"
 	"gopkg.in/yaml.v2"
 )
 

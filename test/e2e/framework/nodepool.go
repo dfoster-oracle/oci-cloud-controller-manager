@@ -5,17 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 	"strings"
+	"time"
 
 	. "github.com/onsi/gomega"
 
-	"github.com/oracle/oci-go-sdk/v31/common"
-	oke "github.com/oracle/oci-go-sdk/v31/containerengine"
+	"github.com/oracle/oci-go-sdk/v49/common"
+	oke "github.com/oracle/oci-go-sdk/v49/containerengine"
 )
 
 var (
-	tenanciesBOAT = []string{"ocid1.tenancy.oc1..aaaaaaaagkbzgg6lpzrf47xzy4rjoxg4de6ncfiq2rncmjiujvy2hjgxvziq","ocid1.tenancy.oc2..aaaaaaaagwtifvnhpr2zoymzwmqk364ycc5fspwx2zzc577cxmmnimazi6nq","ocid1.tenancy.oc3..aaaaaaaatg7khloug5adtynfkhhhr6ysky5fxb57ghqp3ddpqwqvcavznnnq","ocid1.tenancy.oc4..aaaaaaaak37nmbaszvdjdrmkvcvlypax53ila3yajff5tgdffk5njsm2czsa","ocid1.tenancy.oc5..aaaaaaaalfjjthxqwuoxh6ps4aqx62zc46w3aj5n425y3dpvqlqwkant5gda", "ocid1.tenancy.oc6..aaaaaaaalfjjthxqwuoxh6ps4aqx62zc46w3aj5n425y3dpvqlqwkant5gda", "ocid1.tenancy.oc7..aaaaaaaalfjjthxqwuoxh6ps4aqx62zc46w3aj5n425y3dpvqlqwkant5gda"}
+	tenanciesBOAT = []string{"ocid1.tenancy.oc1..aaaaaaaagkbzgg6lpzrf47xzy4rjoxg4de6ncfiq2rncmjiujvy2hjgxvziq", "ocid1.tenancy.oc2..aaaaaaaagwtifvnhpr2zoymzwmqk364ycc5fspwx2zzc577cxmmnimazi6nq", "ocid1.tenancy.oc3..aaaaaaaatg7khloug5adtynfkhhhr6ysky5fxb57ghqp3ddpqwqvcavznnnq", "ocid1.tenancy.oc4..aaaaaaaak37nmbaszvdjdrmkvcvlypax53ila3yajff5tgdffk5njsm2czsa", "ocid1.tenancy.oc5..aaaaaaaalfjjthxqwuoxh6ps4aqx62zc46w3aj5n425y3dpvqlqwkant5gda", "ocid1.tenancy.oc6..aaaaaaaalfjjthxqwuoxh6ps4aqx62zc46w3aj5n425y3dpvqlqwkant5gda", "ocid1.tenancy.oc7..aaaaaaaalfjjthxqwuoxh6ps4aqx62zc46w3aj5n425y3dpvqlqwkant5gda"}
 )
 
 // NodePoolCreateConfig contains values that can be specified when creating a NodePool.
@@ -111,24 +111,23 @@ func (f *Framework) ListNodePoolImages() map[string]string {
 	return images
 }
 
-
-func (f *Framework) PickNonGPUImageWithAMDCompatibility (images map[string]string) (string, string, bool) {
+func (f *Framework) PickNonGPUImageWithAMDCompatibility(images map[string]string) (string, string, bool) {
 	for sourceName, imageId := range images {
 		if !strings.Contains(sourceName, "GPU") && !strings.Contains(sourceName, "-aarch64") {
-			return imageId,sourceName,true
+			return imageId, sourceName, true
 		}
 	}
-	return "","",false
+	return "", "", false
 }
 
-func (f *Framework) PickArmCompatibleImage (images map[string]string) (string, string, bool) {
+func (f *Framework) PickArmCompatibleImage(images map[string]string) (string, string, bool) {
 	for sourceName, imageId := range images {
 		// Hardcoding OL 7.x for now. Needs to be filtered for FIPS compatibility
 		if strings.Contains(sourceName, "7.9-aarch64") {
-			return imageId,sourceName,true
+			return imageId, sourceName, true
 		}
 	}
-	return "","",false
+	return "", "", false
 }
 
 // IsValidNodePoolShape return true if the specified nodeShape is valid.
@@ -153,6 +152,7 @@ func (f *Framework) ListNodePoolsPaged(clusterID string, compartmentId string, l
 		Page:          page,
 	})
 }
+
 // ListNodePools lists all nodepools in the specified cluster.
 func (f *Framework) ListNodePools(clusterID string) []oke.NodePoolSummary {
 	ctx, cancel := context.WithTimeout(f.context, f.timeout)
@@ -180,7 +180,7 @@ func (f *Framework) ListNodePools(clusterID string) []oke.NodePoolSummary {
 			}
 
 			page = response.OpcNextPage
-			if page  == nil {
+			if page == nil {
 				break
 			} else {
 				Logf("received page token, continue calling ListNodePools()")
@@ -273,16 +273,16 @@ func (f *Framework) DeleteNodePool(nodepoolID string, waitForDeleted bool) {
 // CreateNodePool creates a nodepool with the specified characteristics. This function
 // will block until the nodepool is provisioned and active. Defaults to latest cluster k8s version
 func (f *Framework) CreateNodePool(clusterID, compartmentID string, nodeImageName, nodeShape string, size int,
-								   k8sversion string, subnets []string,
-								   nodeShapeConfig oke.CreateNodeShapeConfigDetails) (np *oke.NodePool) {
+	k8sversion string, subnets []string,
+	nodeShapeConfig oke.CreateNodeShapeConfigDetails) (np *oke.NodePool) {
 
 	if k8sversion == "" {
 		k8sversion = f.OkeNodePoolK8sVersion
 	}
 	if os.Getenv("USE_REGIONALSUBNET") == "true" {
 		return f.CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentID, nodeShape, &size,
-													  subnets[0], k8sversion, nil,
-													  nodeShapeConfig)
+			subnets[0], k8sversion, nil,
+			nodeShapeConfig)
 	}
 
 	return f.CreateNodePoolWithVersion(clusterID, nodeImageName, nodeShape, size/(len(subnets)-1), subnets[1:], k8sversion, nil)
@@ -290,8 +290,8 @@ func (f *Framework) CreateNodePool(clusterID, compartmentID string, nodeImageNam
 
 // CreateNodePoolInRgnSubnetWithVersion use the NodeConfigDetails property
 func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentID string, nodeShape string,
-														 size *int, rgnSubnet string, kubeVersion string,
-														 expectedError common.ServiceError, nodeShapeConfig oke.CreateNodeShapeConfigDetails) *oke.NodePool {
+	size *int, rgnSubnet string, kubeVersion string,
+	expectedError common.ServiceError, nodeShapeConfig oke.CreateNodeShapeConfigDetails) *oke.NodePool {
 	ctx, cancel := context.WithTimeout(f.context, f.timeout)
 	defer cancel()
 	ads := f.ListADs()
@@ -334,14 +334,14 @@ func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentI
 	}
 
 	cfg := &NodePoolCreateConfig{
-		ClusterID : clusterID,
-		CompartmentID: compartmentID,
-		NodeImageName: imageName,
-		NodeShape: nodeShape,
-		KubeVersion: kubeVersion,
+		ClusterID:         clusterID,
+		CompartmentID:     compartmentID,
+		NodeImageName:     imageName,
+		NodeShape:         nodeShape,
+		KubeVersion:       kubeVersion,
 		NodeConfigDetails: &nodeConfigDetails,
 		NodeSourceDetails: nodeSourceViaImageDetails,
-		Options: TestOptions{ExpectedError:expectedError},
+		Options:           TestOptions{ExpectedError: expectedError},
 	}
 
 	if f.Architecture == "ARM" {
@@ -351,7 +351,7 @@ func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentI
 	response, _ := f.createNodePoolWithConfig(cfg, ctx)
 	pool, done := f.waitForNodePool(response)
 	if done {
-	    // compare to poolSize because size may be nil
+		// compare to poolSize because size may be nil
 		Expect(*pool.NodeConfigDetails.Size).To(Equal(*poolSize))
 		return pool
 	}
@@ -365,14 +365,14 @@ func (f *Framework) CreateNodePoolWithVersion(clusterID, nodeImageName, nodeShap
 	ctx, cancel := context.WithTimeout(f.context, f.timeout)
 	defer cancel()
 	cfg := &NodePoolCreateConfig{
-		ClusterID : clusterID,
-		CompartmentID: f.Compartment1,
-		NodeImageName: nodeImageName,
-		NodeShape: nodeShape,
-		KubeVersion: kubeVersion,
+		ClusterID:         clusterID,
+		CompartmentID:     f.Compartment1,
+		NodeImageName:     nodeImageName,
+		NodeShape:         nodeShape,
+		KubeVersion:       kubeVersion,
 		QuantityPerSubnet: &quantityPerSubnet,
-		Subnets:         subnets,
-		Options: TestOptions{ExpectedError:expectedError},
+		Subnets:           subnets,
+		Options:           TestOptions{ExpectedError: expectedError},
 	}
 	response, _ := f.createNodePoolWithConfig(cfg, ctx)
 	pool, done := f.waitForNodePool(response)

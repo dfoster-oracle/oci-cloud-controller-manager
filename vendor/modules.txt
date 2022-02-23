@@ -1,6 +1,6 @@
 # bitbucket.oci.oraclecorp.com/oke/bmc-go-sdk v0.0.0-20180119173458-fe578152e621
 bitbucket.oci.oraclecorp.com/oke/bmc-go-sdk
-# bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20201218050159-057951da132b
+# bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20211021080439-0f28edfc51d4
 ## explicit
 bitbucket.oci.oraclecorp.com/oke/oke-common/protobuf
 bitbucket.oci.oraclecorp.com/oke/oke-common/resourceprincipals
@@ -224,16 +224,17 @@ github.com/opencontainers/go-digest
 # github.com/opencontainers/runc v1.0.2
 github.com/opencontainers/runc/libcontainer/apparmor
 github.com/opencontainers/runc/libcontainer/utils
-# github.com/oracle/oci-go-sdk/v31 v31.0.0-00010101000000-000000000000 => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk/v31 v31.0.0-20201215183620-aed686bb60a8
+# github.com/oracle/oci-go-sdk/v49 v49.0.0-00010101000000-000000000000 => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk/v49 v49.2.0-p
 ## explicit
-github.com/oracle/oci-go-sdk/v31/common
-github.com/oracle/oci-go-sdk/v31/common/auth
-github.com/oracle/oci-go-sdk/v31/containerengine
-github.com/oracle/oci-go-sdk/v31/core
-github.com/oracle/oci-go-sdk/v31/filestorage
-github.com/oracle/oci-go-sdk/v31/identity
-github.com/oracle/oci-go-sdk/v31/loadbalancer
-github.com/oracle/oci-go-sdk/v31/monitoring
+github.com/oracle/oci-go-sdk/v49/common
+github.com/oracle/oci-go-sdk/v49/common/auth
+github.com/oracle/oci-go-sdk/v49/containerengine
+github.com/oracle/oci-go-sdk/v49/core
+github.com/oracle/oci-go-sdk/v49/filestorage
+github.com/oracle/oci-go-sdk/v49/identity
+github.com/oracle/oci-go-sdk/v49/loadbalancer
+github.com/oracle/oci-go-sdk/v49/monitoring
+github.com/oracle/oci-go-sdk/v49/networkloadbalancer
 # github.com/pelletier/go-toml v1.7.0
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
@@ -258,6 +259,8 @@ github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
 # github.com/sirupsen/logrus v1.8.1
 github.com/sirupsen/logrus
+# github.com/sony/gobreaker v0.4.2-0.20210216022020-dd874f9dd33b
+github.com/sony/gobreaker
 # github.com/spf13/afero v1.2.2
 github.com/spf13/afero
 github.com/spf13/afero/mem
@@ -1168,11 +1171,11 @@ k8s.io/utils/net
 k8s.io/utils/path
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# oracle.com/oci/httpsigner v0.0.0-00010101000000-000000000000 => bitbucket.oci.oraclecorp.com/goiam/httpsigner.git v0.0.0-00000000000000-e8cb27ebf4409946b295b9e22e511a52fc967e91
+# oracle.com/oci/httpsigner v0.0.0-20190320175442-e8cb27ebf440 => bitbucket.oci.oraclecorp.com/goiam/httpsigner.git v0.0.0-00000000000000-e8cb27ebf4409946b295b9e22e511a52fc967e91
 oracle.com/oci/httpsigner
-# oracle.com/oci/ociauthz v0.0.0-00010101000000-000000000000 => bitbucket.oci.oraclecorp.com/goiam/ociauthz.git v0.0.0-00000000000000-b00a4280e2092ac2c220111731965f49392734c1
+# oracle.com/oci/ociauthz v0.0.0-20200515161105-5b1e37d2dc95 => bitbucket.oci.oraclecorp.com/goiam/ociauthz.git v0.0.0-00000000000000-b00a4280e2092ac2c220111731965f49392734c1
 oracle.com/oci/ociauthz
-# oracle.com/oci/tagging v0.0.0-00010101000000-000000000000 => bitbucket.oci.oraclecorp.com/GOPLEX/tagging.git v0.0.0-00000000000000-20a2e48911da14e503935718f66588ab14aad8d4
+# oracle.com/oci/tagging v0.0.0-20190321202046-20a2e48911da => bitbucket.oci.oraclecorp.com/GOPLEX/tagging.git v0.0.0-00000000000000-20a2e48911da14e503935718f66588ab14aad8d4
 oracle.com/oci/tagging
 oracle.com/oci/tagging/protobuf
 # sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.22
@@ -1195,7 +1198,7 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
 # github.com/docker/docker => github.com/docker/engine v0.0.0-20181106193140-f5749085e9cb
-# github.com/oracle/oci-go-sdk/v31 => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk/v31 v31.0.0-20201215183620-aed686bb60a8
+# github.com/oracle/oci-go-sdk/v49 => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk/v49 v49.2.0-p
 # github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.0
 # google.golang.org/grpc => google.golang.org/grpc v1.38.0
 # k8s.io/api => k8s.io/api v0.22.5
@@ -1228,5 +1231,6 @@ sigs.k8s.io/yaml
 # oracle.com/oci/httpsigner => bitbucket.oci.oraclecorp.com/goiam/httpsigner.git v0.0.0-00000000000000-e8cb27ebf4409946b295b9e22e511a52fc967e91
 # oracle.com/oci/ociauthz => bitbucket.oci.oraclecorp.com/goiam/ociauthz.git v0.0.0-00000000000000-b00a4280e2092ac2c220111731965f49392734c1
 # oracle.com/oci/ocihttpiam => bitbucket.oci.oraclecorp.com/goiam/ocihttpiam.git v0.0.0-00000000000000-996aa4a919d9e80238807c1c63c385980a0302a8
+# oracle.com/oci/ocimtls => bitbucket.oci.oraclecorp.com/faas/ocimtls.git v1.2.0
 # oracle.com/oci/tagging => bitbucket.oci.oraclecorp.com/GOPLEX/tagging.git v0.0.0-00000000000000-20a2e48911da14e503935718f66588ab14aad8d4
 # oracle.com/oke/oci-go-common => bitbucket.oci.oraclecorp.com/oke/oci-go-common.git v0.0.0-00000000000000-f93927b2b66cb1de2a10cf0f9f0d7e349bc0ae27

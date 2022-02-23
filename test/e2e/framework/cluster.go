@@ -9,8 +9,8 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	"github.com/oracle/oci-go-sdk/v31/common"
-	oke "github.com/oracle/oci-go-sdk/v31/containerengine"
+	"github.com/oracle/oci-go-sdk/v49/common"
+	oke "github.com/oracle/oci-go-sdk/v49/containerengine"
 )
 
 // GetClusterOptions requires a clusterOptionId as input (must be "all" right now)
@@ -77,7 +77,7 @@ func (f *Framework) ListClusters() []oke.ClusterSummary {
 			}
 
 			page = response.OpcNextPage
-			if page  == nil {
+			if page == nil {
 				break
 			} else {
 				Logf("received page token, continue calling ListClusters()")
@@ -194,7 +194,7 @@ func (f *Framework) CreateClusterWithResponse(options TestOptions) (response oke
 func (f *Framework) DeleteClusterWithResponse(clusterID string) (response oke.DeleteClusterResponse, err error) {
 	Logf("Deleting cluster, clusterID: '%s'", clusterID)
 	return f.clustersClient.DeleteCluster(f.context, oke.DeleteClusterRequest{
-		ClusterId:    &clusterID,
+		ClusterId: &clusterID,
 	})
 }
 
@@ -311,9 +311,9 @@ func (f *Framework) createClusterFromConfig(cfg *ClusterCreateConfig) (response 
 	isPublicIpEnabled := true
 	if f.Architecture == "ARM" {
 		request.CreateClusterDetails.EndpointConfig = &oke.CreateClusterEndpointConfigDetails{
-			SubnetId: &f.K8sSubnet,
-			NsgIds: strings.Split(f.NsgOCIDS, ","),
-			IsPublicIpEnabled : &isPublicIpEnabled,
+			SubnetId:          &f.K8sSubnet,
+			NsgIds:            strings.Split(f.NsgOCIDS, ","),
+			IsPublicIpEnabled: &isPublicIpEnabled,
 		}
 	}
 

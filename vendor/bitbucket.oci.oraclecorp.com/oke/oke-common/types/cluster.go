@@ -35,6 +35,7 @@ type ClusterSummaryV3 struct {
 	LifecycleDetails            string                  `json:"lifecycleDetails"`
 	Endpoints                   *ClusterEndpointsV3     `json:"endpoints"`
 	AvailableKubernetesUpgrades []string                `json:"availableKubernetesUpgrades"`
+	ImagePolicyConfig           *ImagePolicyConfigV3    `json:"imagePolicyConfig, omitempty"`
 }
 
 // ClusterV3 is the response type for the GetCluster API operation.
@@ -51,6 +52,7 @@ type ClusterV3 struct {
 	LifecycleDetails            string                  `json:"lifecycleDetails"`
 	Endpoints                   *ClusterEndpointsV3     `json:"endpoints"`
 	AvailableKubernetesUpgrades []string                `json:"availableKubernetesUpgrades"`
+	ImagePolicyConfig           *ImagePolicyConfigV3    `json:"imagePolicyConfig, omitempty"`
 }
 
 // ToSummaryV3 a K8Instance object to a ClusterSummaryV3 object understood by the higher layers
@@ -65,6 +67,19 @@ func (src *K8Instance) ToSummaryV3(exposePSP bool) *ClusterSummaryV3 {
 	dst.CompartmentID = src.CompartmentID
 	dst.VCNID = src.NetworkConfig.VCNID
 	dst.KubernetesVersion = src.K8Version
+
+	if src.ImagePolicyConfig != nil {
+		dst.ImagePolicyConfig = &ImagePolicyConfigV3{
+			IsPolicyEnabled: src.ImagePolicyConfig.IsPolicyEnabled,
+		}
+		dst.ImagePolicyConfig.KeyDetails = make([]*KeyDetailsV3, len(src.ImagePolicyConfig.KeyDetails))
+		for idx, srcKeyObj := range src.ImagePolicyConfig.KeyDetails {
+			dst.ImagePolicyConfig.KeyDetails[idx] = &KeyDetailsV3{
+				KmsKeyId:	srcKeyObj.KmsKeyId,
+			}
+		}
+	}
+
 	dst.Options = &ClusterCreateOptionsV3{
 		KubernetesNetworkConfig: &KubernetesNetworkConfigV3{
 			PodsCIDR:     src.NetworkConfig.K8SPodsCIDR,
@@ -82,6 +97,7 @@ func (src *K8Instance) ToSummaryV3(exposePSP bool) *ClusterSummaryV3 {
 			}
 		}
 	}
+
 	dst.Options.ServiceLBSubnetIDs = make([]string, len(src.NetworkConfig.ServiceLBSubnets))
 	for idx, sn := range src.NetworkConfig.ServiceLBSubnets {
 		dst.Options.ServiceLBSubnetIDs[idx] = sn
@@ -115,6 +131,20 @@ func (src *K8Instance) ToV3(exposePSP bool) *ClusterV3 {
 	dst.VCNID = src.NetworkConfig.VCNID
 	dst.KubernetesVersion = src.K8Version
 	dst.KMSKeyID = src.KMSKeyID
+
+	if src.ImagePolicyConfig != nil {
+		dst.ImagePolicyConfig = &ImagePolicyConfigV3{
+			IsPolicyEnabled: src.ImagePolicyConfig.IsPolicyEnabled,
+		}
+
+		dst.ImagePolicyConfig.KeyDetails = make([]*KeyDetailsV3, len(src.ImagePolicyConfig.KeyDetails))
+		for idx, srcKeyObj := range src.ImagePolicyConfig.KeyDetails {
+			dst.ImagePolicyConfig.KeyDetails[idx] = &KeyDetailsV3{
+				KmsKeyId:	srcKeyObj.KmsKeyId,
+			}
+		}
+	}
+
 	dst.Options = &ClusterCreateOptionsV3{
 		KubernetesNetworkConfig: &KubernetesNetworkConfigV3{
 			PodsCIDR:     src.NetworkConfig.K8SPodsCIDR,
@@ -205,6 +235,17 @@ type CreateClusterDetailsV3 struct {
 	VCNID             string                  `json:"vcnId" yaml:"vcnId"`
 	KMSKeyID          string                  `json:"kmsKeyId,omitempty" yaml:"kmsKeyId,omitempty"`
 	Options           *ClusterCreateOptionsV3 `json:"options,omitempty" yaml:"options,omitempty"`
+	ImagePolicyConfig *ImagePolicyConfigV3	  `json:"imagePolicyConfig, omitempty" yaml:"imagePolicyConfig,omitempty"`
+}
+
+// ImagePolicyConfigV3 defines the Image signature verification properties
+type ImagePolicyConfigV3 struct {
+	IsPolicyEnabled bool     `json:"isPolicyEnabled,omitempty" yaml:"isPolicyEnabled"`
+	KeyDetails       []*KeyDetailsV3 `json:"keyDetails,omitempty" yaml:"keyDetails"`
+}
+
+type KeyDetailsV3 struct {
+	KmsKeyId     string `json:"kmsKeyId,omitempty" yaml:"kmsKeyId"`
 }
 
 // ClusterCreateOptionsV3 defines the options that can modify how a cluster is created.
@@ -242,6 +283,7 @@ type UpdateClusterDetailsV3 struct {
 	Name              string                `json:"name"`
 	KubernetesVersion string                `json:"kubernetesVersion"`
 	Options           *ClusterUpdateOptions `json:"options,omitempty" yaml:"options,omitempty"`
+	ImagePolicyConfig *ImagePolicyConfigV3	`json:"imagePolicyConfig, omitempty" yaml:"imagePolicyConfig,omitempty"`
 }
 
 type ClusterUpdateOptions struct {

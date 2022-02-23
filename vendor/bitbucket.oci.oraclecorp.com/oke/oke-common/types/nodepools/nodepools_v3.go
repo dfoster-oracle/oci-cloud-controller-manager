@@ -1,15 +1,16 @@
 package nodepools
 
 import (
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"encoding/json"
 	"fmt"
-	"github.com/oracle/oci-go-sdk/v31/common"
 	"sort"
 	"strings"
 
-	nodes "bitbucket.oci.oraclecorp.com/oke/oke-common/types/nodes"
+	"github.com/golang/protobuf/ptypes/wrappers"
+	"github.com/oracle/oci-go-sdk/v49/common"
+
 	"bitbucket.oci.oraclecorp.com/oke/oke-common/protobuf"
+	nodes "bitbucket.oci.oraclecorp.com/oke/oke-common/types/nodes"
 )
 
 // Set of constants representing the allowable values for NodeSource
@@ -151,7 +152,7 @@ func (src *NodePool) toSummaryV3(enableNodePoolEnhancements bool) NodePoolSummar
 		if enableNodePoolEnhancements {
 			nodeSourceDetails := NodeSourceViaImageDetails{
 				SourceType: NodeSourceTypeImage,
-				ImageId: common.String(src.NodeImageID),
+				ImageId:    common.String(src.NodeImageID),
 			}
 			if src.NodeBootVolumeSizeInGBs != nil {
 				nodeSourceDetails.BootVolumeSizeInGBs = &src.NodeBootVolumeSizeInGBs.Value
@@ -175,6 +176,7 @@ func (src *NodePool) toSummaryV3(enableNodePoolEnhancements bool) NodePoolSummar
 		dst.NodeConfigDetails.Size = src.QuantityPerSubnet * uint32(len(src.SubnetsInfo))
 		dst.QuantityPerSubnet = src.QuantityPerSubnet
 	}
+	dst.NodeConfigDetails.NsgIds = src.NsgIds
 
 	dst.NodeMetadata = make(map[string]string)
 	for k, v := range src.NodeMetadata {
@@ -240,7 +242,6 @@ func toNodePoolV3(src *NodePool, exposeFaultDomainAndPrivateIp bool, enableNodeP
 		dst.NodeShapeConfig.MemoryInGBs = &memoryInGBs
 	}
 
-
 	if src.NodeImageID != "" {
 		nodeSourceImageOption := NodeSourceViaImageOption{
 			SourceName: common.String(src.NodeImageName),
@@ -251,7 +252,7 @@ func toNodePoolV3(src *NodePool, exposeFaultDomainAndPrivateIp bool, enableNodeP
 		if enableNodePoolEnhancements {
 			nodeSourceDetails := NodeSourceViaImageDetails{
 				SourceType: NodeSourceTypeImage,
-				ImageId: common.String(src.NodeImageID),
+				ImageId:    common.String(src.NodeImageID),
 			}
 			if src.NodeBootVolumeSizeInGBs != nil {
 				nodeSourceDetails.BootVolumeSizeInGBs = &src.NodeBootVolumeSizeInGBs.Value
@@ -275,6 +276,7 @@ func toNodePoolV3(src *NodePool, exposeFaultDomainAndPrivateIp bool, enableNodeP
 		dst.NodeConfigDetails.Size = src.QuantityPerSubnet * uint32(len(src.SubnetsInfo))
 		dst.QuantityPerSubnet = src.QuantityPerSubnet
 	}
+	dst.NodeConfigDetails.NsgIds = src.NsgIds
 
 	for _, nd := range src.NodeStates {
 		dst.Nodes = append(dst.Nodes, nd.ToV3(exposeFaultDomainAndPrivateIp))
@@ -297,7 +299,7 @@ type CreateNodePoolDetailsV3 struct {
 	NodeImageName     string                    `json:"nodeImageName"`
 	NodeSourceDetails CreateNodeSourceDetails   `json:"nodeSourceDetails,omitempty"`
 	NodeShape         string                    `json:"nodeShape"`
-	NodeShapeConfig   *NodeShapeConfig           `json:"nodeShapeConfig,omitempty"`
+	NodeShapeConfig   *NodeShapeConfig          `json:"nodeShapeConfig,omitempty"`
 	NodeMetadata      map[string]string         `json:"nodeMetadata"`
 	InitialNodeLabels []KeyValueV3              `json:"initialNodeLabels,omitempty"`
 	SSHPublicKey      string                    `json:"sshPublicKey"`
@@ -314,12 +316,12 @@ type CreateNodeSourceDetails struct {
 
 // NodeShapeConfig has the same structure for Create/Update/Read/List, so use the same one for now.
 type NodeShapeConfig struct {
-	Ocpus *float32 `json:"ocpus,omitempty"`
+	Ocpus       *float32 `json:"ocpus,omitempty"`
 	MemoryInGBs *float32 `json:"memoryInGBs,omitempty"`
 }
 
 type CreateNodeSourceViaImageDetails struct {
-	ImageId *string `mandatory:"true" json:"imageId"`
+	ImageId             *string `mandatory:"true" json:"imageId"`
 	BootVolumeSizeInGBs *uint32 `json:"bootVolumeSizeInGBs,omitempty"`
 }
 
@@ -359,8 +361,8 @@ type NodeSourceDetails interface {
 }
 
 type NodeSourceViaImageDetails struct {
-	SourceType string `mandatory:"true" json:"sourceType"`
-	ImageId *string `mandatory:"true" json:"imageId"`
+	SourceType          string  `mandatory:"true" json:"sourceType"`
+	ImageId             *string `mandatory:"true" json:"imageId"`
 	BootVolumeSizeInGBs *uint32 `json:"bootVolumeSizeInGBs,omitempty"`
 }
 
@@ -378,8 +380,8 @@ type UpdateNodePoolDetailsV3 struct {
 	NodeConfigDetails NodePoolNodeConfigDetails `json:"nodeConfigDetails,omitempty"`
 	NodeMetadata      map[string]string         `json:"nodeMetadata,omitempty"`
 	NodeShape         string                    `json:"nodeShape"`
-	NodeShapeConfig   *NodeShapeConfig           `json:"nodeShapeConfig,omitempty"`
-	NodeSourceDetails CreateNodeSourceDetails    `json:"nodeSourceDetails,omitempty"`
+	NodeShapeConfig   *NodeShapeConfig          `json:"nodeShapeConfig,omitempty"`
+	NodeSourceDetails CreateNodeSourceDetails   `json:"nodeSourceDetails,omitempty"`
 	SSHPublicKey      string                    `json:"sshPublicKey,omitempty"`
 }
 
@@ -396,6 +398,7 @@ type NodePoolOptionsV3 struct {
 // the node pool.
 type NodePoolNodeConfigDetails struct {
 	Size             uint32                           `json:"size"`
+	NsgIds           []string                         `json:"nsgIds"`
 	PlacementConfigs []NodePoolPlacementConfigDetails `json:"placementConfigs"`
 }
 
@@ -464,6 +467,7 @@ func (v3 *CreateNodePoolDetailsV3) ToProto(enableNodePoolEnhancements bool) (*Ne
 				dst.SubnetsInfo[id] = &SubnetInfo{ID: id}
 			}
 		}
+		dst.NsgIds = v3.NodeConfigDetails.NsgIds
 
 		dst.NodeMetadata = make(map[string]string)
 		for k, v := range v3.NodeMetadata {

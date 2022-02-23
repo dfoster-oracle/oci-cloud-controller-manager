@@ -2,6 +2,7 @@ package types
 
 const (
 	TMCollectorPortNumber   = "4041"
+	TMCollectorSecurePort   = "4443"
 	TMCollectorTokenKey     = contextKey("tm-col-token")
 	TMCollectorClusterIDKey = contextKey("tm-col-cluster-id")
 	TMCollectorTMIDKey      = contextKey("tm-col-tm-id")
