@@ -30,22 +30,22 @@ func (f *CloudProviderFramework) newStorageClassTemplate(name string, provisione
 	return &storagev1.StorageClass{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "StorageClass",
-			APIVersion: "storage.k8s.io/v1beta1",
+			APIVersion: "storage.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
 			Labels: testLabels,
 		},
-		Provisioner:       provisionerType,
-		Parameters:        parameters,
-		VolumeBindingMode: volumeBindingMode,
+		Provisioner:          provisionerType,
+		Parameters:           parameters,
+		VolumeBindingMode:    volumeBindingMode,
 		AllowVolumeExpansion: &allowVolumeExpansion,
 	}
 }
 
 // DeleteStorageClass deletes a storage class given the name
-func (f* CloudProviderFramework) DeleteStorageClass(name string) error {
-	err := f.ClientSet.StorageV1().StorageClasses().Delete(context.Background(),name,metav1.DeleteOptions{})
+func (f *CloudProviderFramework) DeleteStorageClass(name string) error {
+	err := f.ClientSet.StorageV1().StorageClasses().Delete(context.Background(), name, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (f *CloudProviderFramework) CreateStorageClassOrFail(name string, provision
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			Logf("Storage Class already exists. Updating existing storage class.")
-			class , err = f.UpdateStorageClassOrFail(classTemp, allowVolumeExpansion, nil)
+			class, err = f.UpdateStorageClassOrFail(classTemp, allowVolumeExpansion, nil)
 			if err != nil {
 				Logf("Error: %v", err)
 			}
@@ -95,7 +95,7 @@ func (f *CloudProviderFramework) UpdateStorageClassOrFail(storageClass *storagev
 	newSC := oldSC.DeepCopy()
 	newSC.AllowVolumeExpansion = &allowVolumeExpansion
 
-	class , err := f.ClientSet.StorageV1().StorageClasses().Update(context.Background(), newSC,
+	class, err := f.ClientSet.StorageV1().StorageClasses().Update(context.Background(), newSC,
 		metav1.UpdateOptions{})
 	return class, err
 }

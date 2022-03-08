@@ -27,7 +27,7 @@ func StartControllerDriver(csioptions csioptions.CSIOptions) {
 	logger := logging.Logger().Sugar()
 	logger.Sync()
 
-	drv, err := driver.NewControllerDriver(logger.Named("BV"), csioptions.Endpoint, csioptions.Kubeconfig, csioptions.Master,
+	drv, err := driver.NewControllerDriver(logger.Named("BV").With(zap.String("component", "csi-controller")), csioptions.Endpoint, csioptions.Kubeconfig, csioptions.Master,
 		true, driver.BlockVolumeDriverName, driver.BlockVolumeDriverVersion)
 	if err != nil {
 		logger.With(zap.Error(err)).Fatal("Failed to create controller driver.")
