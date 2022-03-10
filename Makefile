@@ -51,7 +51,7 @@ BUILD = $(VERSION)
 GOOS ?= linux
 ARCH ?= amd64
 
-SRC_DIRS := cmd pkg # directories which hold app source (not vendored)
+SRC_DIRS := cmd controllers pkg # directories which hold app source (not vendored)
 
 # Allows overriding where the CCM should look for the cloud provider config
 # when running via make run-dev.
@@ -233,3 +233,12 @@ out/oke-ccm-tests-pop-$(BUILD_NUMBER).tar.gz: run-command/validate/* images/oke-
 
 .PHONY: create-pop
 create-pop: clone-secrets out/oke-ccm-tests-pop-$(BUILD_NUMBER).tar.gz
+
+# NPN
+.PHONY: install-controller-runtime
+install-controller-runtime:
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0
+
+.PHONY: npn-generate
+npn-generate:
+	$(GOPATH)/bin/controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./api/..."

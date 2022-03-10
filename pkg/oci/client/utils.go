@@ -18,10 +18,11 @@ import (
 	"net/http"
 	"strings"
 
-	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
-	"github.com/oracle/oci-go-sdk/v49/common"
 	"go.uber.org/zap"
 	"k8s.io/client-go/util/flowcontrol"
+
+	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
+	"github.com/oracle/oci-go-sdk/v49/common"
 )
 
 const (
