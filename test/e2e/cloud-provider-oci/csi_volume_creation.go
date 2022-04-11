@@ -218,6 +218,7 @@ var _ = Describe("CSI Volume Performance Level", func() {
 			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			_ = f.DeleteStorageClass(framework.ClassOCIBalanced)
 		})
+
 		It("Create CSI block volume with Performance Level as High", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-perf-paravirtual-high")
 
@@ -225,11 +226,10 @@ var _ = Describe("CSI Volume Performance Level", func() {
 				map[string]string{framework.AttachmentType: framework.AttachmentTypeParavirtualized, csi_util.VpusPerGB: "20"},
 				pvcJig.Labels, "WaitForFirstConsumer", true)
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil)
-			podName := pvcJig.NewPodForCSI("high-perf-pvc-app", f.Namespace.Name, pvc.Name, setupF.AdLabel)
+			pvcJig.NewPodForCSI("high-perf-pvc-app", f.Namespace.Name, pvc.Name, setupF.AdLabel)
 
 			time.Sleep(60 * time.Second) //waiting for pod to up and running
 			pvcJig.CheckVolumePerformanceLevel(f.BlockStorageClient, pvc.Namespace, pvc.Name, csi_util.HigherPerformanceOption)
-			pvcJig.CheckISCSIQueueDepthOnNode(f.Namespace.Name, podName)
 			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			_ = f.DeleteStorageClass(framework.ClassOCIHigh)
 		})
