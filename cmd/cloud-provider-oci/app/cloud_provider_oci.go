@@ -21,16 +21,21 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/go-logr/zapr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	cloudprovider "k8s.io/cloud-provider"
 	cloudControllerManager "k8s.io/cloud-provider/app"
 	cloudControllerManagerConfig "k8s.io/cloud-provider/app/config"
@@ -40,10 +45,17 @@ import (
 	"k8s.io/component-base/cli/globalflag"
 	"k8s.io/component-base/term"
 	"k8s.io/component-base/version/verflag"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
+	npnv1beta1 "github.com/oracle/oci-cloud-controller-manager/api/v1beta1"
 	csicontroller "github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	"github.com/oracle/oci-cloud-controller-manager/controllers"
+	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/metrics"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	_ "github.com/oracle/oci-cloud-controller-manager/pkg/oci/client" // for oci client metric registration
 	provisioner "github.com/oracle/oci-cloud-controller-manager/pkg/volume/provisioner/core"
 )
@@ -52,10 +64,17 @@ var (
 	logLevel                                                                                  int8
 	minVolumeSize, resourcePrincipalFile, metricsEndpoint, logfilePath                        string
 	enableCSI, enableVolumeProvisioning, volumeRoundingEnabled, useResourcePrincipal, logJSON bool
+	enableNPNController                                                                       bool
 	resourcePrincipalInitialTimeout                                                           time.Duration
 )
 
 var csioption = csioptions.CSIOptions{}
+
+var (
+	scheme         = runtime.NewScheme()
+	npnSetupLog    = ctrl.Log.WithName("npn-controller-setup")
+	configFilePath = "/etc/oci/config.yaml"
+)
 
 // NewCloudProviderOCICommand creates a *cobra.Command object with default parameters
 func NewCloudProviderOCICommand(logger *zap.SugaredLogger) *cobra.Command {
@@ -138,6 +157,9 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	csiFlagSet.Var(utilflag.NewMapStringBool(&csioption.FeatureGates), "csi-feature-gates", "A set of key=value pairs that describe feature gates for alpha/experimental features. ")
 	verflag.AddFlags(namedFlagSets.FlagSet("global"))
 	globalflag.AddGlobalFlags(namedFlagSets.FlagSet("global"), command.Name())
+
+	npnFlagSet := namedFlagSets.FlagSet("NPN Controller")
+	npnFlagSet.BoolVar(&enableNPNController, "enable-npn-controller", false, "Whether to enable Native Pod Network controller")
 
 	if flag.CommandLine.Lookup("cloud-provider-gce-lb-src-cidrs") != nil {
 		// hoist this flag from the global flagset to preserve the commandline until
@@ -233,6 +255,85 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 		logger.Info("CSI is disabled.")
 	}
 
+	enableNPNEnvVar, ok := os.LookupEnv("ENABLE_NPN_CONTROLLER")
+	enableNPN := false
+
+	if ok {
+		var err error
+		enableNPN, err = strconv.ParseBool(enableNPNEnvVar)
+		if err != nil {
+			logger.Error("failed to parse NPN envvar, defaulting to false")
+
+		}
+	}
+
+	if (ok && enableNPN) || enableNPNController {
+		wg.Add(1)
+		logger = logger.With(zap.String("component", "npn-controller"))
+		ctrl.SetLogger(zapr.NewLogger(logger.Desugar()))
+		logger.Info("NPN controller is enabled.")
+		go func() {
+			defer wg.Done()
+			utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+			utilruntime.Must(npnv1beta1.AddToScheme(scheme))
+
+			configPath, ok := os.LookupEnv("CONFIG_YAML_FILENAME")
+			if !ok {
+				configPath = configFilePath
+			}
+			cfg := providercfg.GetConfig(logger, configPath)
+			ociClient := getOCIClient(logger, cfg)
+
+			mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+				Scheme:                  scheme,
+				MetricsBindAddress:      ":8080",
+				Port:                    9443,
+				HealthProbeBindAddress:  ":8081",
+				LeaderElection:          true,
+				LeaderElectionID:        "npn.oci.oraclecloud.com",
+				LeaderElectionNamespace: "kube-system",
+			})
+			if err != nil {
+				npnSetupLog.Error(err, "unable to start manager")
+				os.Exit(1)
+			}
+
+			metricPusher, err := metrics.NewMetricPusher(logger)
+			if err != nil {
+				logger.With("error", err).Error("metrics collection could not be enabled")
+				// disable metrics
+				metricPusher = nil
+			}
+
+			if err = (&controllers.NativePodNetworkReconciler{
+				Client:           mgr.GetClient(),
+				Scheme:           mgr.GetScheme(),
+				MetricPusher:     metricPusher,
+				OCIClient:        ociClient,
+				TimeTakenTracker: make(map[string]time.Time),
+			}).SetupWithManager(mgr); err != nil {
+				npnSetupLog.Error(err, "unable to create controller", "controller", "NativePodNetwork")
+				os.Exit(1)
+			}
+
+			if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+				npnSetupLog.Error(err, "unable to set up health check")
+				os.Exit(1)
+			}
+			if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+				npnSetupLog.Error(err, "unable to set up ready check")
+				os.Exit(1)
+			}
+
+			npnSetupLog.Info("starting manager")
+			if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+				npnSetupLog.Error(err, "problem running manager")
+				// TODO: Handle the case of NPN controller not running more gracefully
+				os.Exit(1)
+			}
+		}()
+	}
+
 	// wait for all the go routines to finish.
 	wg.Wait()
 }
@@ -257,4 +358,13 @@ func cloudInitializer(logger *zap.SugaredLogger, config *cloudControllerManagerC
 	}
 
 	return cloud
+}
+
+func getOCIClient(logger *zap.SugaredLogger, config *providercfg.Config) client.Interface {
+	c, err := client.GetClient(logger, config)
+
+	if err != nil {
+		logger.With(zap.Error(err)).Fatal("client can not be generated.")
+	}
+	return c
 }
