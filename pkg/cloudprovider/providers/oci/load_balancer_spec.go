@@ -138,6 +138,10 @@ const (
 
 	// ServiceAnnotationLoadBalancerType is a service annotation for specifying lb type
 	ServiceAnnotationLoadBalancerType = "oci.oraclecloud.com/load-balancer-type"
+
+	// ServiceAnnotationLoadBalancerNodeFilter is a service annotation to select specific nodes as your backend in the LB
+	// based on label selector.
+	ServiceAnnotationLoadBalancerNodeFilter = "oci.oraclecloud.com/node-label-selector"
 )
 
 // NLB specific annotations
@@ -191,6 +195,10 @@ const (
 	// ServiceAnnotationNetworkLoadBalancerInitialFreeformTagsOverride is a service annotation for specifying
 	// freeform tags on the nlb
 	ServiceAnnotationNetworkLoadBalancerInitialFreeformTagsOverride = "oci-network-load-balancer.oraclecloud.com/initial-freeform-tags-override"
+
+	// ServiceAnnotationNetworkLoadBalancerNodeFilter is a service annotation to select specific nodes as your backend in the NLB
+	// based on label selector.
+	ServiceAnnotationNetworkLoadBalancerNodeFilter = "oci-network-load-balancer.oraclecloud.com/node-label-selector"
 )
 
 // certificateData is a structure containing the data about a K8S secret required
@@ -502,11 +510,17 @@ func getBackends(logger *zap.SugaredLogger, nodes []*v1.Node, nodePort int32) []
 			logger.Warnf("Node %q has an empty Internal IP address.", node.Name)
 			continue
 		}
+		instanceID, err := MapProviderIDToInstanceID(node.Spec.ProviderID)
+		if err != nil {
+			logger.Warnf("Node %q has an empty ProviderID.", node.Name)
+			continue
+		}
+
 		backends = append(backends, client.GenericBackend{
 			IpAddress: nodeAddressString,
 			Port:      common.Int(int(nodePort)),
 			Weight:    common.Int(1),
-			TargetId:  &node.Spec.ProviderID,
+			TargetId:  &instanceID,
 		})
 	}
 	return backends

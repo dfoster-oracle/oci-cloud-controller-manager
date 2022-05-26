@@ -34,10 +34,11 @@ spec:
 | `oci-load-balancer-health-check-timeout`    | The maximum time, in milliseconds, to wait for a reply to a [health check][6]. A [health check][6] is successful only if a reply returns within this timeout period.                                                                               | `3000`                                           |
 | `oci-load-balancer-health-check-interval`   | The interval between [health checks][6] requests, in milliseconds.                                                                                                                                                                                 | `10000`                                          |
 | `oci-load-balancer-connection-idle-timeout` | The maximum idle time, in seconds, allowed between two successive receive or two successive send operations between the client and backend servers.                                                                                                | `300` for TCP listeners, `60` for HTTP listeners |
-| `oci-load-balancer-security-list-management-mode` | Specifies the [security list mode](##security-list-management-modes) (`"All"`, `"Frontend"`,`"None"`) to configure how security lists are managed by the CCM.                            | `"All"`            
-| `oci-load-balancer-backend-protocol` | Specifies protocol on which the listener accepts connection requests. To get a list of valid protocols, use the [`ListProtocols`][5] operation.                          | `"TCP"`            
-| `loadbalancer-policy` | Specifies loadbalancer traffic policy for the loadbalancer. To get a list of valid policies, use the [`ListPolicies`][7] operation.                       | `"ROUND_ROBIN"`            
-| `oci-network-security-groups` | Specifies Network Security Groups' OCIDs to be associated with the loadbalancer. Please refer [here][8] for NSG details.                      | `N/A`            
+| `oci-load-balancer-security-list-management-mode` | Specifies the [security list mode](##security-list-management-modes) (`"All"`, `"Frontend"`,`"None"`) to configure how security lists are managed by the CCM.                            | `"All"`            |
+| `oci-load-balancer-backend-protocol` | Specifies protocol on which the listener accepts connection requests. To get a list of valid protocols, use the [`ListProtocols`][5] operation.                          | `"TCP"`            |
+| `loadbalancer-policy` | Specifies loadbalancer traffic policy for the loadbalancer. To get a list of valid policies, use the [`ListPolicies`][7] operation.                       | `"ROUND_ROBIN"`            |
+| `oci-network-security-groups` | Specifies Network Security Groups' OCIDs to be associated with the loadbalancer. Please refer [here][8] for NSG details.                      | `N/A`            |
+| `node-label-selector` | Specifies which nodes to add as a backend to the OCI Load Balancer and Network Load Balancer.                                                                                                                            | `N/A`|
 
 Note: 
 - Only one annotation `oci-load-balancer-subnet1` should be passed if it is a regional subnet.
@@ -50,11 +51,11 @@ Note:
 | `oci-load-balancer-ssl-ports` | A `,` separated list of port number(s) for which to enable SSL termination. | `""` |
 
 ## Security List Management Modes
-| Mode | Description | 
-| ---- | ----------- | 
-| `"All"` | CCM will manage all required security list rules for load balancer services | 
-| `"Frontend"` | CCM will manage  only security list rules for ingress to the load balancer. Requires that the user has setup a rule that allows inbound traffic to the appropriate ports for kube proxy health port, node port ranges, and health check port ranges.  | 
-| `"None`" | Disables all security list management. Requires that the user has setup a rule that allows inbound traffic to the appropriate ports for kube proxy health port, node port ranges, and health check port ranges. *Additionally, requires the user to mange rules to allow inbound traffic to load balancers.* | 
+| Mode | Description |
+| ---- | ----------- |
+| `"All"` | CCM will manage all required security list rules for load balancer services |
+| `"Frontend"` | CCM will manage  only security list rules for ingress to the load balancer. Requires that the user has setup a rule that allows inbound traffic to the appropriate ports for kube proxy health port, node port ranges, and health check port ranges.  |
+| `"None`" | Disables all security list management. Requires that the user has setup a rule that allows inbound traffic to the appropriate ports for kube proxy health port, node port ranges, and health check port ranges. *Additionally, requires the user to mange rules to allow inbound traffic to load balancers.* |
 
 Note:
 - If an invalid mode is passed in the annotation, then the default (`"All"`) mode is configured.
