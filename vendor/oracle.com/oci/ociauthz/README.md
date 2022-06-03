@@ -9,6 +9,7 @@ Package `ociauthz` provides a collection of utilities to perform authentication 
   - [STSKeySupplier](docs/key-supplier.md#stskeysupplier)
 - [SigningClient](docs/client.md)
 - [AuthorizationClient](docs/authz.md#ociauthzauthorizationclient)
+- [Resource Principals](docs/resourceprincipals.md)
 
 ## Installation (Dyn)
 ### Glide

@@ -402,7 +402,7 @@ func principalToAuthorizationPrincipal(p *Principal) AuthorizationRequestPrincip
 
 // authorizationRequestToOutbound converts the given AuthorizationRequest into outbound format understood
 // by the identity service
-func authorizationRequestToOutbound(r *AuthorizationRequest) *OutboundAuthorizationRequest {
+func authorizationRequestToOutbound(r *AuthorizationRequest, taggingEnabled bool) *OutboundAuthorizationRequest {
 	// legacy attributes and behaviors, to remove
 	// (user, null) -> principal: user, obo: null
 	// (svc, null)  -> principal: svc, obo: null
@@ -421,7 +421,7 @@ func authorizationRequestToOutbound(r *AuthorizationRequest) *OutboundAuthorizat
 		oboPrincipal = principalToAuthorizationPrincipal(r.UserPrincipal)
 	}
 
-	return &OutboundAuthorizationRequest{
+	outboundRequest := &OutboundAuthorizationRequest{
 		RequestID:        r.RequestID,
 		ServiceName:      r.ServiceName,
 		UserPrincipal:    userPrincipal,
@@ -434,14 +434,20 @@ func authorizationRequestToOutbound(r *AuthorizationRequest) *OutboundAuthorizat
 		PhysicalAD:       r.PhysicalAD,
 		ActionKind:       r.ActionKind,
 	}
+	// Add tag slugs and use the tagging authorization URI
+	if taggingEnabled {
+		outboundRequest.TagSlugChanges = r.TagSlugChanges
+		outboundRequest.TagSlugOriginal = r.TagSlugOriginal
+	}
+	return outboundRequest
 }
 
 // associationAuthorizationRequestToOutbound
 // converts AssociationAuthorizationRequest to an OutboundAssociationAuthorizationRequest
-func associationAuthorizationRequestToOutbound(r *AssociationAuthorizationRequest) *OutboundAssociationAuthorizationRequest {
+func associationAuthorizationRequestToOutbound(r *AssociationAuthorizationRequest, taggingEnabled bool) *OutboundAssociationAuthorizationRequest {
 	outbound := &OutboundAssociationAuthorizationRequest{}
 	for _, request := range *r {
-		outboundRequest := authorizationRequestToOutbound(&request)
+		outboundRequest := authorizationRequestToOutbound(&request, taggingEnabled)
 		outbound.Requests = append(outbound.Requests, *outboundRequest)
 	}
 	return outbound
@@ -677,13 +683,7 @@ func (a *authorizationClient) authorize(r *AuthorizationRequest) (*Authorization
 	}
 
 	// Convert AuthorizationRequest into outbound format
-	outboundRequest := authorizationRequestToOutbound(r)
-
-	// Add tag slugs and use the tagging authorization URI
-	if a.taggingEnabled {
-		outboundRequest.TagSlugChanges = r.TagSlugChanges
-		outboundRequest.TagSlugOriginal = r.TagSlugOriginal
-	}
+	outboundRequest := authorizationRequestToOutbound(r, a.taggingEnabled)
 
 	// Marshal the given request into JSON
 	b, err := json.Marshal(*outboundRequest)
@@ -783,7 +783,7 @@ func (a *authorizationClient) MakeAssociationAuthorizationCall(r *AssociationAut
 	}
 
 	// Convert AssociationAuthorizationRequest into outbound format
-	outboundRequest := associationAuthorizationRequestToOutbound(r)
+	outboundRequest := associationAuthorizationRequestToOutbound(r, a.taggingEnabled)
 
 	// Marshal the given request into JSON
 	b, err := json.Marshal(*outboundRequest)
@@ -795,6 +795,7 @@ func (a *authorizationClient) MakeAssociationAuthorizationCall(r *AssociationAut
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add(requestIDHeader, outboundRequest.Requests[0].RequestID)
 
 	_, body, err := a.performRequestToIdentity(req)
 	if err != nil {

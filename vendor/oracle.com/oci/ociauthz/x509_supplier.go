@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2017-2020, Oracle and/or its affiliates. All rights reserved.
 
 package ociauthz
 
@@ -130,10 +130,12 @@ type URLX509CertificateSupplier struct {
 	tenantID, certificateURL, privateKeyURL string
 	privateKeyPassphrase                    []byte
 	intermediateURLs                        []string
+	headers                                 map[string][]string
 }
 
-// NewX509CertificateSupplierFromURLs builds a CertificateSupplier from the URL arguments
-func NewX509CertificateSupplierFromURLs(client httpsigner.Client, tenantID, certificateURL, privateKeyURL string, keypassphrase []byte, intermediateURL ...string) (*URLX509CertificateSupplier, error) {
+// NewX509CertificateSupplierFromHeadersURLs builds a CertificateSupplier from the URL arguments and optional additional
+// HTTP headers to use when fetching certificates.
+func NewX509CertificateSupplierFromHeadersURLs(client httpsigner.Client, tenantID, certificateURL, privateKeyURL string, keypassphrase []byte, headers map[string][]string, intermediateURL ...string) (*URLX509CertificateSupplier, error) {
 
 	if tenantID == "" {
 		return nil, ErrInvalidTenantID
@@ -157,7 +159,14 @@ func NewX509CertificateSupplierFromURLs(client httpsigner.Client, tenantID, cert
 		intermediateURLs:     intermediateURL,
 		privateKeyURL:        privateKeyURL,
 		privateKeyPassphrase: keypassphrase,
+		headers:              headers,
 	}, nil
+}
+
+// NewX509CertificateSupplierFromURLs builds a CertificateSupplier from the URL arguments
+func NewX509CertificateSupplierFromURLs(client httpsigner.Client, tenantID, certificateURL, privateKeyURL string, keypassphrase []byte, intermediateURL ...string) (*URLX509CertificateSupplier, error) {
+	var headers map[string][]string
+	return NewX509CertificateSupplierFromHeadersURLs(client, tenantID, certificateURL, privateKeyURL, keypassphrase, headers, intermediateURL...)
 }
 
 // KeyID returns the keyID generated from the x509 certificate
@@ -196,7 +205,7 @@ func (x URLX509CertificateSupplier) PrivateKey() *rsa.PrivateKey {
 
 // PrivateKeyOrError will always return the private key associated with the x509 certificate
 func (x URLX509CertificateSupplier) PrivateKeyOrError() (*rsa.PrivateKey, error) {
-	content, err := getURLContentOrError(x.privateKeyURL, x.client)
+	content, err := getURLContentOrError(x.privateKeyURL, x.headers, x.client)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +224,7 @@ func (x URLX509CertificateSupplier) Certificate() *x509.Certificate {
 
 // CertificateOrError returns X509 certificates
 func (x URLX509CertificateSupplier) CertificateOrError() (*x509.Certificate, error) {
-	content, err := getURLContentOrError(x.certificateURL, x.client)
+	content, err := getURLContentOrError(x.certificateURL, x.headers, x.client)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +250,7 @@ func (x URLX509CertificateSupplier) Intermediate() []*x509.Certificate {
 func (x URLX509CertificateSupplier) IntermediateOrError() ([]*x509.Certificate, error) {
 	certificates := make([]*x509.Certificate, len(x.intermediateURLs))
 	for i, u := range x.intermediateURLs {
-		content, err := getURLContentOrError(u, x.client)
+		content, err := getURLContentOrError(u, x.headers, x.client)
 		if err != nil {
 			return nil, err
 		}
@@ -256,11 +265,12 @@ func (x URLX509CertificateSupplier) IntermediateOrError() ([]*x509.Certificate, 
 	return certificates, nil
 }
 
-func getURLContentOrError(url string, client httpsigner.Client) (content []byte, err error) {
+func getURLContentOrError(url string, headers map[string][]string, client httpsigner.Client) (content []byte, err error) {
 	request, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return
 	}
+	request.Header = headers
 
 	response, err := client.Do(request)
 	if err != nil {

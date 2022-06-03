@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2017-2020, Oracle and/or its affiliates. All rights reserved.
 
 package ociauthz
 
@@ -342,6 +342,16 @@ func formatSTSToken(token string) string {
 }
 
 const (
+	//V2 URL to validate that v2 exists
+	metadataV2EnabledURL = `http://169.254.169.254/opc/v2/instance/id`
+	//V2 URL for leaf certificate for instance principals
+	leafCertificateV2URL = `http://169.254.169.254/opc/v2/identity/cert.pem`
+	//V2 URL for key for instance principals
+	leafCertificateKeyV2URL = `http://169.254.169.254/opc/v2/identity/key.pem`
+	//V2 URL for intermediate certificate for instance principals
+	intermediateCertificateV2URL = `http://169.254.169.254/opc/v2/identity/intermediate.pem`
+	// oracle header required for instance metadata v2 calls
+	oracleAuthzHeader = "Bearer Oracle"
 	//URL for leaf certificate for instance principals
 	leafCertificateURL = `http://169.254.169.254/opc/v1/identity/cert.pem`
 	//URL for key for instance principals
@@ -352,10 +362,34 @@ const (
 	servicePrincipalSTSPurpose = "SERVICE_PRINCIPAL"
 )
 
+// newX509CertificateSupplierFromMetadata returns a certificate supplier based off of instance metadata.
+// It tries to query instance metadata v2, but if this doesn't exist, then it will query instance metadata v1
+func newX509CertificateSupplierFromMetadata(certificateSupplierClient httpsigner.Client, tenancyID string) (*URLX509CertificateSupplier, error) {
+	req, err := http.NewRequest(http.MethodGet, metadataV2EnabledURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", oracleAuthzHeader)
+
+	v2Resp, err := certificateSupplierClient.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	useV2 := v2Resp.StatusCode == http.StatusOK
+	if useV2 {
+		return NewX509CertificateSupplierFromHeadersURLs(
+			certificateSupplierClient, tenancyID, leafCertificateV2URL, leafCertificateKeyV2URL, nil, req.Header, intermediateCertificateV2URL)
+	}
+	return NewX509CertificateSupplierFromURLs(
+		certificateSupplierClient, tenancyID, leafCertificateURL, leafCertificateKeyURL, nil, intermediateCertificateURL)
+
+}
+
 // NewInstanceKeySupplier returns a key supplier that reads certificates from the instance
 func NewInstanceKeySupplier(tenancyID, endpoint string, certificateSupplierClient httpsigner.Client) (*STSKeySupplier, error) {
-	certificateSupplier, err := NewX509CertificateSupplierFromURLs(
-		certificateSupplierClient, tenancyID, leafCertificateURL, leafCertificateKeyURL, nil, intermediateCertificateURL)
+	certificateSupplier, err := newX509CertificateSupplierFromMetadata(certificateSupplierClient, tenancyID)
 	if err != nil {
 		return nil, err
 	}
@@ -376,6 +410,7 @@ func NewInstanceKeySupplier(tenancyID, endpoint string, certificateSupplierClien
 	instanceKeySupplier.shouldVerifyToken = func(token string) bool { return false }
 
 	return instanceKeySupplier, nil
+
 }
 
 // NewServiceInstanceKeySupplier returns a key supplier that reads certificates from the instance

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2018-2020, Oracle and/or its affiliates. All rights reserved.
 
 package ociauthz
 
@@ -74,6 +74,18 @@ var (
 	ErrNoTargetServiceNames    = errors.New("targetServiceNames must be non-empty")
 	ErrInvalidRequestType      = errors.New("requestType must be 'OBO' or 'DELEGATION'")
 	ErrInvalidDelegateGroups   = errors.New("delegateGroups must not be empty")
+
+	// Claims for resource principals
+	ErrInvalidClaimIssuer        = errors.New("resource Principal token claim Issuer must be a non-empty value ")
+	ErrInvalidClaimTokenType     = errors.New("resource Principal token claim TokenType must be a non-empty value")
+	ErrInvalidClaimResourceType  = errors.New("resource Principal token claim ResourceType must be a non-empty value")
+	ErrInvalidClaimTenantID      = errors.New("resource Principal token claim TenantID must be a non-empty value")
+	ErrInvalidClaimCompartmentID = errors.New("resource Principal token claim CompartmentID must be a non-empty value")
+	ErrInvalidClaimResourceID    = errors.New("resource Principal token claim ResourceID must be a non-empty value")
+	ErrInvalidClaimResourceTag   = errors.New("resource Principal token claim ResourceTag must be a non-empty value")
+	ErrInvalidClaimPublicKey     = errors.New("resource Principal token claim PublicKey must be a non-empty value")
+
+	ErrUnableToGenerateUniqueID = errors.New("unable to generate a unique ID string")
 )
 
 // ServiceResponseError is thrown if the response from an external service returns a non-2xx status code.

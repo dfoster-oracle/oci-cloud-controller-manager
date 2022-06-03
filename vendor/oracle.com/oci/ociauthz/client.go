@@ -1,8 +1,9 @@
-// Copyright (c) 2017-2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2017-2020, Oracle and/or its affiliates. All rights reserved.
 
 package ociauthz
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -24,6 +25,8 @@ const (
 	HdrContentType    = "Content-Type"
 	HdrXDate          = "x-date"
 )
+
+const defaultBufferSize = 4096
 
 // Default list of headers in the request the signing client will sign.
 var (
@@ -130,12 +133,18 @@ func GetRequestBodySha256(request *http.Request) (body string, err error) {
 		return
 	}
 
-	rawBody, err := ioutil.ReadAll(reader)
+	initialBufferSize := request.ContentLength
+	if initialBufferSize < 0 {
+		initialBufferSize = defaultBufferSize
+	}
+	buffer := bytes.NewBuffer(make([]byte, 0, initialBufferSize))
+
+	_, err = buffer.ReadFrom(reader)
 	if err != nil {
 		return
 	}
 
-	hash := sha256.Sum256(rawBody)
+	hash := sha256.Sum256(buffer.Bytes())
 	body = base64.StdEncoding.EncodeToString(hash[:])
 	return
 }

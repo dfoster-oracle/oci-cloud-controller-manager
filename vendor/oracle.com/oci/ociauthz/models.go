@@ -25,15 +25,21 @@ const subjectUndetected = "<subject-not-specified>"
 const hdrAuthorization = "Authorization"
 
 // These constants define types of principal
+// https://bitbucket.oci.oraclecorp.com/projects/IDENT/repos/authorization-sdk/browse/authentication-common/src/main/java/com/oracle/pic/identity/authentication/PrincipalType.java
 const (
 	PrincipalTypeUser     = "user"
 	PrincipalTypeService  = "service"
 	PrincipalTypeInstance = "instance"
+	PrincipalTypeResource = "resource"
 )
 
 // These constants define sub types of principals
+// https://bitbucket.oci.oraclecorp.com/projects/IDENT/repos/authorization-sdk/browse/authentication-common/src/main/java/com/oracle/pic/identity/authentication/PrincipalSubType.java
 const (
-	PrincipalSubTypeFederated = "fed"
+	PrincipalSubTypeNative          = "natv"
+	PrincipalSubTypeFederated       = "fed"
+	PrincipalSubTypeNativeFederated = "natf"
+	PrincipalSubTypeNone            = "none"
 )
 
 // InvalidClaimType represents a string to use when the type of the claim value is not supported
