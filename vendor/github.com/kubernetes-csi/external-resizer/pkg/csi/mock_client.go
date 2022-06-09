@@ -5,31 +5,36 @@ import (
 	"fmt"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/kubernetes-csi/csi-lib-utils/connection"
 )
 
 func NewMockClient(
 	name string,
 	supportsNodeResize bool,
 	supportsControllerResize bool,
-	supportsPluginControllerService bool) *MockClient {
+	supportsPluginControllerService bool,
+	supportsControllerSingleNodeMultiWriter bool) *MockClient {
 	return &MockClient{
-		name:                            name,
-		supportsNodeResize:              supportsNodeResize,
-		supportsControllerResize:        supportsControllerResize,
-		expandCalled:                    0,
-		supportsPluginControllerService: supportsPluginControllerService,
+		name:                                    name,
+		supportsNodeResize:                      supportsNodeResize,
+		supportsControllerResize:                supportsControllerResize,
+		expandCalled:                            0,
+		supportsPluginControllerService:         supportsPluginControllerService,
+		supportsControllerSingleNodeMultiWriter: supportsControllerSingleNodeMultiWriter,
 	}
 }
 
 type MockClient struct {
-	name                            string
-	supportsNodeResize              bool
-	supportsControllerResize        bool
-	supportsPluginControllerService bool
-	expandCalled                    int
-	expansionFailed                 bool
-	usedSecrets                     map[string]string
-	usedCapability                  *csi.VolumeCapability
+	name                                    string
+	supportsNodeResize                      bool
+	supportsControllerResize                bool
+	supportsPluginControllerService         bool
+	supportsControllerSingleNodeMultiWriter bool
+	expandCalled                            int
+	expansionFailed                         bool
+	checkMigratedLabel                      bool
+	usedSecrets                             map[string]string
+	usedCapability                          *csi.VolumeCapability
 }
 
 func (c *MockClient) GetDriverName(context.Context) (string, error) {
@@ -48,8 +53,16 @@ func (c *MockClient) SupportsNodeResize(context.Context) (bool, error) {
 	return c.supportsNodeResize, nil
 }
 
+func (c *MockClient) SupportsControllerSingleNodeMultiWriter(context.Context) (bool, error) {
+	return c.supportsControllerSingleNodeMultiWriter, nil
+}
+
 func (c *MockClient) SetExpansionFailed() {
 	c.expansionFailed = true
+}
+
+func (c *MockClient) SetCheckMigratedLabel() {
+	c.checkMigratedLabel = true
 }
 
 func (c *MockClient) Expand(
@@ -62,6 +75,15 @@ func (c *MockClient) Expand(
 	if c.expansionFailed {
 		c.expandCalled++
 		return requestBytes, c.supportsNodeResize, fmt.Errorf("expansion failed")
+	}
+	if c.checkMigratedLabel {
+		additionalInfo := ctx.Value(connection.AdditionalInfoKey)
+		additionalInfoVal := additionalInfo.(connection.AdditionalInfo)
+		migrated := additionalInfoVal.Migrated
+		if migrated != "true" {
+			err := fmt.Errorf("Expected value of migrated label: true, Actual value: %s", migrated)
+			return requestBytes, c.supportsNodeResize, err
+		}
 	}
 	c.expandCalled++
 	c.usedSecrets = secrets
@@ -80,4 +102,8 @@ func (c *MockClient) GetCapability() *csi.VolumeCapability {
 // GetSecrets returns secrets used for volume expansion
 func (c *MockClient) GetSecrets() map[string]string {
 	return c.usedSecrets
+}
+
+func (c *MockClient) CloseConnection() {
+
 }

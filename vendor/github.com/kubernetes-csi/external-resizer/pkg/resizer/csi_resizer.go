@@ -20,10 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	csilib "github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-csi/csi-lib-utils/metrics"
+	"github.com/kubernetes-csi/csi-lib-utils/accessmodes"
+	"github.com/kubernetes-csi/csi-lib-utils/connection"
 	"github.com/kubernetes-csi/external-resizer/pkg/csi"
 	"github.com/kubernetes-csi/external-resizer/pkg/util"
 	v1 "k8s.io/api/core/v1"
@@ -32,7 +34,7 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	csitrans "k8s.io/csi-translation-lib"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 var (
@@ -40,43 +42,12 @@ var (
 	resizeNotSupportErr            = errors.New("CSI driver neither supports controller resize nor node resize")
 )
 
-// NewResizer creates a new resizer responsible for resizing CSI volumes.
-func NewResizer(
-	address string,
-	timeout time.Duration,
-	k8sClient kubernetes.Interface,
-	informerFactory informers.SharedInformerFactory,
-	metricsAddress, metricsPath string) (Resizer, error) {
-	metricsManager := metrics.NewCSIMetricsManager("" /* driverName */)
-	csiClient, err := csi.New(address, timeout, metricsManager)
-	if err != nil {
-		return nil, err
-	}
-	return NewResizerFromClient(
-		csiClient,
-		timeout,
-		k8sClient,
-		informerFactory,
-		metricsManager,
-		metricsAddress,
-		metricsPath)
-}
-
 func NewResizerFromClient(
 	csiClient csi.Client,
 	timeout time.Duration,
 	k8sClient kubernetes.Interface,
 	informerFactory informers.SharedInformerFactory,
-	metricsManager metrics.CSIMetricsManager,
-	metricsAddress, metricsPath string) (Resizer, error) {
-	driverName, err := getDriverName(csiClient, timeout)
-	if err != nil {
-		return nil, fmt.Errorf("get driver name failed: %v", err)
-	}
-
-	klog.V(2).Infof("CSI driver name: %q", driverName)
-	metricsManager.SetDriverName(driverName)
-	metricsManager.StartMetricsEndpoint(metricsAddress, metricsPath)
+	driverName string) (Resizer, error) {
 
 	supportControllerService, err := supportsPluginControllerService(csiClient, timeout)
 	if err != nil {
@@ -102,6 +73,11 @@ func NewResizerFromClient(
 			return newTrivialResizer(driverName), nil
 		}
 		return nil, resizeNotSupportErr
+	}
+
+	_, err = supportsControllerSingleNodeMultiWriter(csiClient, timeout)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if plugin supports the SINGLE_NODE_MULTI_WRITER capability: %v", err)
 	}
 
 	return &csiResizer{
@@ -149,6 +125,10 @@ func (r *csiResizer) CanSupport(pv *v1.PersistentVolume, pvc *v1.PersistentVolum
 	return true
 }
 
+func (r *csiResizer) DriverSupportsControlPlaneExpansion() bool {
+	return true
+}
+
 // Resize resizes the persistence volume given request size
 // It supports both CSI volume and migrated in-tree volume
 func (r *csiResizer) Resize(pv *v1.PersistentVolume, requestSize resource.Quantity) (resource.Quantity, bool, error) {
@@ -157,6 +137,7 @@ func (r *csiResizer) Resize(pv *v1.PersistentVolume, requestSize resource.Quanti
 	var volumeID string
 	var source *v1.CSIPersistentVolumeSource
 	var pvSpec v1.PersistentVolumeSpec
+	var migrated bool
 	if pv.Spec.CSI != nil {
 		// handle CSI volume
 		source = pv.Spec.CSI
@@ -170,6 +151,7 @@ func (r *csiResizer) Resize(pv *v1.PersistentVolume, requestSize resource.Quanti
 			if err != nil {
 				return oldSize, false, fmt.Errorf("failed to translate persistent volume: %v", err)
 			}
+			migrated = true
 			source = csiPV.Spec.CSI
 			pvSpec = csiPV.Spec
 			volumeID = source.VolumeHandle
@@ -193,14 +175,16 @@ func (r *csiResizer) Resize(pv *v1.PersistentVolume, requestSize resource.Quanti
 		}
 	}
 
-	capability, err := GetVolumeCapabilities(pvSpec)
+	capability, err := r.getVolumeCapabilities(pvSpec)
 	if err != nil {
 		return oldSize, false, fmt.Errorf("failed to get capabilities of volume %s with %v", pv.Name, err)
 	}
 
 	ctx, cancel := timeoutCtx(r.timeout)
+	resizeCtx := context.WithValue(ctx, connection.AdditionalInfoKey, connection.AdditionalInfo{Migrated: strconv.FormatBool(migrated)})
+
 	defer cancel()
-	newSizeBytes, nodeResizeRequired, err := r.client.Expand(ctx, volumeID, requestSize.Value(), secrets, capability)
+	newSizeBytes, nodeResizeRequired, err := r.client.Expand(resizeCtx, volumeID, requestSize.Value(), secrets, capability)
 	if err != nil {
 		return oldSize, nodeResizeRequired, err
 	}
@@ -208,13 +192,17 @@ func (r *csiResizer) Resize(pv *v1.PersistentVolume, requestSize resource.Quanti
 	return *resource.NewQuantity(newSizeBytes, resource.BinarySI), nodeResizeRequired, err
 }
 
-// GetVolumeCapabilities returns volumecapability from PV spec
-func GetVolumeCapabilities(pvSpec v1.PersistentVolumeSpec) (*csilib.VolumeCapability, error) {
-	m := map[v1.PersistentVolumeAccessMode]bool{}
-	for _, mode := range pvSpec.AccessModes {
-		m[mode] = true
+func (r *csiResizer) getVolumeCapabilities(pvSpec v1.PersistentVolumeSpec) (*csilib.VolumeCapability, error) {
+	supported, err := supportsControllerSingleNodeMultiWriter(r.client, r.timeout)
+	if err != nil {
+		return nil, err
 	}
+	return GetVolumeCapabilities(pvSpec, supported)
+}
 
+// GetVolumeCapabilities returns a VolumeCapability from the PV spec. Which access mode will be set depends if the driver supports the
+// SINGLE_NODE_MULTI_WRITER capability.
+func GetVolumeCapabilities(pvSpec v1.PersistentVolumeSpec, singleNodeMultiWriterCapable bool) (*csilib.VolumeCapability, error) {
 	if pvSpec.CSI == nil {
 		return nil, errors.New("CSI volume source was nil")
 	}
@@ -242,34 +230,13 @@ func GetVolumeCapabilities(pvSpec v1.PersistentVolumeSpec) (*csilib.VolumeCapabi
 		}
 	}
 
-	// Translate array of modes into single VolumeCapability
-	switch {
-	case m[v1.ReadWriteMany]:
-		// ReadWriteMany trumps everything, regardless what other modes are set
-		cap.AccessMode.Mode = csilib.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER
-
-	case m[v1.ReadOnlyMany] && m[v1.ReadWriteOnce]:
-		// This is no way how to translate this to CSI...
-		return nil, fmt.Errorf("CSI does not support ReadOnlyMany and ReadWriteOnce on the same PersistentVolume")
-
-	case m[v1.ReadOnlyMany]:
-		// There is only ReadOnlyMany set
-		cap.AccessMode.Mode = csilib.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY
-
-	case m[v1.ReadWriteOnce]:
-		// There is only ReadWriteOnce set
-		cap.AccessMode.Mode = csilib.VolumeCapability_AccessMode_SINGLE_NODE_WRITER
-
-	default:
-		return nil, fmt.Errorf("unsupported AccessMode combination: %+v", pvSpec.AccessModes)
+	am, err := accessmodes.ToCSIAccessMode(pvSpec.AccessModes, singleNodeMultiWriterCapable)
+	if err != nil {
+		return nil, err
 	}
-	return cap, nil
-}
 
-func getDriverName(client csi.Client, timeout time.Duration) (string, error) {
-	ctx, cancel := timeoutCtx(timeout)
-	defer cancel()
-	return client.GetDriverName(ctx)
+	cap.AccessMode.Mode = am
+	return cap, nil
 }
 
 func supportsPluginControllerService(client csi.Client, timeout time.Duration) (bool, error) {
@@ -288,6 +255,12 @@ func supportsNodeResize(client csi.Client, timeout time.Duration) (bool, error) 
 	ctx, cancel := timeoutCtx(timeout)
 	defer cancel()
 	return client.SupportsNodeResize(ctx)
+}
+
+func supportsControllerSingleNodeMultiWriter(client csi.Client, timeout time.Duration) (bool, error) {
+	ctx, cancel := timeoutCtx(timeout)
+	defer cancel()
+	return client.SupportsControllerSingleNodeMultiWriter(ctx)
 }
 
 func timeoutCtx(timeout time.Duration) (context.Context, context.CancelFunc) {
@@ -309,4 +282,12 @@ func getCredentials(k8sClient kubernetes.Interface, ref *v1.SecretReference) (ma
 		credentials[key] = string(value)
 	}
 	return credentials, nil
+}
+
+func uniqueAccessModes(pvSpec v1.PersistentVolumeSpec) map[v1.PersistentVolumeAccessMode]bool {
+	m := map[v1.PersistentVolumeAccessMode]bool{}
+	for _, mode := range pvSpec.AccessModes {
+		m[mode] = true
+	}
+	return m
 }

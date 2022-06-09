@@ -18,24 +18,24 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/kubernetes-csi/csi-lib-utils/leaderelection"
 	"github.com/kubernetes-csi/csi-lib-utils/metrics"
-	"github.com/kubernetes-csi/external-resizer/pkg/csi"
 	"github.com/kubernetes-csi/external-resizer/pkg/controller"
+	"github.com/kubernetes-csi/external-resizer/pkg/csi"
 	"github.com/kubernetes-csi/external-resizer/pkg/resizer"
 	"github.com/kubernetes-csi/external-resizer/pkg/util"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers"
-	"k8s.io/klog"
-
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	"k8s.io/klog/v2"
 )
 
 var (
@@ -53,7 +53,14 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 		os.Exit(0)
 	}
 	klog.Infof("Version : %s", version)
-
+	if csioptions.MetricsAddress != "" && csioptions.HttpEndpoint != "" {
+		klog.Error("only one of `--metrics-address` and `--http-endpoint` can be set.")
+		os.Exit(1)
+	}
+	addr := csioptions.MetricsAddress
+	if addr == "" {
+		addr = csioptions.HttpEndpoint
+	}
 	var config *rest.Config
 	var err error
 	if csioptions.Master != "" || csioptions.Kubeconfig != "" {
@@ -75,6 +82,8 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 
 	informerFactory := informers.NewSharedInformerFactory(kubeClient, csioptions.Resync)
 
+	mux := http.NewServeMux()
+
 	metricsManager := metrics.NewCSIMetricsManager("" /* driverName */)
 
 	csiClient, err := csi.New(csioptions.CsiAddress, csioptions.Timeout, metricsManager)
@@ -93,11 +102,22 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 		csioptions.Timeout,
 		kubeClient,
 		informerFactory,
-		metricsManager,
-		csioptions.MetricsAddress,
-		csioptions.MetricsPath)
+		driverName)
 	if err != nil {
 		klog.Fatal(err.Error())
+	}
+
+	// Start HTTP server for metrics + leader election healthz
+	if addr != "" {
+		metricsManager.RegisterToServer(mux, csioptions.MetricsPath)
+		metricsManager.SetDriverName(driverName)
+		go func() {
+			klog.Infof("ServeMux listening at %q", addr)
+			err := http.ListenAndServe(addr, mux)
+			if err != nil {
+				klog.Fatalf("Failed to start HTTP server at specified address (%q) and metrics path (%q): %s", addr, csioptions.MetricsPath, err)
+			}
+		}()
 	}
 
 	resizerName := csiResizer.Name()

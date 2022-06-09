@@ -17,6 +17,7 @@ package csiattacher
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -25,7 +26,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-lib-utils/connection"
@@ -112,8 +113,22 @@ func StartCSIAttacher(csioptions csioptions.CSIOptions) {
 	}
 	klog.V(2).Infof("CSI driver name: %q", csiAttacher)
 
-	metricsManager.SetDriverName(csiAttacher)
-	metricsManager.StartMetricsEndpoint(csioptions.MetricsAddress, csioptions.MetricsPath)
+	mux := http.NewServeMux()
+	addr := csioptions.MetricsAddress
+	// Start HTTP server for metrics + leader election healthz
+	if addr != "" {
+		metricsManager.RegisterToServer(mux, csioptions.MetricsPath)
+		metricsManager.SetDriverName(csiAttacher)
+		go func() {
+			klog.Infof("ServeMux listening at %q", addr)
+			err := http.ListenAndServe(addr, mux)
+			if err != nil {
+				klog.Fatalf("Failed to start HTTP server at specified address (%q) and metrics path (%q): %s", addr, csioptions.MetricsPath, err)
+			}
+		}()
+	}
+	//metricsManager.SetDriverName(csiAttacher)
+	//metricsManager.StartMetricsEndpoint(csioptions.MetricsAddress, csioptions.MetricsPath)
 
 	supportsService, err := supportsPluginControllerService(ctx, csiConn)
 	if err != nil {
@@ -136,7 +151,7 @@ func StartCSIAttacher(csioptions csioptions.CSIOptions) {
 			csiNodeLister := factory.Storage().V1().CSINodes().Lister()
 			volAttacher := attacher.NewAttacher(csiConn)
 			CSIVolumeLister := attacher.NewVolumeLister(csiConn)
-			handler = controller.NewCSIHandler(clientset, csiAttacher, volAttacher, CSIVolumeLister, pvLister, csiNodeLister, vaLister, &csioptions.Timeout, supportsReadOnly, csitranslationlib.New())
+			handler = controller.NewCSIHandler(clientset, csiAttacher, volAttacher, CSIVolumeLister, pvLister, csiNodeLister, vaLister, &csioptions.Timeout, supportsReadOnly, false, csitranslationlib.New(), csioptions.DefaultFSType)
 			klog.V(2).Infof("CSI driver supports ControllerPublishUnpublish, using real CSI handler")
 		} else {
 			handler = controller.NewTrivialHandler(clientset)

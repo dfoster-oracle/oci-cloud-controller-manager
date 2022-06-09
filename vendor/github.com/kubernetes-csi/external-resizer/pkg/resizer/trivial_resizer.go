@@ -21,7 +21,7 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	csitrans "k8s.io/csi-translation-lib"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // newTrivialResizer returns a trivial resizer which will mark all pvs' resize process as finished.
@@ -54,6 +54,10 @@ func (r *trivialResizer) CanSupport(pv *v1.PersistentVolume, pvc *v1.PersistentV
 		return false
 	}
 	return true
+}
+
+func (r *trivialResizer) DriverSupportsControlPlaneExpansion() bool {
+	return false
 }
 
 func (r *trivialResizer) Resize(pv *v1.PersistentVolume, requestSize resource.Quantity) (newSize resource.Quantity, fsResizeRequired bool, err error) {

@@ -17,7 +17,16 @@ package csiprovisioner
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	storagev1 "k8s.io/api/storage/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/component-base/metrics/legacyregistry"
 	"math/rand"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -30,7 +39,8 @@ import (
 	"github.com/kubernetes-csi/external-provisioner/pkg/capacity/topology"
 	ctrl "github.com/kubernetes-csi/external-provisioner/pkg/controller"
 	"github.com/kubernetes-csi/external-provisioner/pkg/owner"
-	snapclientset "github.com/kubernetes-csi/external-snapshotter/client/v2/clientset/versioned"
+	snapclientset "github.com/kubernetes-csi/external-snapshotter/client/v6/clientset/versioned"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
 	flag "github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -44,9 +54,7 @@ import (
 	csitranslationlib "k8s.io/csi-translation-lib"
 	"k8s.io/klog"
 
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
-
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v8/controller"
 )
 
 var (
@@ -59,16 +67,23 @@ var (
 	kubeAPIQPS          = flag.Float32("kube-api-qps", 5, "QPS to use while communicating with the kubernetes apiserver. Defaults to 5.0.")
 	kubeAPIBurst        = flag.Int("kube-api-burst", 10, "Burst to use while communicating with the kubernetes apiserver. Defaults to 10.")
 
-	capacityMode = func() *capacity.DeploymentMode {
+	kubeAPICapacityQPS   = flag.Float32("kube-api-capacity-qps", 1, "QPS to use for storage capacity updates while communicating with the kubernetes apiserver. Defaults to 1.0.")
+	kubeAPICapacityBurst = flag.Int("kube-api-capacity-burst", 5, "Burst to use for storage capacity updates while communicating with the kubernetes apiserver. Defaults to 5.")
+	enableNodeDeployment = flag.Bool("node-deployment", false, "Enables deploying the external-provisioner together with a CSI driver on nodes to manage node-local volumes.")
+	enableCapacity       = flag.Bool("enable-capacity", false, "This enables producing CSIStorageCapacity objects with capacity information from the driver's GetCapacity call.")
+	/*capacityMode   = func() *capacity.DeploymentMode {
 		mode := capacity.DeploymentModeUnset
 		flag.Var(&mode, "capacity-controller-deployment-mode", "Setting this enables producing CSIStorageCapacity objects with capacity information from the driver's GetCapacity call. 'central' is currently the only supported mode. Use it when there is just one active provisioner in the cluster.")
 		return &mode
-	}()
-	capacityImmediateBinding = flag.Bool("capacity-for-immediate-binding", false, "Enables producing capacity information for storage classes with immediate binding. Not needed for the Kubernetes scheduler, maybe useful for other consumers or for debugging.")
-	capacityPollInterval     = flag.Duration("capacity-poll-interval", time.Minute, "How long the external-provisioner waits before checking for storage capacity changes.")
-	capacityOwnerrefLevel    = flag.Int("capacity-ownerref-level", 1, "The level indicates the number of objects that need to be traversed starting from the pod identified by the POD_NAME and POD_NAMESPACE environment variables to reach the owning object for CSIStorageCapacity objects: 0 for the pod itself, 1 for a StatefulSet, 2 for a Deployment, etc.")
+	}()*/
+	capacityImmediateBinding    = flag.Bool("capacity-for-immediate-binding", false, "Enables producing capacity information for storage classes with immediate binding. Not needed for the Kubernetes scheduler, maybe useful for other consumers or for debugging.")
+	capacityPollInterval        = flag.Duration("capacity-poll-interval", time.Minute, "How long the external-provisioner waits before checking for storage capacity changes.")
+	capacityOwnerrefLevel       = flag.Int("capacity-ownerref-level", 1, "The level indicates the number of objects that need to be traversed starting from the pod identified by the POD_NAME and POD_NAMESPACE environment variables to reach the owning object for CSIStorageCapacity objects: 0 for the pod itself, 1 for a StatefulSet, 2 for a Deployment, etc.")
+	preventVolumeModeConversion = flag.Bool("prevent-volume-mode-conversion", false, "Prevents an unauthorised user from modifying the volume mode when creating a PVC from an existing VolumeSnapshot.")
+	nodeDeployment              *ctrl.NodeDeployment
 )
 
+//Todo :- Remove the following
 type leaderElection interface {
 	Run() error
 	WithNamespace(namespace string)
@@ -83,11 +98,27 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		klog.Fatal(err)
 	}
 
+	ctx := context.Background()
+
+	node := os.Getenv("NODE_NAME")
+	if *enableNodeDeployment && node == "" {
+		klog.Fatal("The NODE_NAME environment variable must be set when using --enable-node-deployment.")
+	}
+
 	if csioptions.ShowVersion {
 		fmt.Println(os.Args[0], version)
 		os.Exit(0)
 	}
 	klog.Infof("Version: %s", version)
+
+	if csioptions.MetricsAddress != "" && csioptions.HttpEndpoint != "" {
+		klog.Error("only one of `--metrics-address` and `--http-endpoint` can be set.")
+		os.Exit(1)
+	}
+	addr := csioptions.MetricsAddress
+	if addr == "" {
+		addr = csioptions.HttpEndpoint
+	}
 
 	// get the KUBECONFIG from env if specified (useful for local/debug cluster)
 	kubeconfigEnv := os.Getenv("KUBECONFIG")
@@ -124,7 +155,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 
 	// The controller needs to know what the server version is because out-of-tree
 	// provisioners aren't officially supported until 1.5
-	serverVersion, err := clientset.Discovery().ServerVersion()
+	//serverVersion, err := clientset.Discovery().ServerVersion()
 	if err != nil {
 		klog.Fatalf("Error getting server version: %v", err)
 	}
@@ -149,9 +180,23 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		klog.Fatalf("Error getting CSI driver name: %s", err)
 	}
 	klog.V(2).Infof("Detected CSI driver %s", provisionerName)
-
 	metricsManager.SetDriverName(provisionerName)
-	metricsManager.StartMetricsEndpoint(csioptions.MetricsAddress, csioptions.MetricsPath)
+
+	//Todo :- translator IsMigratedCSIDriverByName
+	//metricsManager.StartMetricsEndpoint(csioptions.MetricsAddress, csioptions.MetricsPath)
+	// Prepare http endpoint for metrics + leader election healthz
+	mux := http.NewServeMux()
+	gatherers := prometheus.Gatherers{
+		// For workqueue and leader election metrics, set up via the anonymous imports of:
+		// https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/component-base/metrics/prometheus/workqueue/metrics.go
+		// https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/component-base/metrics/prometheus/clientgo/leaderelection/metrics.go
+		//
+		// Also to happens to include Go runtime and process metrics:
+		// https://github.com/kubernetes/kubernetes/blob/9780d88cb6a4b5b067256ecb4abf56892093ee87/staging/src/k8s.io/component-base/metrics/legacyregistry/registry.go#L46-L49
+		legacyregistry.DefaultGatherer,
+		// For CSI operations.
+		metricsManager.GetRegistry(),
+	}
 
 	pluginCapabilities, controllerCapabilities, err := ctrl.GetDriverCapabilities(grpcClient, csioptions.OperationTimeout)
 	if err != nil {
@@ -161,7 +206,9 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 	// Generate a unique ID for this provisioner
 	timeStamp := time.Now().UnixNano() / int64(time.Millisecond)
 	identity := strconv.FormatInt(timeStamp, 10) + "-" + strconv.Itoa(rand.Intn(10000)) + "-" + provisionerName
-
+	if *enableNodeDeployment {
+		identity = identity + "-" + node
+	}
 	factory := informers.NewSharedInformerFactory(clientset, ctrl.ResyncPeriodOfCsiNodeInformer)
 	var factoryForNamespace informers.SharedInformerFactory // usually nil, only used for CSIStorageCapacity
 
@@ -171,7 +218,6 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 	scLister := factory.Storage().V1().StorageClasses().Lister()
 	claimLister := factory.Core().V1().PersistentVolumeClaims().Lister()
 
-	var csiNodeLister storagelistersv1.CSINodeLister
 	var vaLister storagelistersv1.VolumeAttachmentLister
 	if controllerCapabilities[csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME] {
 		klog.Info("CSI driver supports PUBLISH_UNPUBLISH_VOLUME, watching VolumeAttachments")
@@ -179,6 +225,25 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 	} else {
 		klog.Info("CSI driver does not support PUBLISH_UNPUBLISH_VOLUME, not watching VolumeAttachments")
 	}
+
+	//Todo Node Deployment
+	/*var nodeDeployment *ctrl.NodeDeployment
+	/*if *enableNodeDeployment {
+		nodeDeployment = &ctrl.NodeDeployment{
+			NodeName:         node,
+			ClaimInformer:    factory.Core().V1().PersistentVolumeClaims(),
+			ImmediateBinding: *nodeDeploymentImmediateBinding,
+			BaseDelay:        *nodeDeploymentBaseDelay,
+			MaxDelay:         *nodeDeploymentMaxDelay,
+		}
+		nodeInfo, err := ctrl.GetNodeInfo(grpcClient, *operationTimeout)
+		if err != nil {
+			klog.Fatalf("Failed to get node info from CSI driver: %v", err)
+		}
+		nodeDeployment.NodeInfo = *nodeInfo
+	}*/
+
+	var csiNodeLister storagelistersv1.CSINodeLister
 	var nodeLister v1.NodeLister
 	if ctrl.SupportsTopology(pluginCapabilities) {
 		csiNodeLister = factory.Storage().V1().CSINodes().Lister()
@@ -216,6 +281,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
+
 	csiProvisioner := ctrl.NewCSIProvisioner(
 		clientset,
 		csioptions.OperationTimeout,
@@ -229,6 +295,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		controllerCapabilities,
 		supportsMigrationFromInTreePluginName,
 		csioptions.StrictTopology,
+		csioptions.ImmediateTopology,
 		translator,
 		scLister,
 		csiNodeLister,
@@ -237,13 +304,141 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		vaLister,
 		extraCreateMetadata,
 		defaultFSType,
+		nil,
+		csioptions.ControllerPublishReadOnly,
+		*preventVolumeModeConversion,
 	)
 
+	//Todo Publishing storage capacity information uses its own client
+	var capacityController *capacity.Controller
+	if *enableCapacity {
+		// Publishing storage capacity information uses its own client
+		// with separate rate limiting.
+		config.QPS = *kubeAPICapacityQPS
+		config.Burst = *kubeAPICapacityBurst
+		clientset, err := kubernetes.NewForConfig(config)
+		if err != nil {
+			klog.Fatalf("Failed to create client: %v", err)
+		}
+
+		namespace := os.Getenv("POD_NAMESPACE")
+		if namespace == "" {
+			namespace = os.Getenv("NAMESPACE")
+		}
+		if namespace == "" {
+			klog.Fatal("need NAMESPACE env variable for CSIStorageCapacity objects")
+		}
+		var controller *metav1.OwnerReference
+		if *capacityOwnerrefLevel >= 0 {
+			podName := os.Getenv("POD_NAME")
+			if podName == "" {
+				klog.Fatal("need POD_NAME env variable to determine CSIStorageCapacity owner")
+			}
+			var err error
+			controller, err = owner.Lookup(config, namespace, podName,
+				schema.GroupVersionKind{
+					Group:   "",
+					Version: "v1",
+					Kind:    "Pod",
+				}, *capacityOwnerrefLevel)
+			if err != nil {
+				klog.Fatalf("look up owner(s) of pod: %v", err)
+			}
+			klog.Infof("using %s/%s %s as owner of CSIStorageCapacity objects", controller.APIVersion, controller.Kind, controller.Name)
+		}
+
+		var topologyInformer topology.Informer
+		if nodeDeployment == nil {
+			topologyInformer = topology.NewNodeTopology(
+				provisionerName,
+				clientset,
+				factory.Core().V1().Nodes(),
+				factory.Storage().V1().CSINodes(),
+				workqueue.NewNamedRateLimitingQueue(rateLimiter, "csitopology"),
+			)
+		} else {
+			var segment topology.Segment
+			if nodeDeployment.NodeInfo.AccessibleTopology != nil {
+				for key, value := range nodeDeployment.NodeInfo.AccessibleTopology.Segments {
+					segment = append(segment, topology.SegmentEntry{Key: key, Value: value})
+				}
+			}
+			klog.Infof("producing CSIStorageCapacity objects with fixed topology segment %s", segment)
+			topologyInformer = topology.NewFixedNodeTopology(&segment)
+		}
+		go topologyInformer.RunWorker(ctx)
+
+		managedByID := "external-provisioner"
+		if *enableNodeDeployment {
+			managedByID = getNameWithMaxLength(managedByID, node, validation.DNS1035LabelMaxLength)
+		}
+
+		// We only need objects from our own namespace. The normal factory would give
+		// us an informer for the entire cluster. We can further restrict the
+		// watch to just those objects with the right labels.
+		factoryForNamespace = informers.NewSharedInformerFactoryWithOptions(clientset,
+			ctrl.ResyncPeriodOfCsiNodeInformer,
+			informers.WithNamespace(namespace),
+			informers.WithTweakListOptions(func(lo *metav1.ListOptions) {
+				lo.LabelSelector = labels.Set{
+					capacity.DriverNameLabel: provisionerName,
+					capacity.ManagedByLabel:  managedByID,
+				}.AsSelector().String()
+			}),
+		)
+
+		// We use the V1 CSIStorageCapacity API if available.
+		clientFactory := capacity.NewV1ClientFactory(clientset)
+		cInformer := factoryForNamespace.Storage().V1().CSIStorageCapacities()
+
+		// This invalid object is used in a v1 Create call to determine
+		// based on the resulting error whether the v1 API is supported.
+		invalidCapacity := &storagev1.CSIStorageCapacity{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "#%123-invalid-name",
+			},
+		}
+		createdCapacity, err := clientset.StorageV1().CSIStorageCapacities("default").Create(ctx, invalidCapacity, metav1.CreateOptions{})
+		switch {
+		case err == nil:
+			klog.Fatalf("creating an invalid v1.CSIStorageCapacity didn't fail as expected, got: %s", createdCapacity)
+		case apierrors.IsNotFound(err):
+			// We need to bridge between the v1beta1 API on the
+			// server and the v1 API expected by the capacity code.
+			klog.Info("using the CSIStorageCapacity v1beta1 API")
+			clientFactory = capacity.NewV1beta1ClientFactory(clientset)
+			cInformer = capacity.NewV1beta1InformerBridge(factoryForNamespace.Storage().V1beta1().CSIStorageCapacities())
+		case apierrors.IsInvalid(err):
+			klog.Info("using the CSIStorageCapacity v1 API")
+		default:
+			klog.Fatalf("unexpected error when checking for the V1 CSIStorageCapacity API: %v", err)
+		}
+
+		capacityController = capacity.NewCentralCapacityController(
+			csi.NewControllerClient(grpcClient),
+			provisionerName,
+			clientFactory,
+			// Metrics for the queue is available in the default registry.
+			workqueue.NewNamedRateLimitingQueue(rateLimiter, "csistoragecapacity"),
+			controller,
+			managedByID,
+			namespace,
+			topologyInformer,
+			factory.Storage().V1().StorageClasses(),
+			cInformer,
+			*capacityPollInterval,
+			*capacityImmediateBinding,
+			csioptions.OperationTimeout,
+		)
+		legacyregistry.CustomMustRegister(capacityController)
+
+		// Wrap Provision and Delete to detect when it is time to refresh capacity.
+		csiProvisioner = capacity.NewProvisionWrapper(csiProvisioner, capacityController)
+	}
 	provisionController = controller.NewProvisionController(
 		clientset,
 		provisionerName,
 		csiProvisioner,
-		serverVersion.GitVersion,
 		provisionerOptions...,
 	)
 
@@ -255,53 +450,29 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		controllerCapabilities,
 	)
 
-	var capacityController *capacity.Controller
-	if *capacityMode == capacity.DeploymentModeCentral {
-		podName := os.Getenv("POD_NAME")
-		namespace := os.Getenv("POD_NAMESPACE")
-		if podName == "" || namespace == "" {
-			klog.Fatalf("need POD_NAMESPACE/POD_NAME env variables, have only POD_NAMESPACE=%q and POD_NAME=%q", namespace, podName)
-		}
-		controller, err := owner.Lookup(config, namespace, podName,
-			schema.GroupVersionKind{
-				Group:   "",
-				Version: "v1",
-				Kind:    "Pod",
-			}, *capacityOwnerrefLevel)
-		if err != nil {
-			klog.Fatalf("look up owner(s) of pod: %v", err)
-		}
-		klog.Infof("using %s/%s %s as owner of CSIStorageCapacity objects", controller.APIVersion, controller.Kind, controller.Name)
+	// Start HTTP server, regardless whether we are the leader or not.
+	if addr != "" {
+		// To collect metrics data from the metric handler itself, we
+		// let it register itself and then collect from that registry.
+		reg := prometheus.NewRegistry()
+		gatherers = append(gatherers, reg)
 
-		topologyInformer := topology.NewNodeTopology(
-			provisionerName,
-			clientset,
-			factory.Core().V1().Nodes(),
-			factory.Storage().V1().CSINodes(),
-			workqueue.NewNamedRateLimitingQueue(rateLimiter, "csitopology"),
-		)
-
-		// We only need objects from our own namespace. The normal factory would give
-		// us an informer for the entire cluster.
-		factoryForNamespace = informers.NewSharedInformerFactoryWithOptions(clientset,
-			ctrl.ResyncPeriodOfCsiNodeInformer,
-			informers.WithNamespace(namespace),
-		)
-
-		capacityController = capacity.NewCentralCapacityController(
-			csi.NewControllerClient(grpcClient),
-			provisionerName,
-			clientset,
-			// TODO: metrics for the queue?!
-			workqueue.NewNamedRateLimitingQueue(rateLimiter, "csistoragecapacity"),
-			*controller,
-			namespace,
-			topologyInformer,
-			factory.Storage().V1().StorageClasses(),
-			factoryForNamespace.Storage().V1alpha1().CSIStorageCapacities(),
-			*capacityPollInterval,
-			*capacityImmediateBinding,
-		)
+		// This is similar to k8s.io/component-base/metrics HandlerWithReset
+		// except that we gather from multiple sources. This is necessary
+		// because both CSI metrics manager and component-base manage
+		// their own registry. Probably could be avoided by making
+		// CSI metrics manager a bit more flexible.
+		mux.Handle(csioptions.MetricsPath,
+			promhttp.InstrumentMetricHandler(
+				reg,
+				promhttp.HandlerFor(gatherers, promhttp.HandlerOpts{})))
+		go func() {
+			klog.Infof("ServeMux listening at %q", addr)
+			err := http.ListenAndServe(addr, mux)
+			if err != nil {
+				klog.Fatalf("Failed to start HTTP server at specified address (%q) and metrics path (%q): %s", addr, csioptions.MetricsPath, err)
+			}
+		}()
 	}
 
 	run := func(ctx context.Context) {
