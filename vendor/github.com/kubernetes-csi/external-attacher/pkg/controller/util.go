@@ -25,6 +25,7 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	jsonpatch "github.com/evanphx/json-patch"
+	"github.com/kubernetes-csi/csi-lib-utils/accessmodes"
 	v1 "k8s.io/api/core/v1"
 	storage "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,9 +108,7 @@ func markAsDetached(client kubernetes.Interface, va *storage.VolumeAttachment) (
 }
 
 const (
-	defaultFSType              = "ext4"
-	csiVolAttribsAnnotationKey = "csi.volume.kubernetes.io/volume-attributes"
-	vaNodeIDAnnotation         = "csi.alpha.kubernetes.io/node-id"
+	vaNodeIDAnnotation = "csi.alpha.kubernetes.io/node-id"
 )
 
 // SanitizeDriverName sanitizes provided driver name.
@@ -138,13 +137,9 @@ func GetNodeIDFromCSINode(driver string, csiNode *storage.CSINode) (string, bool
 	return "", false
 }
 
-// GetVolumeCapabilities returns volumecapability from PV spec
-func GetVolumeCapabilities(pvSpec *v1.PersistentVolumeSpec) (*csi.VolumeCapability, error) {
-	m := map[v1.PersistentVolumeAccessMode]bool{}
-	for _, mode := range pvSpec.AccessModes {
-		m[mode] = true
-	}
-
+// GetVolumeCapabilities returns a VolumeCapability from the PV spec. Which access mode will be set depends if the driver supports the
+// SINGLE_NODE_MULTI_WRITER capability.
+func GetVolumeCapabilities(pvSpec *v1.PersistentVolumeSpec, singleNodeMultiWriterCapable bool, defaultFSType string) (*csi.VolumeCapability, error) {
 	if pvSpec.CSI == nil {
 		return nil, errors.New("CSI volume source was nil")
 	}
@@ -162,6 +157,7 @@ func GetVolumeCapabilities(pvSpec *v1.PersistentVolumeSpec) (*csi.VolumeCapabili
 		fsType := pvSpec.CSI.FSType
 		if len(fsType) == 0 {
 			fsType = defaultFSType
+			klog.V(4).Infof("Filesystem type not found in PV spec. Using defaultFSType: %v.", fsType)
 		}
 
 		cap = &csi.VolumeCapability{
@@ -175,27 +171,12 @@ func GetVolumeCapabilities(pvSpec *v1.PersistentVolumeSpec) (*csi.VolumeCapabili
 		}
 	}
 
-	// Translate array of modes into single VolumeCapability
-	switch {
-	case m[v1.ReadWriteMany]:
-		// ReadWriteMany trumps everything, regardless what other modes are set
-		cap.AccessMode.Mode = csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER
-
-	case m[v1.ReadOnlyMany] && m[v1.ReadWriteOnce]:
-		// This is no way how to translate this to CSI...
-		return nil, fmt.Errorf("CSI does not support ReadOnlyMany and ReadWriteOnce on the same PersistentVolume")
-
-	case m[v1.ReadOnlyMany]:
-		// There is only ReadOnlyMany set
-		cap.AccessMode.Mode = csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY
-
-	case m[v1.ReadWriteOnce]:
-		// There is only ReadWriteOnce set
-		cap.AccessMode.Mode = csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER
-
-	default:
-		return nil, fmt.Errorf("unsupported AccessMode combination: %+v", pvSpec.AccessModes)
+	am, err := accessmodes.ToCSIAccessMode(pvSpec.AccessModes, singleNodeMultiWriterCapable)
+	if err != nil {
+		return nil, err
 	}
+
+	cap.AccessMode.Mode = am
 	return cap, nil
 }
 

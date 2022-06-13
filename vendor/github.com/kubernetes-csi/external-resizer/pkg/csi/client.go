@@ -46,9 +46,16 @@ type Client interface {
 	// in NodeGetCapabilities() gRPC call.
 	SupportsNodeResize(ctx context.Context) (bool, error)
 
+	// SupportsControllerResize returns whether the CSI driver reports
+	// SINGLE_NODE_MULTI_WRITER in ControllerGetCapabilities() gRPC call.
+	SupportsControllerSingleNodeMultiWriter(ctx context.Context) (bool, error)
+
 	// Expand expands the volume to a new size at least as big as requestBytes.
 	// It returns the new size and whether the volume need expand operation on the node.
 	Expand(ctx context.Context, volumeID string, requestBytes int64, secrets map[string]string, capability *csi.VolumeCapability) (int64, bool, error)
+
+	//CloseConnection closes the gRPC connection established by the client
+	CloseConnection()
 }
 
 // New creates a new CSI client.
@@ -116,6 +123,14 @@ func (c *client) SupportsNodeResize(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
+func (c *client) SupportsControllerSingleNodeMultiWriter(ctx context.Context) (bool, error) {
+	caps, err := csirpc.GetControllerCapabilities(ctx, c.conn)
+	if err != nil {
+		return false, fmt.Errorf("error getting controller capabilities: %v", err)
+	}
+	return caps[csi.ControllerServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER], nil
+}
+
 func (c *client) Expand(
 	ctx context.Context,
 	volumeID string,
@@ -133,4 +148,8 @@ func (c *client) Expand(
 		return 0, false, err
 	}
 	return resp.CapacityBytes, resp.NodeExpansionRequired, nil
+}
+
+func (c *client) CloseConnection() {
+	c.conn.Close()
 }
