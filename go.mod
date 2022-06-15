@@ -80,7 +80,6 @@ require (
 	k8s.io/kubernetes v1.24.1
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/controller-runtime v0.11.2
-	sigs.k8s.io/sig-storage-lib-external-provisioner/v6 v6.3.0
 	sigs.k8s.io/sig-storage-lib-external-provisioner/v8 v8.0.0
 )
 
