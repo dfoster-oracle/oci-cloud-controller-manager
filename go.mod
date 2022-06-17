@@ -40,6 +40,7 @@ replace (
 	oracle.com/oci/ocimtls => bitbucket.oci.oraclecorp.com/faas/ocimtls.git v1.2.0
 	oracle.com/oci/tagging => bitbucket.oci.oraclecorp.com/GOPLEX/tagging v0.0.0-20190321202046-20a2e48911da
 	oracle.com/oke/oci-go-common => bitbucket.oci.oraclecorp.com/oke/oci-go-common v1.0.4-0.20200706161333-eb59f40527dd
+	sigs.k8s.io/sig-storage-lib-external-provisioner/v8 => sigs.k8s.io/sig-storage-lib-external-provisioner/v8 v8.0.0-20220531195724-a4ce2c1d2e52
 )
 
 require (
@@ -48,9 +49,9 @@ require (
 	github.com/go-logr/zapr v1.2.0
 	github.com/golang/protobuf v1.5.2
 	github.com/kubernetes-csi/csi-lib-utils v0.11.0
-	github.com/kubernetes-csi/external-attacher v0.0.0-20220607140055-8d337281e065 //v3.0.2
-	github.com/kubernetes-csi/external-provisioner v0.0.0-20220603165354-da22b889f61a // v2.0.5
-	github.com/kubernetes-csi/external-resizer v0.0.0-20220603171023-04cdbabd15cb // v1.0.1
+	github.com/kubernetes-csi/external-attacher v0.0.0-20220607140055-8d337281e065 //v3.5.0
+	github.com/kubernetes-csi/external-provisioner v0.0.0-20220610061345-7f08effe3de5 // v3.2.0
+	github.com/kubernetes-csi/external-resizer v0.0.0-20220615155319-a76b4d2afe86 // v1.5.0
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.0.1
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
