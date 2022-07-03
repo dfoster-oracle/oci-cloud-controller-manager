@@ -40,7 +40,7 @@ replace (
 	oracle.com/oci/ocimtls => bitbucket.oci.oraclecorp.com/faas/ocimtls.git v1.2.0
 	oracle.com/oci/tagging => bitbucket.oci.oraclecorp.com/GOPLEX/tagging v0.0.0-20190321202046-20a2e48911da
 	oracle.com/oke/oci-go-common => bitbucket.oci.oraclecorp.com/oke/oci-go-common v1.0.4-0.20200706161333-eb59f40527dd
-	sigs.k8s.io/sig-storage-lib-external-provisioner/v8 => sigs.k8s.io/sig-storage-lib-external-provisioner/v8 v8.0.0-20220531195724-a4ce2c1d2e52
+	sigs.k8s.io/sig-storage-lib-external-provisioner/v8 => sigs.k8s.io/sig-storage-lib-external-provisioner/v8 v8.0.0-20220531195724-a4ce2c1d2e52 // Master Branch to support Migrated leader election to lease API https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner/commit/a4ce2c1d2e5221e98de41dfd00bdc4b041a40b3f
 )
 
 require (
