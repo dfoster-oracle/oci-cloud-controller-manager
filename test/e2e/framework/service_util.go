@@ -697,6 +697,41 @@ func (j *ServiceTestJig) RunOrFail(namespace string, tweak func(rc *v1.Replicati
 	return result
 }
 
+// UpdateReplicationControllerOrFail - updates the given replication controller and waits for the desired Pods
+func (j *ServiceTestJig) UpdateReplicationControllerOrFail(namespace, name string, update func(controller *v1.ReplicationController)) *v1.ReplicationController{
+	rc, err := j.updateReplicationController(namespace, name, update)
+	if err != nil {
+		Failf(err.Error())
+	}
+	pods, err := j.waitForPodsCreated(namespace, int(*(rc.Spec.Replicas)))
+	if err != nil {
+		Failf("Failed to create pods: %v", err)
+	}
+	if err := j.waitForPodsReady(namespace, pods); err != nil {
+		Failf("Failed waiting for pods to be running: %v", err)
+	}
+	return rc
+}
+
+func (j *ServiceTestJig) updateReplicationController(namespace, name string, update func(controller *v1.ReplicationController)) (*v1.ReplicationController, error) {
+	for i := 0; i < 3; i++ {
+		rc, err := j.Client.CoreV1().ReplicationControllers(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("Failed to get Replication Controller %q: %v", name, err)
+		}
+		update(rc)
+		rc, err = j.Client.CoreV1().ReplicationControllers(namespace).Update(context.Background(), rc, metav1.UpdateOptions{})
+		if err == nil {
+			return rc, nil
+		}
+		if !errors.IsConflict(err) && !errors.IsServerTimeout(err) {
+			return nil, fmt.Errorf("Failed to update Replication Controller %q: %v", name, err)
+		}
+	}
+	return nil, fmt.Errorf("Too many retries updating Replication Controller %q", name)
+}
+
+
 func (j *ServiceTestJig) waitForPdbReady(namespace string) error {
 	timeout := 2 * time.Minute
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(2 * time.Second) {
@@ -962,6 +997,64 @@ func testConnectionIdleTimeout(loadBalancer *client.GenericLoadBalancer, connect
 		return true, nil
 	}
 	return false, gerrors.Errorf("Could not find connection configuration.")
+}
+
+// VerifyLoadBalancerBackendSetsWithVirtualPods - verifies if LB backends match pods IPs targeted by the LB's service
+func (f *CloudProviderFramework) VerifyLoadBalancerBackendSetsWithVirtualPods(service *v1.Service, namespace, loadBalancerId, lbType string) error {
+	virtualPodIPs , err := f.getVirtualPodsIPs(service, namespace)
+	if err != nil {
+		return err
+	}
+	for start := time.Now(); time.Since(start) < 5*time.Minute; time.Sleep(5 * time.Second) {
+		loadBalancer, err := f.Client.LoadBalancer(lbType).GetLoadBalancer(context.TODO(), loadBalancerId)
+		if err != nil {
+			return err
+		}
+		if verifyLoadBalancerBackendSetsMatch(loadBalancer.BackendSets, virtualPodIPs) {
+			Logf("LB backends match virtual pods targeted by service")
+			return nil
+		}
+		Logf("LB backends do not match virtual pods targeted by service - will retry")
+	}
+	return gerrors.Errorf("Timeout waiting for LB backends to be as expected.")
+}
+
+func (f *CloudProviderFramework) getVirtualPodsIPs (service *v1.Service, namespace string) (map[string]v1.Pod, error) {
+	ipMap := make(map[string]v1.Pod)
+	pods, err := f.ClientSet.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	selector := labels.Set(service.Spec.Selector).AsSelectorPreValidated()
+	for _, pod := range pods.Items {
+		node, err := f.ClientSet.CoreV1().Nodes().Get(context.Background(), pod.Spec.NodeName, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+		isVirtualNode, err := cloudprovider.IsVirtualNode(node)
+		if err != nil {
+			return nil, err
+		}
+		if isVirtualNode && selector.Matches(labels.Set(pod.ObjectMeta.GetLabels())) {
+			ipMap[pod.Status.PodIP] = pod
+		}
+	}
+	return ipMap, nil
+}
+
+func verifyLoadBalancerBackendSetsMatch(backendSets map[string]client.GenericBackendSetDetails, podIPMap map[string]v1.Pod) bool {
+	for _, backendSetDetails := range backendSets {
+		if len(backendSetDetails.Backends) != len(podIPMap) {
+			return false
+		}
+		for _, backend := range backendSetDetails.Backends {
+			_, exists := podIPMap[*backend.IpAddress]
+			if !exists {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // Simple helper class to avoid too much boilerplate in tests

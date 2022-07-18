@@ -208,6 +208,13 @@ const (
 	ServiceAnnotationNetworkLoadBalancerIsPreserveSource = "oci-network-load-balancer.oraclecloud.com/is-preserve-source"
 )
 
+// Virtual Node Annotations
+const (
+	// PrivateIPOCIDAnnotation is the privateIP OCID of the Container Instance running a virtual pod
+	// set by the virtual node
+	PrivateIPOCIDAnnotation = "oci.oraclecloud.com/pod.info.private_ip_ocid"
+)
+
 // certificateData is a structure containing the data about a K8S secret required
 // to store SSL information required for BackendSets and Listeners
 type certificateData struct {
@@ -295,7 +302,7 @@ type LBSpec struct {
 }
 
 // NewLBSpec creates a LB Spec from a Kubernetes service and a slice of nodes.
-func NewLBSpec(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, subnets []string, sslConfig *SSLConfig, secListFactory securityListManagerFactory, initialLBTags *config.InitialTags) (*LBSpec, error) {
+func NewLBSpec(logger *zap.SugaredLogger, svc *v1.Service, provisionedNodes []*v1.Node, virtualPods []*v1.Pod, subnets []string, sslConfig *SSLConfig, secListFactory securityListManagerFactory, initialLBTags *config.InitialTags) (*LBSpec, error) {
 	if err := validateService(svc); err != nil {
 		return nil, errors.Wrap(err, "invalid service")
 	}
@@ -325,7 +332,7 @@ func NewLBSpec(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, sub
 		return nil, err
 	}
 
-	backendSets, err := getBackendSets(logger, svc, nodes, sslConfig, isPreserveSource)
+	backendSets, err := getBackendSets(logger, svc, provisionedNodes, virtualPods, sslConfig, isPreserveSource)
 	if err != nil {
 		return nil, err
 	}
@@ -374,7 +381,7 @@ func NewLBSpec(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, sub
 		SourceCIDRs:             sourceCIDRs,
 		NetworkSecurityGroupIds: networkSecurityGroupIds,
 		service:                 svc,
-		nodes:                   nodes,
+		nodes:                   provisionedNodes,
 		securityListManager:     secListFactory(secListManagerMode),
 		FreeformTags:            lbTags.FreeformTags,
 		DefinedTags:             lbTags.DefinedTags,
@@ -552,9 +559,11 @@ func getPorts(svc *v1.Service) (map[string]portSpec, error) {
 	return ports, nil
 }
 
-func getBackends(logger *zap.SugaredLogger, nodes []*v1.Node, nodePort int32) []client.GenericBackend {
+func getBackends(logger *zap.SugaredLogger, provisionedNodes []*v1.Node, virtualPods []*v1.Pod, nodePort int32) []client.GenericBackend {
 	backends := make([]client.GenericBackend, 0)
-	for _, node := range nodes {
+
+	// Prepare provisioned nodes backends
+	for _, node := range provisionedNodes {
 		nodeAddressString := common.String(NodeInternalIP(node))
 		if *nodeAddressString == "" {
 			logger.Warnf("Node %q has an empty Internal IP address.", node.Name)
@@ -573,10 +582,31 @@ func getBackends(logger *zap.SugaredLogger, nodes []*v1.Node, nodePort int32) []
 			TargetId:  &instanceID,
 		})
 	}
+
+	// Prepare virtual pods backends
+	for _, pod := range virtualPods {
+		if pod.Status.PodIP == "" {
+			logger.Warnf("Virtual pod %q has an empty Pod IP", pod.Name)
+			continue
+		}
+		privateIpOcid, ok := pod.Annotations[PrivateIPOCIDAnnotation]
+		if !ok {
+			logger.Warnf("Virtual pod %q has an empty PrivateIP OCID", pod.Name)
+			continue
+		}
+
+		backends = append(backends, client.GenericBackend{
+			IpAddress: common.String(pod.Status.PodIP),
+			Port:      common.Int(int(nodePort)),
+			Weight:    common.Int(1),
+			TargetId:  common.String(privateIpOcid),
+		})
+	}
+
 	return backends
 }
 
-func getBackendSets(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node, sslCfg *SSLConfig, isPreserveSource bool) (map[string]client.GenericBackendSetDetails, error) {
+func getBackendSets(logger *zap.SugaredLogger, svc *v1.Service, provisionedNodes []*v1.Node, virtualPods []*v1.Pod, sslCfg *SSLConfig, isPreserveSource bool) (map[string]client.GenericBackendSetDetails, error) {
 	backendSets := make(map[string]client.GenericBackendSetDetails)
 	loadbalancerPolicy, err := getLoadBalancerPolicy(svc)
 	if err != nil {
@@ -609,7 +639,7 @@ func getBackendSets(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node
 		}
 		backendSets[backendSetName] = client.GenericBackendSetDetails{
 			Policy:           &loadbalancerPolicy,
-			Backends:         getBackends(logger, nodes, servicePort.NodePort),
+			Backends:         getBackends(logger, provisionedNodes, virtualPods, servicePort.NodePort),
 			HealthChecker:    healthChecker,
 			IsPreserveSource: &isPreserveSource,
 			SslConfiguration: getSSLConfiguration(sslCfg, secretName, port),

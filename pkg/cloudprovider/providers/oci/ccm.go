@@ -26,11 +26,19 @@ import (
 	"go.uber.org/zap"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/informers"
 	clientset "k8s.io/client-go/kubernetes"
 	listersv1 "k8s.io/client-go/listers/core/v1"
+	discoverylistersv1 "k8s.io/client-go/listers/discovery/v1"
 	"k8s.io/client-go/tools/cache"
 	cloudprovider "k8s.io/cloud-provider"
+	cloudControllerManager "k8s.io/cloud-provider/app"
+	"k8s.io/cloud-provider/app/config"
+	cloudcontrollerconfig "k8s.io/cloud-provider/app/config"
+	genericcontrollermanager "k8s.io/controller-manager/app"
+	"k8s.io/controller-manager/controller"
+	"k8s.io/klog/v2"
 
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/metrics"
@@ -58,7 +66,8 @@ type CloudProvider struct {
 	// NodeLister provides a cache to lookup nodes for deleting a load balancer.
 	// Due to limitations in the OCI API around going from an IP to a subnet
 	// we use the node lister to go from IP -> node / provider id -> ... -> subnet
-	NodeLister listersv1.NodeLister
+	NodeLister          listersv1.NodeLister
+	EndpointSliceLister discoverylistersv1.EndpointSliceLister
 
 	client     client.Interface
 	kubeclient clientset.Interface
@@ -175,15 +184,21 @@ func (cp *CloudProvider) Initialize(clientBuilder cloudprovider.ControllerClient
 
 	nodeInformer := factory.Core().V1().Nodes()
 	go nodeInformer.Informer().Run(wait.NeverStop)
+
 	serviceInformer := factory.Core().V1().Services()
 	go serviceInformer.Informer().Run(wait.NeverStop)
+
+	endpointSliceInformer := factory.Discovery().V1().EndpointSlices()
+	go endpointSliceInformer.Informer().Run(wait.NeverStop)
+
 	go nodeInfoController.Run(wait.NeverStop)
 
 	cp.logger.Info("Waiting for node informer cache to sync")
-	if !cache.WaitForCacheSync(wait.NeverStop, nodeInformer.Informer().HasSynced, serviceInformer.Informer().HasSynced) {
+	if !cache.WaitForCacheSync(wait.NeverStop, nodeInformer.Informer().HasSynced, serviceInformer.Informer().HasSynced, endpointSliceInformer.Informer().HasSynced) {
 		utilruntime.HandleError(fmt.Errorf("Timed out waiting for informers to sync"))
 	}
 	cp.NodeLister = nodeInformer.Lister()
+	cp.EndpointSliceLister = endpointSliceInformer.Lister()
 
 	cp.securityListManagerFactory = func(mode string) securityListManager {
 		if cp.config.LoadBalancer.Disabled {
@@ -247,4 +262,32 @@ func (cp *CloudProvider) HasClusterID() bool {
 
 func instanceCacheKeyFn(obj interface{}) (string, error) {
 	return *obj.(*core.Instance).Id, nil
+}
+
+func StartOciServiceControllerWrapper(initContext cloudControllerManager.ControllerInitContext, completedConfig *cloudcontrollerconfig.CompletedConfig, cloud cloudprovider.Interface) cloudControllerManager.InitFunc {
+	return func(ctx context.Context, controllerContext genericcontrollermanager.ControllerContext) (controller.Interface, bool, error) {
+		return startOciServiceController(ctx, initContext, completedConfig, cloud)
+	}
+}
+
+func startOciServiceController(ctx context.Context, initContext cloudControllerManager.ControllerInitContext, completedConfig *config.CompletedConfig, cloud cloudprovider.Interface) (controller.Interface, bool, error) {
+	// Start the service controller
+	serviceController, err := NewServiceController(
+		cloud,
+		completedConfig.ClientBuilder.ClientOrDie(initContext.ClientName),
+		completedConfig.SharedInformers.Core().V1().Services(),
+		completedConfig.SharedInformers.Core().V1().Nodes(),
+		completedConfig.SharedInformers.Discovery().V1().EndpointSlices(),
+		completedConfig.ComponentConfig.KubeCloudShared.ClusterName,
+		5*time.Second,
+		utilfeature.DefaultFeatureGate,
+	)
+	if err != nil {
+		klog.Errorf("Failed to start OCI service controller: %v", err)
+		return nil, false, err
+	}
+
+	go serviceController.Run(ctx, int(completedConfig.ComponentConfig.ServiceController.ConcurrentServiceSyncs))
+
+	return nil, true, nil
 }

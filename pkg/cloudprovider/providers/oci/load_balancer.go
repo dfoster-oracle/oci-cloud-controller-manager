@@ -21,6 +21,7 @@ import (
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	discovery "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -373,23 +374,31 @@ func getNodeFilter(svc *v1.Service) (labels.Selector, error) {
 	return labels.Parse(labelSelector)
 }
 
-// filterNodes based on the label selector, if present, and returns the set of nodes
-// that should be backends in the load balancer.
-func filterNodes(svc *v1.Service, nodes []*v1.Node) ([]*v1.Node, error) {
+// filterNodes - Separates provisioned nodes based on the label selector,
+// that should be backends in the load balancer, and virtual nodes.
+func filterNodes(logger *zap.SugaredLogger, svc *v1.Service, nodes []*v1.Node) ([]*v1.Node, []*v1.Node, error) {
 
 	selector, err := getNodeFilter(svc)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var filteredNodes []*v1.Node
+	var provisionedNodes, virtualNodes []*v1.Node
 	for _, n := range nodes {
-		if selector.Matches(labels.Set(n.GetLabels())) {
-			filteredNodes = append(filteredNodes, n)
+		// Since virtual nodes should not be added as backends,
+		// labels are not checked
+		isVirtualNode, err := IsVirtualNode(n)
+		if err != nil {
+			logger.With(zap.Error(err)).Errorf("Failed to check if node is virtual: %s", n.Name)
+		}
+		if isVirtualNode {
+			virtualNodes = append(virtualNodes, n)
+		} else if selector.Matches(labels.Set(n.GetLabels())) {
+			provisionedNodes = append(provisionedNodes, n)
 		}
 	}
 
-	return filteredNodes, nil
+	return provisionedNodes, virtualNodes, nil
 }
 
 // EnsureLoadBalancer creates a new load balancer or updates the existing one.
@@ -400,13 +409,35 @@ func (cp *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName str
 	loadBalancerType := getLoadBalancerType(service)
 	logger := cp.logger.With("loadBalancerName", lbName, "serviceName", service.Name, "loadBalancerType", loadBalancerType)
 
-	nodes, err := filterNodes(service, nodes)
+	// Ideally virtual nodes will be excluded since they will have the LabelNodeExcludeBalancers set on them,
+	// However, the user could delete the label, so we need to filter out virtual nodes here
+	provisionedNodes, virtualNodes, err := filterNodes(logger, service, nodes)
 	if err != nil {
-		logger.With(zap.Error(err)).Error("Failed to filter nodes with label selector")
+		logger.With(zap.Error(err)).Error("Failed to filter provisioned nodes with label selector and virtual nodes")
 		return nil, err
 	}
 
-	logger.With("nodes", len(nodes)).Info("Ensuring load balancer")
+	virtualNodeExists := len(virtualNodes) > 0
+	if !virtualNodeExists {
+		// Check if virtual nodes exist in the cluster
+		virtualNodeExists, err = cp.virtualNodeExists(logger)
+		if err != nil {
+			logger.With(zap.Error(err)).Error("Failed to check if cluster has virtual nodes")
+			return nil, errors.Wrap(err, "failed to check if cluster has virtual nodes")
+		}
+	}
+
+	var virtualPods []*v1.Pod
+	if virtualNodeExists {
+		// Get pods scheduled on virtual nodes for the service
+		virtualPods, err = cp.getVirtualPodsOfService(ctx, logger, service)
+		if err != nil {
+			logger.With(zap.Error(err)).Error("Failed to get virtual pods of the service")
+			return nil, errors.Wrap(err, "failed to get virtual pods of the service")
+		}
+	}
+
+	logger.With("provisioned nodes", len(provisionedNodes), "virtual pods", len(virtualPods)).Info("Ensuring load balancer")
 
 	dimensionsMap := make(map[string]string)
 
@@ -462,7 +493,7 @@ func (cp *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName str
 		return nil, err
 	}
 
-	spec, err := NewLBSpec(logger, service, nodes, subnets, sslConfig, cp.securityListManagerFactory, cp.config.Tags)
+	spec, err := NewLBSpec(logger, service, provisionedNodes, virtualPods, subnets, sslConfig, cp.securityListManagerFactory, cp.config.Tags)
 	if err != nil {
 		logger.With(zap.Error(err)).Error("Failed to derive LBSpec")
 		errorType = util.GetError(err)
@@ -518,7 +549,7 @@ func (cp *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName str
 		}
 	}
 
-	if len(nodes) == 0 {
+	if len(provisionedNodes) == 0 && !virtualNodeExists {
 		allNodesNotReady, err := cp.checkAllBackendNodesNotReady()
 		if err != nil {
 			logger.With(zap.Error(err)).Error("Failed to check if all backend nodes are not ready")
@@ -843,7 +874,7 @@ func (clb *CloudLoadBalancerProvider) updateListener(ctx context.Context, lbID s
 	return nil
 }
 
-// UpdateLoadBalancer : TODO find out where this is called
+// UpdateLoadBalancer updates an existing loadbalancer
 func (cp *CloudProvider) UpdateLoadBalancer(ctx context.Context, clusterName string, service *v1.Service, nodes []*v1.Node) error {
 	name := cp.GetLoadBalancerName(ctx, clusterName, service)
 	cp.logger.With("loadBalancerName", name, "loadBalancerType", getLoadBalancerType(service)).Info("Updating load balancer")
@@ -852,29 +883,55 @@ func (cp *CloudProvider) UpdateLoadBalancer(ctx context.Context, clusterName str
 	return err
 }
 
-// getNodesByIPs returns a slice of Nodes corresponding to the given IP addresses.
-func (cp *CloudProvider) getNodesByIPs(backendIPs []string) ([]*v1.Node, error) {
+// getNodesAndPodsByIPs returns slices of Nodes and Pods corresponding to the given IP addresses.
+func (cp *CloudProvider) getNodesAndPodsByIPs(ctx context.Context, logger *zap.SugaredLogger, backendIPs []string, service *v1.Service) ([]*v1.Node, []*v1.Pod, error) {
+	ipToPodLookup := make(map[string]*v1.Pod)
+	ipToNodeLookup := make(map[string]*v1.Node)
+
 	nodeList, err := cp.NodeLister.List(labels.Everything())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	ipToNodeLookup := make(map[string]*v1.Node)
+	var virtualNodeExists bool
 	for _, node := range nodeList {
+		isVirtualNode, err := IsVirtualNode(node)
+		if err != nil {
+			logger.With(zap.Error(err)).Errorf("Failed to check if node is virtual: %s", node.Name)
+		}
+		if isVirtualNode {
+			virtualNodeExists = true
+			continue
+		}
 		ip := NodeInternalIP(node)
 		ipToNodeLookup[ip] = node
 	}
 
-	var nodes []*v1.Node
-	for _, ip := range backendIPs {
-		node, ok := ipToNodeLookup[ip]
-		if !ok {
-			return nil, errors.Errorf("node was not found by IP %q", ip)
+	if virtualNodeExists {
+		listOptions := metav1.ListOptions{LabelSelector: labels.Set(service.Spec.Selector).AsSelector().String()}
+		podList, err := cp.kubeclient.CoreV1().Pods(service.Namespace).List(ctx, listOptions)
+		if err != nil {
+			return nil, nil, err
 		}
-		nodes = append(nodes, node)
+		for i := range podList.Items {
+			ip := podList.Items[i].Status.PodIP
+			ipToPodLookup[ip] = &podList.Items[i]
+		}
 	}
 
-	return nodes, nil
+	var nodes []*v1.Node
+	var pods []*v1.Pod
+	for _, ip := range backendIPs {
+		if node, nodeExists := ipToNodeLookup[ip]; nodeExists {
+			nodes = append(nodes, node)
+		} else if pod, podExists := ipToPodLookup[ip]; virtualNodeExists && podExists {
+			 pods = append(pods, pod)
+		} else {
+			return nil, nil, errors.Errorf("provisioned node or virtual pod was not found by IP %q", ip)
+		}
+	}
+
+	return nodes, pods, nil
 }
 
 // EnsureLoadBalancerDeleted deletes the specified load balancer if it exists,
@@ -958,13 +1015,13 @@ func (cp *CloudProvider) EnsureLoadBalancerDeleted(ctx context.Context, clusterN
 
 func (cp *CloudProvider) cleanupSecListForLoadBalancerDelete(lb *client.GenericLoadBalancer, logger *zap.SugaredLogger, ctx context.Context, service *v1.Service, name string) error {
 	id := *lb.Id
-	nodeIPs := sets.NewString()
+	ipSet := sets.NewString()
 	for _, backendSet := range lb.BackendSets {
 		for _, backend := range backendSet.Backends {
-			nodeIPs.Insert(*backend.IpAddress)
+			ipSet.Insert(*backend.IpAddress)
 		}
 	}
-	nodes, err := cp.getNodesByIPs(nodeIPs.List())
+	nodes, _, err := cp.getNodesAndPodsByIPs(ctx, logger, ipSet.List(), service)
 	if err != nil {
 		logger.With(zap.Error(err)).Error("Failed to fetch nodes by internal ips")
 		return errors.Wrap(err, "fetching nodes by internal ips")
@@ -1110,4 +1167,65 @@ func (cp *CloudProvider) checkAllBackendNodesNotReady() (bool, error) {
 		}
 	}
 	return true, nil
+}
+
+// getVirtualPodsOfService returns pods scheduled on virtual nodes from a slice of endpointSlices
+func (cp *CloudProvider) getVirtualPodsOfService(ctx context.Context, logger *zap.SugaredLogger, service *v1.Service) ([]*v1.Pod, error) {
+	endpointSlices, err := cp.getEndpointSlicesForService(service)
+	if err != nil {
+		return nil, err
+	}
+	var virtualPods []*v1.Pod
+	for _, es := range endpointSlices {
+		for _, e := range es.Endpoints {
+			if e.TargetRef.Kind == "Pod" {
+				pod, err := cp.kubeclient.CoreV1().Pods(es.Namespace).Get(ctx, e.TargetRef.Name, metav1.GetOptions{})
+				if err != nil {
+					return nil, err
+				}
+				node, err := cp.NodeLister.Get(pod.Spec.NodeName)
+				if err != nil {
+					return nil, err
+				}
+				isVirtualNode, err := IsVirtualNode(node)
+				if err != nil {
+					logger.With(zap.Error(err)).Errorf("Failed to check if node is virtual: %s", node.Name)
+				}
+				if isVirtualNode {
+					virtualPods = append(virtualPods, pod)
+				}
+			}
+		}
+	}
+	return virtualPods, nil
+}
+
+func (cp *CloudProvider) virtualNodeExists(logger *zap.SugaredLogger) (bool, error) {
+	nodeList, err := cp.NodeLister.List(labels.Everything())
+	if err != nil {
+		return false, err
+	}
+	for _, node := range nodeList {
+		isVirtualNode, err := IsVirtualNode(node)
+		if err != nil {
+			logger.With(zap.Error(err)).Errorf("Failed to check if node is virtual: %s", node.Name)
+		}
+		if isVirtualNode {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (cp *CloudProvider) getEndpointSlicesForService(service *v1.Service) ([]*discovery.EndpointSlice, error) {
+	esLabelSelector := labels.Set(map[string]string{
+		discovery.LabelServiceName: service.Name,
+	}).AsSelectorPreValidated()
+
+	endpointSlices, err := cp.EndpointSliceLister.EndpointSlices(service.Namespace).List(esLabelSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	return endpointSlices, nil
 }

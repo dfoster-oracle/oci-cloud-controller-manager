@@ -15,12 +15,14 @@
 package oci
 
 import (
-	"k8s.io/apimachinery/pkg/util/sets"
 	"strings"
 
 	"github.com/pkg/errors"
 	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
+
+const virtualNodeOcidPrefix = "ocid1.virtualnode"
 
 // MapProviderIDToInstanceID parses the provider id and returns the instance ocid.
 func MapProviderIDToInstanceID(providerID string) (string, error) {
@@ -55,4 +57,18 @@ func RemoveDuplicatesFromList(list []string) []string {
 // the duplicates and order of items in both lists is ignored.
 func DeepEqualLists(listA, listB []string) bool {
 	return sets.NewString(listA...).Equal(sets.NewString(listB...))
+}
+
+// IsVirtualNodeId Returns true if providerId is a Virtual Node OCID
+func IsVirtualNodeId(resourceId string) bool {
+	return strings.HasPrefix(resourceId, virtualNodeOcidPrefix)
+}
+
+// IsVirtualNode returns true if a node object corresponds to a Virtual Node
+func IsVirtualNode(node *api.Node) (bool, error) {
+	resourceId, err := MapProviderIDToInstanceID(node.Spec.ProviderID)
+	if err != nil {
+		return false, err
+	}
+	return IsVirtualNodeId(resourceId), nil
 }

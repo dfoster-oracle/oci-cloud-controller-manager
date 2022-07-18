@@ -16,6 +16,8 @@ package oci
 
 import (
 	"testing"
+
+	v1 "k8s.io/api/core/v1"
 )
 
 func TestMapProviderIDToInstanceID(t *testing.T) {
@@ -123,5 +125,61 @@ func TestRemoveDuplicatesFromList(t *testing.T) {
 				t.Errorf("Expected Lists comparison to be %v, but got %v", tc.result, result)
 			}
 		})
+	}
+}
+
+func TestIsVirtualNode(t *testing.T) {
+	tests := map[string]struct {
+		node          *v1.Node
+		isVirtualNode bool
+		wantErr       bool
+	}{
+		"Virtual node": {
+			node: &v1.Node{
+				Spec: v1.NodeSpec{
+					ProviderID: "ocid1.virtualnode.xyz",
+				},
+			},
+			isVirtualNode: true,
+			wantErr:       false,
+		},
+		"Provisioned node": {
+			node: &v1.Node{
+				Spec: v1.NodeSpec{
+					ProviderID: "ocid1.instance.xyz",
+				},
+			},
+			isVirtualNode: false,
+			wantErr:       false,
+		},
+		"Unknown provider Id": {
+			node: &v1.Node{
+				Spec: v1.NodeSpec{
+					ProviderID: "ocid1.resource.virtualnode",
+				},
+			},
+			isVirtualNode: false,
+			wantErr:       false,
+		},
+		"Empty provider Id": {
+			node: &v1.Node{
+				Spec: v1.NodeSpec{
+					ProviderID: "",
+				},
+			},
+			isVirtualNode: false,
+			wantErr:       true,
+		},
+	}
+
+	for _, tc := range tests {
+		isVirtualNode, err := IsVirtualNode(tc.node)
+		if (err != nil) != tc.wantErr {
+			t.Errorf("IsVirtualNode() error = %v, wantErr %v", err, tc.wantErr)
+			return
+		}
+		if isVirtualNode != tc.isVirtualNode {
+			t.Errorf("expected: %+v got %+v", tc.isVirtualNode, isVirtualNode)
+		}
 	}
 }
