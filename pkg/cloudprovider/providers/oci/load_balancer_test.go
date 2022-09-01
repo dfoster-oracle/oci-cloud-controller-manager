@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	testclient "k8s.io/client-go/kubernetes/fake"
 
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
@@ -41,9 +42,10 @@ func newNodeObj(name string, labels map[string]string) *v1.Node {
 
 func Test_filterNodes(t *testing.T) {
 	testCases := map[string]struct {
-		nodes    []*v1.Node
-		service  *v1.Service
-		expected []*v1.Node
+		nodes                    []*v1.Node
+		service                  *v1.Service
+		expectedProvisionedNodes []*v1.Node
+		expectedVirtualNodes     []*v1.Node
 	}{
 		"lb - no annotation": {
 			nodes: []*v1.Node{
@@ -57,10 +59,11 @@ func Test_filterNodes(t *testing.T) {
 					Annotations: map[string]string{},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
 			},
+			expectedVirtualNodes: nil,
 		},
 		"nlb - no annotation": {
 			nodes: []*v1.Node{
@@ -76,15 +79,17 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
 			},
+			expectedVirtualNodes: nil,
 		},
 		"lb - empty annotation": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
+				newVirtualNodeObj("vn1", nil),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -95,15 +100,19 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
+			},
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", nil),
 			},
 		},
 		"nlb - empty annotation": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
+				newVirtualNodeObj("vn1", nil),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -115,15 +124,19 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
+			},
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", nil),
 			},
 		},
 		"lb - single selector select all": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "bar"}),
+				newVirtualNodeObj("vn1", nil),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -134,15 +147,19 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "bar"}),
+			},
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", nil),
 			},
 		},
 		"nlb - single selector select all": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "bar"}),
+				newVirtualNodeObj("vn1", nil),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -154,15 +171,19 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "bar"}),
+			},
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", nil),
 			},
 		},
 		"lb - single selector select some": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
+				newVirtualNodeObj("vn1", map[string]string{"foo": "bar"}),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -173,14 +194,18 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
+			},
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", map[string]string{"foo": "bar"}),
 			},
 		},
 		"nlb - single selector select some": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
+				newVirtualNodeObj("vn1", map[string]string{"foo": "baz"}),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -192,14 +217,18 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
+			},
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", map[string]string{"foo": "baz"}),
 			},
 		},
 		"lb - multi selector select all": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
+				newVirtualNodeObj("vn1", map[string]string{"hello": "world"}),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -210,9 +239,12 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
+			},
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", map[string]string{"hello": "world"}),
 			},
 		},
 		"nlb - multi selector select all": {
@@ -230,16 +262,18 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
 			},
+			expectedVirtualNodes: nil,
 		},
 		"lb - multi selector select some": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "joe"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
+				newVirtualNodeObj("vn1", nil),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -250,9 +284,12 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
+			},
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", nil),
 			},
 		},
 		"nlb - multi selector select some": {
@@ -260,6 +297,7 @@ func Test_filterNodes(t *testing.T) {
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "joe"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
+				newVirtualNodeObj("vn1", map[string]string{"foo": "joe"}),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -271,24 +309,82 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expected: []*v1.Node{
+			expectedProvisionedNodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
+			},
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", map[string]string{"foo": "joe"}),
+			},
+		},
+		"lb - only virtual nodes": {
+			nodes: []*v1.Node{
+				newVirtualNodeObj("vn1", nil),
+			},
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerNodeFilter: "foo in (bar, baz)",
+					},
+				},
+			},
+			expectedProvisionedNodes: nil,
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", nil),
+			},
+		},
+		"nlb - only virtual nodes": {
+			nodes: []*v1.Node{
+				newVirtualNodeObj("vn1", map[string]string{"foo": "bar"}),
+				newVirtualNodeObj("vn2", map[string]string{"foo": "baz"}),
+			},
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "kube-system",
+					Name:      "testservice",
+					Annotations: map[string]string{
+						ServiceAnnotationLoadBalancerType:              "nlb",
+						ServiceAnnotationNetworkLoadBalancerNodeFilter: "hello",
+					},
+				},
+			},
+			expectedProvisionedNodes: nil,
+			expectedVirtualNodes: []*v1.Node{
+				newVirtualNodeObj("vn1", map[string]string{"foo": "bar"}),
+				newVirtualNodeObj("vn2", map[string]string{"foo": "baz"}),
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			nodes, err := filterNodes(tc.service, tc.nodes)
+			provisionedNodes, virtualNodes, err := filterNodes(zap.S(), tc.service, tc.nodes)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(nodes, tc.expected) {
-				t.Errorf("expected: %+v got %+v", tc.expected, nodes)
+			if !reflect.DeepEqual(provisionedNodes, tc.expectedProvisionedNodes) {
+				t.Errorf("expected provisioned nodes: %+v got %+v", tc.expectedProvisionedNodes, provisionedNodes)
+			}
+
+			if !reflect.DeepEqual(virtualNodes, tc.expectedVirtualNodes) {
+				t.Errorf("expected virtual nodes: %+v got %+v", tc.expectedVirtualNodes, virtualNodes)
 			}
 		})
+	}
+}
+
+func newVirtualNodeObj(name string, labels map[string]string) *v1.Node {
+	return &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+		Spec: v1.NodeSpec{
+			ProviderID: "ocid1.virtualnode.oc1.iad.xyzabc123" + name,
+		},
 	}
 }
 
@@ -901,14 +997,241 @@ func TestCloudProvider_EnsureLoadBalancerDeleted(t *testing.T) {
 		logger:        zap.S(),
 		instanceCache: &mockInstanceCache{},
 		metricPusher:  nil,
+		kubeclient:    testclient.NewSimpleClientset(),
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := cp.EnsureLoadBalancerDeleted(context.Background(), "test", tt.service); (err != nil) != tt.wantErr {
-				t.Errorf("EnsureLoadBalancerDeleted() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("EnsureHyrbidLoadBalancerDeleted() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
+}
+
+func Test_getVirtualPodsOfService(t *testing.T) {
+	tests := []struct {
+		name    string
+		service *v1.Service
+		want    []*v1.Pod
+		wantErr bool
+	}{
+		{
+			name: "Virtual pods - no err",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "virtualService",
+				},
+			},
+			want: []*v1.Pod{
+				podList["virtualPod1"],
+				podList["virtualPod2"],
+			},
+			wantErr: false,
+		},
+		{
+			name: "Zero virtual pods - no err",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "regularService",
+				},
+			},
+			want:    nil,
+			wantErr: false,
+		},
+		{
+			name: "Multiple virtual pods and regular pods - no err",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mixedService",
+				},
+			},
+			want: []*v1.Pod{
+				podList["virtualPod1"],
+				podList["virtualPod2"],
+			},
+			wantErr: false,
+		},
+		{
+			name: "One virtual pod - not found err",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "unknownService",
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	cp := &CloudProvider{
+		NodeLister:          &mockNodeLister{},
+		EndpointSliceLister: &mockEndpointSliceLister{},
+		kubeclient:          testclient.NewSimpleClientset(),
+	}
+	_, _ = cp.kubeclient.CoreV1().Pods("").Create(context.TODO(), podList["regularPod1"], metav1.CreateOptions{})
+	_, _ = cp.kubeclient.CoreV1().Pods("").Create(context.TODO(), podList["regularPod2"], metav1.CreateOptions{})
+	_, _ = cp.kubeclient.CoreV1().Pods("").Create(context.TODO(), podList["virtualPod1"], metav1.CreateOptions{})
+	_, _ = cp.kubeclient.CoreV1().Pods("").Create(context.TODO(), podList["virtualPod2"], metav1.CreateOptions{})
+	_, _ = cp.kubeclient.CoreV1().Pods("").Create(context.TODO(), podList["virtualPod3"], metav1.CreateOptions{})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := cp.getVirtualPodsOfService(context.TODO(), zap.S(), tt.service)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getVirtualPodsOfService() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getVirtualPodsOfService() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getNodesAndPodsByIPs(t *testing.T) {
+	tests := map[string]struct {
+		backendIPs    []string
+		service       *v1.Service
+		expectedNodes []*v1.Node
+		expectedPods  []*v1.Pod
+		wantErr       bool
+	}{
+		"backend IPs of only provisioned nodes": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testservice",
+				},
+				Spec: v1.ServiceSpec{
+					Selector: map[string]string{
+						"app": "pod2",
+					},
+				},
+			},
+			backendIPs: []string{"0.0.0.0", "0.0.0.1"},
+			expectedNodes: []*v1.Node{
+				nodeList["instanceWithAddress1"],
+				nodeList["instanceWithAddress2"],
+			},
+			expectedPods: nil,
+			wantErr:      false,
+		},
+		"backend IPs of only virtual pods": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testservice",
+				},
+				Spec: v1.ServiceSpec{
+					Selector: map[string]string{
+						"app": "pod2",
+					},
+				},
+			},
+			backendIPs:    []string{"0.0.0.10"},
+			expectedNodes: nil,
+			expectedPods: []*v1.Pod{
+				podList["virtualPod2"],
+			},
+			wantErr: false,
+		},
+		"backend IPs of provisioned nodes and virtual pods": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testservice",
+				},
+				Spec: v1.ServiceSpec{
+					Selector: map[string]string{
+						"app": "pod2",
+					},
+				},
+			},
+			backendIPs: []string{"0.0.0.0", "0.0.0.10"},
+			expectedNodes: []*v1.Node{
+				nodeList["instanceWithAddress1"],
+			},
+			expectedPods: []*v1.Pod{
+				podList["virtualPod2"],
+			},
+			wantErr: false,
+		},
+		"unknown backend IP": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testservice",
+				},
+				Spec: v1.ServiceSpec{
+					Selector: map[string]string{
+						"app": "pod2",
+					},
+				},
+			},
+			backendIPs:    []string{"0.0.0.100"},
+			expectedNodes: nil,
+			expectedPods:  nil,
+			wantErr:       true,
+		},
+		"provisioned nodes and unknown service label selector": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testservice",
+				},
+				Spec: v1.ServiceSpec{
+					Selector: map[string]string{
+						"app": "unknown",
+					},
+				},
+			},
+			backendIPs: []string{"0.0.0.0"},
+			expectedNodes: []*v1.Node{
+				nodeList["instanceWithAddress1"],
+			},
+			expectedPods: nil,
+			wantErr:      false,
+		},
+		"unknown service label selector": {
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "testservice",
+				},
+				Spec: v1.ServiceSpec{
+					Selector: map[string]string{
+						"app": "unknown",
+					},
+				},
+			},
+			backendIPs:    []string{"0.0.0.10"},
+			expectedNodes: nil,
+			expectedPods:  nil,
+			wantErr:       true,
+		},
+	}
+
+	cp := &CloudProvider{
+		client:     MockOCIClient{},
+		config:     &providercfg.Config{CompartmentID: "testCompartment"},
+		NodeLister: &mockNodeLister{},
+		kubeclient: testclient.NewSimpleClientset(),
+	}
+
+	_, _ = cp.kubeclient.CoreV1().Pods("").Create(context.TODO(), podList["virtualPod1"], metav1.CreateOptions{})
+	_, _ = cp.kubeclient.CoreV1().Pods("").Create(context.TODO(), podList["virtualPod2"], metav1.CreateOptions{})
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			nodes, pods, err := cp.getNodesAndPodsByIPs(context.TODO(), zap.S(), tc.backendIPs, tc.service)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("getNodesAndPodsByIPs() error = %v, wantErr %v", err, tc.wantErr)
+				return
+			}
+
+			if !reflect.DeepEqual(nodes, tc.expectedNodes) {
+				t.Errorf("expected: %+v got %+v", tc.expectedNodes, nodes)
+			}
+
+			if !reflect.DeepEqual(pods, tc.expectedPods) {
+				t.Errorf("expected: %+v got %+v", tc.expectedPods, pods)
+			}
+		})
+	}
+
 }
 
 func assertError(actual, expected error) bool {

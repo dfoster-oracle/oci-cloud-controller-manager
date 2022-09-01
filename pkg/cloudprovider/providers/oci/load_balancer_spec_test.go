@@ -69,6 +69,7 @@ func TestNewLBSpecSuccess(t *testing.T) {
 		defaultSubnetOne string
 		defaultSubnetTwo string
 		nodes            []*v1.Node
+		virtualPods      []*v1.Pod
 		service          *v1.Service
 		expected         *LBSpec
 		sslConfig        *SSLConfig
@@ -1906,7 +1907,7 @@ func TestNewLBSpecSuccess(t *testing.T) {
 			slManagerFactory := func(mode string) securityListManager {
 				return newSecurityListManagerNOOP()
 			}
-			result, err := NewLBSpec(logger.Sugar(), tc.service, tc.nodes, subnets, tc.sslConfig, slManagerFactory, tc.clusterTags)
+			result, err := NewLBSpec(logger.Sugar(), tc.service, tc.nodes, tc.virtualPods, subnets, tc.sslConfig, slManagerFactory, tc.clusterTags)
 			if err != nil {
 				t.Error(err)
 			}
@@ -1923,6 +1924,7 @@ func TestNewLBSpecSingleAD(t *testing.T) {
 		defaultSubnetOne string
 		defaultSubnetTwo string
 		nodes            []*v1.Node
+		virtualPods		 []*v1.Pod
 		service          *v1.Service
 		expected         *LBSpec
 		clusterTags      *providercfg.InitialTags
@@ -2016,7 +2018,7 @@ func TestNewLBSpecSingleAD(t *testing.T) {
 			slManagerFactory := func(mode string) securityListManager {
 				return newSecurityListManagerNOOP()
 			}
-			result, err := NewLBSpec(logger.Sugar(), tc.service, tc.nodes, subnets, nil, slManagerFactory, tc.clusterTags)
+			result, err := NewLBSpec(logger.Sugar(), tc.service, tc.nodes, tc.virtualPods, subnets, nil, slManagerFactory, tc.clusterTags)
 			if err != nil {
 				t.Error(err)
 			}
@@ -2033,6 +2035,7 @@ func TestNewLBSpecFailure(t *testing.T) {
 		defaultSubnetOne string
 		defaultSubnetTwo string
 		nodes            []*v1.Node
+		virtualPods      []*v1.Pod
 		service          *v1.Service
 		//add cp or cp security list
 		expectedErrMsg string
@@ -2313,7 +2316,7 @@ func TestNewLBSpecFailure(t *testing.T) {
 				slManagerFactory := func(mode string) securityListManager {
 					return newSecurityListManagerNOOP()
 				}
-				_, err = NewLBSpec(logger.Sugar(), tc.service, tc.nodes, subnets, nil, slManagerFactory, tc.clusterTags)
+				_, err = NewLBSpec(logger.Sugar(), tc.service, tc.nodes, tc.virtualPods, subnets, nil, slManagerFactory, tc.clusterTags)
 			}
 			if err == nil || err.Error() != tc.expectedErrMsg {
 				t.Errorf("Expected error with message %q but got %q", tc.expectedErrMsg, err)
@@ -2597,6 +2600,7 @@ func TestRequiresCertificate(t *testing.T) {
 func Test_getBackends(t *testing.T) {
 	type args struct {
 		nodes    []*v1.Node
+		virtualPods []*v1.Pod
 		nodePort int32
 	}
 	var tests = []struct {
@@ -2865,11 +2869,131 @@ func Test_getBackends(t *testing.T) {
 				{IpAddress: common.String("0.0.0.1"), Port: common.Int(80), Weight: common.Int(1), TargetId: &testNodeString},
 			},
 		},
+		{
+			name: "multiple virtual pods - one with unassigned IP",
+			args: args{
+				virtualPods: []*v1.Pod{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								PrivateIPOCIDAnnotation: "privateIpOcid",
+							},
+						},
+						Status: v1.PodStatus{
+							PodIP: "0.0.0.0",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								PrivateIPOCIDAnnotation: "privateIpOcid",
+							},
+						},
+						Status: v1.PodStatus{
+							PodIP: "0.0.0.1",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								PrivateIPOCIDAnnotation: "privateIpOcid",
+							},
+						},
+					},
+				},
+				nodePort: 80,
+			},
+			want: []client.GenericBackend{
+				{IpAddress: common.String("0.0.0.0"), Port: common.Int(80), Weight: common.Int(1), TargetId: common.String("privateIpOcid")},
+				{IpAddress: common.String("0.0.0.1"), Port: common.Int(80), Weight: common.Int(1), TargetId: common.String("privateIpOcid")},
+			},
+		},
+		{
+			name: "multiple nodes and virtual pods - one each with unassigned IP",
+			args: args{
+				nodes: []*v1.Node{
+					{
+						TypeMeta:   metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{},
+						Spec: v1.NodeSpec{
+							ProviderID: testNodeString,
+						},
+						Status: v1.NodeStatus{
+							Addresses: []v1.NodeAddress{
+								{
+									Address: "0.0.0.0",
+									Type:    "InternalIP",
+								},
+							},
+						},
+					},
+					{
+						TypeMeta:   metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{},
+						Spec: v1.NodeSpec{
+							ProviderID: testNodeString,
+						},
+						Status: v1.NodeStatus{
+							Addresses:       []v1.NodeAddress{},
+						},
+					},
+					{
+						TypeMeta:   metav1.TypeMeta{},
+						ObjectMeta: metav1.ObjectMeta{},
+						Spec: v1.NodeSpec{
+							ProviderID: testNodeString,
+						},
+						Status: v1.NodeStatus{
+							Addresses: []v1.NodeAddress{
+								{
+									Address: "0.0.0.1",
+									Type:    "InternalIP",
+								},
+							},
+						},
+					},
+				},
+				virtualPods: []*v1.Pod{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								PrivateIPOCIDAnnotation: "privateIpOcid",
+							},
+						},
+						Status: v1.PodStatus{
+							PodIP: "0.0.0.2",
+						},
+					},
+					{
+						Status: v1.PodStatus{
+							PodIP: "0.0.0.4",
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								PrivateIPOCIDAnnotation: "privateIpOcid",
+							},
+						},
+						Status: v1.PodStatus{
+							PodIP: "0.0.0.3",
+						},
+					},
+				},
+				nodePort: 80,
+			},
+			want: []client.GenericBackend{
+				{IpAddress: common.String("0.0.0.0"), Port: common.Int(80), Weight: common.Int(1), TargetId: &testNodeString},
+				{IpAddress: common.String("0.0.0.1"), Port: common.Int(80), Weight: common.Int(1), TargetId: &testNodeString},
+				{IpAddress: common.String("0.0.0.2"), Port: common.Int(80), Weight: common.Int(1), TargetId: common.String("privateIpOcid")},
+				{IpAddress: common.String("0.0.0.3"), Port: common.Int(80), Weight: common.Int(1), TargetId: common.String("privateIpOcid")},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			logger := zap.L()
-			if got := getBackends(logger.Sugar(), tt.args.nodes, tt.args.nodePort); !reflect.DeepEqual(got, tt.want) {
+			if got := getBackends(logger.Sugar(), tt.args.nodes, tt.args.virtualPods, tt.args.nodePort); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getBackends() = %+v, want %+v", got, tt.want)
 			}
 		})

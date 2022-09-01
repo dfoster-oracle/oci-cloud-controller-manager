@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	_ "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
@@ -53,7 +53,7 @@ func main() {
 	}
 
 	fss := cliflag.NamedFlagSets{}
-	command := app.NewCloudControllerManagerCommand(s, cloudInitializer, app.DefaultInitFuncConstructors, fss, wait.NeverStop)
+	command := app.NewCloudControllerManagerCommand(s, cloudInitializer, getInitFuncConstructors(), fss, wait.NeverStop)
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
 	// utilflag.InitFlags() (by removing its pflag.Parse() call). For now, we have to set the
@@ -93,4 +93,20 @@ func cloudInitializer(config *config.CompletedConfig) cloudprovider.Interface {
 	}
 
 	return cloud
+}
+
+func getInitFuncConstructors() map[string]app.ControllerInitFuncConstructor{
+	// Disable default service controller
+	app.ControllersDisabledByDefault.Insert("service")
+
+	// Add custom service controller init func
+	defaultConstructors := app.DefaultInitFuncConstructors
+	defaultConstructors["oci-service"] = app.ControllerInitFuncConstructor{
+		InitContext: app.ControllerInitContext{
+			ClientName: "service-controller",
+		},
+		Constructor: oci.StartOciServiceControllerWrapper,
+	}
+
+	return defaultConstructors
 }

@@ -31,7 +31,9 @@ import (
 	"github.com/oracle/oci-go-sdk/v49/identity"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	v1discovery "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	v1discoverylisters "k8s.io/client-go/listers/discovery/v1"
 )
 
 var (
@@ -197,6 +199,213 @@ var (
 			},
 			Spec: v1.NodeSpec{
 				ProviderID: "instance1",
+			},
+		},
+		"instanceWithAddress1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					CompartmentIDAnnotation: "compartment1",
+				},
+			},
+			Spec: v1.NodeSpec{
+				ProviderID: "instanceWithAddress1",
+			},
+			Status: v1.NodeStatus{
+				Addresses: []v1.NodeAddress{
+					{
+						Address: "0.0.0.0",
+						Type:    "InternalIP",
+					},
+				},
+			},
+		},
+		"instanceWithAddress2": {
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					CompartmentIDAnnotation: "compartment1",
+				},
+			},
+			Spec: v1.NodeSpec{
+				ProviderID: "instanceWithAddress2",
+			},
+			Status: v1.NodeStatus{
+				Addresses: []v1.NodeAddress{
+					{
+						Address: "0.0.0.1",
+						Type:    "InternalIP",
+					},
+				},
+			},
+		},
+		"virtualNodeDefault": {
+			Spec: v1.NodeSpec{
+				ProviderID: "ocid1.virtualnode.oc1.iad.default",
+			},
+		},
+	}
+
+	podList = map[string]*v1.Pod{
+		"virtualPod1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "virtualPod1",
+				Labels: map[string]string{
+					"app": "pod1",
+				},
+			},
+			Spec: v1.PodSpec{
+				NodeName: "virtualNodeDefault",
+			},
+		},
+		"virtualPod2": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "virtualPod2",
+				Labels: map[string]string{
+					"app": "pod2",
+				},
+			},
+			Spec: v1.PodSpec{
+				NodeName: "virtualNodeDefault",
+			},
+			Status: v1.PodStatus{
+				PodIP: "0.0.0.10",
+			},
+		},
+		"regularPod1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "regularPod1",
+			},
+			Spec: v1.PodSpec{
+				NodeName: "default",
+			},
+		},
+		"regularPod2": {
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "regularPod2",
+			},
+			Spec: v1.PodSpec{
+				NodeName: "default",
+			},
+		},
+	}
+
+	ready = true
+	endpointSliceList = map[string]*v1discovery.EndpointSlice{
+		"endpointSliceVirtual": {
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					v1discovery.LabelServiceName: "virtualService",
+				},
+			},
+			Endpoints: []v1discovery.Endpoint{
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "virtualPod1",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+				},
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "virtualPod2",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+				},
+			},
+		},
+		"endpointSliceRegular": {
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					v1discovery.LabelServiceName: "regularService",
+				},
+			},
+			Endpoints: []v1discovery.Endpoint{
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "regularPod1",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+				},
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "regularPod2",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+				},
+			},
+		},
+
+		"endpointSliceMixed": {
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					v1discovery.LabelServiceName: "mixedService",
+				},
+			},
+			Endpoints: []v1discovery.Endpoint{
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "virtualPod1",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+				},
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "regularPod1",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+				},
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "virtualPod2",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+				},
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "regularPod2",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+				},
+			},
+		},
+		"endpointSliceUnknownPod": {
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					v1discovery.LabelServiceName: "unknownService",
+				},
+			},
+			Endpoints: []v1discovery.Endpoint{
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "unknown",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+				},
 			},
 		},
 	}
@@ -1060,9 +1269,16 @@ func TestGetCompartmentIDByInstanceID(t *testing.T) {
 type mockNodeLister struct{}
 
 func (s *mockNodeLister) List(selector labels.Selector) (ret []*v1.Node, err error) {
-	nodes := make([]*v1.Node, len(nodeList))
-	nodes[0] = nodeList["default"]
-	nodes[1] = nodeList["instance1"]
+	var nodes []*v1.Node
+	for _, n := range nodeList {
+		if selector != nil {
+			if selector.Matches(labels.Set(n.ObjectMeta.GetLabels())) {
+				nodes = append(nodes, n)
+			}
+		} else {
+			nodes = append(nodes, n)
+		}
+	}
 	return nodes, nil
 }
 
@@ -1070,9 +1286,42 @@ func (s *mockNodeLister) Get(name string) (*v1.Node, error) {
 	if node, ok := nodeList[name]; ok {
 		return node, nil
 	}
-	return nil, nil
+	return nil, errors.New("get node error")
 }
 
 func (s *mockNodeLister) ListWithPredicate() ([]*v1.Node, error) {
 	return nil, nil
+}
+
+type mockEndpointSliceLister struct{}
+
+func (s *mockEndpointSliceLister) List(selector labels.Selector) (ret []*v1discovery.EndpointSlice, err error) {
+	return []*v1discovery.EndpointSlice{}, nil
+}
+
+func (s *mockEndpointSliceLister) EndpointSlices(namespace string) v1discoverylisters.EndpointSliceNamespaceLister {
+	return &mockEndpointSliceNamespaceLister{}
+}
+
+type mockEndpointSliceNamespaceLister struct{}
+
+func (s *mockEndpointSliceNamespaceLister) List(selector labels.Selector) (ret []*v1discovery.EndpointSlice, err error) {
+	var endpointSlices []*v1discovery.EndpointSlice
+	for _, es := range endpointSliceList {
+		if selector != nil {
+			if selector.Matches(labels.Set(es.ObjectMeta.GetLabels())) {
+				endpointSlices = append(endpointSlices, es)
+			}
+		} else {
+			endpointSlices = append(endpointSlices, es)
+		}
+	}
+	return endpointSlices, nil
+}
+
+func (s *mockEndpointSliceNamespaceLister) Get(name string) (ret *v1discovery.EndpointSlice, err error) {
+	if es, ok := endpointSliceList[name]; ok {
+		return es, nil
+	}
+	return nil, errors.New("get endpointSlice error")
 }

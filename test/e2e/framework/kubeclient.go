@@ -44,6 +44,8 @@ import (
 	scheduler "k8s.io/kubernetes/pkg/scheduler/framework"
 	testutil "k8s.io/kubernetes/test/utils"
 	uexec "k8s.io/utils/exec"
+
+	cloudprovider "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci"
 )
 
 const (
@@ -659,6 +661,15 @@ func GetReadySchedulableNodesOrDie(c clientset.Interface) (nodes *v1.NodeList) {
 	// 'Not Ready' nodes, just in case (there is no need to fail the test).
 	FilterNodes(nodes, func(node v1.Node) bool {
 		return isNodeSchedulable(&node) && isNodeUntainted(&node)
+	})
+	return nodes
+}
+
+// GetReadySchedulableVirtualNodesOrDie - gets nodes that are schedulable, ready and virtual
+func GetReadySchedulableVirtualNodesOrDie(c clientset.Interface) (nodes *v1.NodeList) {
+	nodes = waitListSchedulableNodesOrDie(c)
+	FilterNodes(nodes, func(node v1.Node) bool {
+		return cloudprovider.IsVirtualNodeId(node.Spec.ProviderID) && isNodeSchedulable(&node) && isNodeUntainted(&node)
 	})
 	return nodes
 }

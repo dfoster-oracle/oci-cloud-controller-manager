@@ -52,6 +52,7 @@ import (
 	csicontroller "github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
 	"github.com/oracle/oci-cloud-controller-manager/controllers"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci"
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/metrics"
@@ -231,7 +232,8 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 		defer wg.Done()
 		// Run starts all the cloud controller manager control loops.
 		cloudProvider := cloudInitializer(logger, config)
-		controllerInitializers := cloudControllerManager.ConstructControllerInitializers(cloudControllerManager.DefaultInitFuncConstructors, config, cloudProvider)
+
+		controllerInitializers := cloudControllerManager.ConstructControllerInitializers(getInitFuncConstructors(), config, cloudProvider)
 		// TODO move to newer cloudControllerManager dependency that provides a way to pass channel/context
 		if err := cloudControllerManager.Run(config, cloudProvider, controllerInitializers, ctx.Done()); err != nil {
 			logger.With(zap.Error(err)).Error("Error running cloud controller manager")
@@ -367,4 +369,20 @@ func getOCIClient(logger *zap.SugaredLogger, config *providercfg.Config) client.
 		logger.With(zap.Error(err)).Fatal("client can not be generated.")
 	}
 	return c
+}
+
+func getInitFuncConstructors() map[string]cloudControllerManager.ControllerInitFuncConstructor{
+	// Disable default service controller
+	cloudControllerManager.ControllersDisabledByDefault.Insert("service")
+
+	// Add custom service controller init func
+	defaultConstructors := cloudControllerManager.DefaultInitFuncConstructors
+	defaultConstructors["oci-service"] = cloudControllerManager.ControllerInitFuncConstructor{
+		InitContext: cloudControllerManager.ControllerInitContext{
+			ClientName: "service-controller",
+		},
+		Constructor: oci.StartOciServiceControllerWrapper,
+	}
+
+	return defaultConstructors
 }
