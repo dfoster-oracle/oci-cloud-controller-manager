@@ -107,6 +107,8 @@ type serviceCache struct {
 	serviceMap map[string]*cachedService
 }
 
+// This controller is based on https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/cloud-provider/controllers/service/controller.go
+
 // ServiceController keeps cloud provider service resources
 // (like load balancers) in sync with the registry.
 type ServiceController struct {
@@ -253,6 +255,7 @@ func NewServiceController(
 				// EndpointSlice generation does not change when labels change. Although the
 				// controller will never change LabelServiceName, users might. This check
 				// ensures that we handle changes to this label.
+				// Refer: https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/endpointslice/endpointslice_controller.go
 				curSvcName := curEndpointSlice.Labels[discovery.LabelServiceName]
 				oldSvcName := oldEndpointSlice.Labels[discovery.LabelServiceName]
 				if curSvcName != oldSvcName {
@@ -304,6 +307,16 @@ func (s *ServiceController) enqueueService(obj interface{}) {
 // enqueueServiceForEndpointSlice attempts to queue the corresponding Service for
 // the provided EndpointSlice.
 func (s *ServiceController) enqueueServiceForEndpointSlice(endpointSlice *discovery.EndpointSlice) {
+	virtualNodeExists, err := VirtualNodeExists(s.nodeLister)
+	if err != nil {
+		runtime.HandleError(fmt.Errorf("couldn't determine if a virtual node exists in the cluster: %v", err))
+		return
+	}
+	if !virtualNodeExists {
+		// We don't want to queue a service that fronts non-virtual pods when there is an endpointslice event,
+		// only virtual pods are added as backends
+		return
+	}
 	serviceName, ok := endpointSlice.Labels[discovery.LabelServiceName]
 	if !ok || serviceName == "" {
 		runtime.HandleError(fmt.Errorf("couldn't get service name for EndpointSlice %s", endpointSlice.Name))
@@ -779,6 +792,10 @@ func nodeSlicesEqualForLB(x, y []*v1.Node) bool {
 
 func (s *ServiceController) getNodeConditionPredicate() NodeConditionPredicate {
 	return func(node *v1.Node) bool {
+		if IsVirtualNode(node) {
+			return false
+		}
+
 		if _, hasExcludeBalancerLabel := node.Labels[v1.LabelNodeExcludeBalancers]; hasExcludeBalancerLabel {
 			return false
 		}

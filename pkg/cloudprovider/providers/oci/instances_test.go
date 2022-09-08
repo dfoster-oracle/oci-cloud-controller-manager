@@ -305,6 +305,7 @@ var (
 					Conditions: v1discovery.EndpointConditions{
 						Ready:       &ready,
 					},
+					Addresses: []string{"0.0.0.9"},
 				},
 				{
 					TargetRef: &v1.ObjectReference{
@@ -314,6 +315,7 @@ var (
 					Conditions: v1discovery.EndpointConditions{
 						Ready:       &ready,
 					},
+					Addresses: []string{"0.0.0.10"},
 				},
 			},
 		},
@@ -332,6 +334,7 @@ var (
 					Conditions: v1discovery.EndpointConditions{
 						Ready:       &ready,
 					},
+					Addresses: []string{"0.0.0.19"},
 				},
 				{
 					TargetRef: &v1.ObjectReference{
@@ -341,6 +344,7 @@ var (
 					Conditions: v1discovery.EndpointConditions{
 						Ready:       &ready,
 					},
+					Addresses: []string{"0.0.0.20"},
 				},
 			},
 		},
@@ -360,6 +364,7 @@ var (
 					Conditions: v1discovery.EndpointConditions{
 						Ready:       &ready,
 					},
+					Addresses: []string{"0.0.0.9"},
 				},
 				{
 					TargetRef: &v1.ObjectReference{
@@ -369,6 +374,7 @@ var (
 					Conditions: v1discovery.EndpointConditions{
 						Ready:       &ready,
 					},
+					Addresses: []string{"0.0.0.19"},
 				},
 				{
 					TargetRef: &v1.ObjectReference{
@@ -378,6 +384,7 @@ var (
 					Conditions: v1discovery.EndpointConditions{
 						Ready:       &ready,
 					},
+					Addresses: []string{"0.0.0.10"},
 				},
 				{
 					TargetRef: &v1.ObjectReference{
@@ -387,6 +394,7 @@ var (
 					Conditions: v1discovery.EndpointConditions{
 						Ready:       &ready,
 					},
+					Addresses: []string{"0.0.0.20"},
 				},
 			},
 		},
@@ -405,6 +413,65 @@ var (
 					Conditions: v1discovery.EndpointConditions{
 						Ready:       &ready,
 					},
+					Addresses: []string{"0.0.0.100"},
+				},
+			},
+		},
+		"endpointSliceDuplicate1.1": {
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					v1discovery.LabelServiceName: "duplicateEndpointsService",
+				},
+			},
+			Endpoints: []v1discovery.Endpoint{
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "virtualPod1",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+					Addresses: []string{"0.0.0.10"},
+				},
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "virtualPod2",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+					Addresses: []string{"0.0.0.9"},
+				},
+			},
+		},
+		"endpointSliceDuplicate1.2": {
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					v1discovery.LabelServiceName: "duplicateEndpointsService",
+				},
+			},
+			Endpoints: []v1discovery.Endpoint{
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "virtualPod2",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+					Addresses: []string{"0.0.0.9"},
+				},
+				{
+					TargetRef: &v1.ObjectReference{
+						Kind: "Pod",
+						Name: "virtualPod1",
+					},
+					Conditions: v1discovery.EndpointConditions{
+						Ready:       &ready,
+					},
+					Addresses: []string{"0.0.0.10"},
 				},
 			},
 		},

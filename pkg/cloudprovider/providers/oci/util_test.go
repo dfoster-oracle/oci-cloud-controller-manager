@@ -15,7 +15,10 @@
 package oci
 
 import (
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes/fake"
 	"testing"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 )
@@ -132,7 +135,6 @@ func TestIsVirtualNode(t *testing.T) {
 	tests := map[string]struct {
 		node          *v1.Node
 		isVirtualNode bool
-		wantErr       bool
 	}{
 		"Virtual node": {
 			node: &v1.Node{
@@ -141,7 +143,30 @@ func TestIsVirtualNode(t *testing.T) {
 				},
 			},
 			isVirtualNode: true,
-			wantErr:       false,
+		},
+		"Virtual node dev": {
+			node: &v1.Node{
+				Spec: v1.NodeSpec{
+					ProviderID: "ocid1.virtualnodedev.xyz",
+				},
+			},
+			isVirtualNode: true,
+		},
+		"Virtual node integ": {
+			node: &v1.Node{
+				Spec: v1.NodeSpec{
+					ProviderID: "ocid1.virtualnodeinteg.xyz",
+				},
+			},
+			isVirtualNode: true,
+		},
+		"Unknown virtual node resource": {
+			node: &v1.Node{
+				Spec: v1.NodeSpec{
+					ProviderID: "ocid1.virtualnodelimit.xyz",
+				},
+			},
+			isVirtualNode: false,
 		},
 		"Provisioned node": {
 			node: &v1.Node{
@@ -150,7 +175,6 @@ func TestIsVirtualNode(t *testing.T) {
 				},
 			},
 			isVirtualNode: false,
-			wantErr:       false,
 		},
 		"Unknown provider Id": {
 			node: &v1.Node{
@@ -159,7 +183,6 @@ func TestIsVirtualNode(t *testing.T) {
 				},
 			},
 			isVirtualNode: false,
-			wantErr:       false,
 		},
 		"Empty provider Id": {
 			node: &v1.Node{
@@ -168,18 +191,93 @@ func TestIsVirtualNode(t *testing.T) {
 				},
 			},
 			isVirtualNode: false,
-			wantErr:       true,
 		},
 	}
 
-	for _, tc := range tests {
-		isVirtualNode, err := IsVirtualNode(tc.node)
-		if (err != nil) != tc.wantErr {
-			t.Errorf("IsVirtualNode() error = %v, wantErr %v", err, tc.wantErr)
-			return
-		}
-		if isVirtualNode != tc.isVirtualNode {
-			t.Errorf("expected: %+v got %+v", tc.isVirtualNode, isVirtualNode)
-		}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := IsVirtualNode(tc.node)
+			if got != tc.isVirtualNode {
+				t.Errorf("expected: %+v got %+v", tc.isVirtualNode, got)
+			}
+		})
+	}
+}
+
+func TestVirtualNodeExists(t *testing.T) {
+	tests := map[string]struct{
+		nodeList []*v1.Node
+		exists   bool
+	} {
+		"No nodes exist": {
+			nodeList: []*v1.Node{},
+			exists:   false,
+		},
+		"No virtual nodes exist": {
+			nodeList: []*v1.Node{
+				{
+					Spec: v1.NodeSpec{
+						ProviderID: "ocid1.instance.xyz1",
+					},
+				},
+				{
+					Spec: v1.NodeSpec{
+						ProviderID: "ocid1.instance.xyz2",
+					},
+				},
+			},
+			exists: false,
+		},
+		"Virtual nodes and provisioned nodes exist": {
+			nodeList: []*v1.Node{
+				{
+					Spec: v1.NodeSpec{
+						ProviderID: "ocid1.instance.xyz1",
+					},
+				},
+				{
+					Spec: v1.NodeSpec{
+						ProviderID: "ocid1.instance.xyz2",
+					},
+				},
+				{
+					Spec: v1.NodeSpec{
+						ProviderID: "ocid1.instance.xyz3",
+					},
+				},
+				{
+					Spec: v1.NodeSpec{
+						ProviderID: virtualNodeOcidPrefix + ".xyz",
+					},
+				},
+			},
+			exists: true,
+		},
+		"Virtual node exists": {
+			nodeList: []*v1.Node{
+				{
+					Spec: v1.NodeSpec{
+						ProviderID: virtualNodeOcidPrefix + ".xyz",
+					},
+				},
+			},
+			exists: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			fakeInformerFactory := informers.NewSharedInformerFactory(&fake.Clientset{}, 0*time.Second)
+			for _, node := range tc.nodeList {
+				fakeInformerFactory.Core().V1().Nodes().Informer().GetStore().Add(node)
+			}
+			got, err := VirtualNodeExists(fakeInformerFactory.Core().V1().Nodes().Lister())
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if got != tc.exists {
+				t.Errorf("expected: %+v got %+v", tc.exists, got)
+			}
+		})
 	}
 }

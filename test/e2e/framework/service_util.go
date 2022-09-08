@@ -1031,11 +1031,7 @@ func (f *CloudProviderFramework) getVirtualPodsIPs (service *v1.Service, namespa
 		if err != nil {
 			return nil, err
 		}
-		isVirtualNode, err := cloudprovider.IsVirtualNode(node)
-		if err != nil {
-			return nil, err
-		}
-		if isVirtualNode && selector.Matches(labels.Set(pod.ObjectMeta.GetLabels())) {
+		if cloudprovider.IsVirtualNode(node) && selector.Matches(labels.Set(pod.ObjectMeta.GetLabels())) {
 			ipMap[pod.Status.PodIP] = pod
 		}
 	}

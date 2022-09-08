@@ -19,10 +19,16 @@ import (
 
 	"github.com/pkg/errors"
 	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
+	listersv1 "k8s.io/client-go/listers/core/v1"
 )
 
-const virtualNodeOcidPrefix = "ocid1.virtualnode"
+const (
+	virtualNodeOcidPrefix = "ocid1.virtualnode."
+	virtualNodeOcidDevPrefix = "ocid1.virtualnodedev."
+	virtualNodeOcidIntegPrefix = "ocid1.virtualnodeinteg."
+)
 
 // MapProviderIDToInstanceID parses the provider id and returns the instance ocid.
 func MapProviderIDToInstanceID(providerID string) (string, error) {
@@ -61,14 +67,33 @@ func DeepEqualLists(listA, listB []string) bool {
 
 // IsVirtualNodeId Returns true if providerId is a Virtual Node OCID
 func IsVirtualNodeId(resourceId string) bool {
-	return strings.HasPrefix(resourceId, virtualNodeOcidPrefix)
+	return strings.HasPrefix(resourceId, virtualNodeOcidPrefix) || strings.HasPrefix(resourceId, virtualNodeOcidDevPrefix) || strings.HasPrefix(resourceId, virtualNodeOcidIntegPrefix)
 }
 
 // IsVirtualNode returns true if a node object corresponds to a Virtual Node
-func IsVirtualNode(node *api.Node) (bool, error) {
+func IsVirtualNode(node *api.Node) bool {
 	resourceId, err := MapProviderIDToInstanceID(node.Spec.ProviderID)
+	if err != nil {
+		// OVK ensures the providerId is set on a Virtual Node
+		// If the providerId is empty it is safe to assume the node is not virtual
+		return false
+	}
+	return IsVirtualNodeId(resourceId)
+}
+
+// VirtualNodeExists returns true if a virtual node exists in the cluster
+func VirtualNodeExists(nodeLister listersv1.NodeLister) (bool, error) {
+	nodeList, err := nodeLister.List(labels.Everything())
 	if err != nil {
 		return false, err
 	}
-	return IsVirtualNodeId(resourceId), nil
+	for _, node := range nodeList {
+		if IsVirtualNode(node) {
+			return true, nil
+		} else {
+			//TODO: Change this when clusters with mixed node pools are introduced, we will need to check every node
+			return false, nil
+		}
+	}
+	return false, nil
 }
