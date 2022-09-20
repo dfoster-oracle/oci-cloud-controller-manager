@@ -53,6 +53,10 @@ const (
 	// (OCI) cloud-provider.
 	providerName   = "oci"
 	providerPrefix = providerName + "://"
+
+	// endpointSliceUpdatesBatchPeriod is the duration after which a service
+	// owning an endpointslice is batched in the Service Controller
+	endpointSliceUpdatesBatchPeriod = 5*time.Second
 )
 
 // ProviderName uniquely identifies the Oracle Bare Metal Cloud Services (OCI)
@@ -279,7 +283,7 @@ func startOciServiceController(ctx context.Context, initContext cloudControllerM
 		completedConfig.SharedInformers.Core().V1().Nodes(),
 		completedConfig.SharedInformers.Discovery().V1().EndpointSlices(),
 		completedConfig.ComponentConfig.KubeCloudShared.ClusterName,
-		5*time.Second,
+		endpointSliceUpdatesBatchPeriod,
 		utilfeature.DefaultFeatureGate,
 	)
 	if err != nil {

@@ -36,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -103,7 +102,7 @@ func newServiceController(options ...func(*ServiceController)) (*ServiceControll
 		cloud:                           cloud,
 		knownHosts:                      []*v1.Node{},
 		kubeClient:                      kubeClient,
-		clusterName: 					 "test-cluster",
+		clusterName:                     "test-cluster",
 		cache:                           &serviceCache{serviceMap: make(map[string]*cachedService)},
 		eventBroadcaster:                broadcaster,
 		eventRecorder:                   recorder,
@@ -1821,42 +1820,64 @@ func TestMarkAndUnmarkFullSync(t *testing.T) {
 }
 
 func TestEnqueueServiceForEndpointSlice(t *testing.T) {
+	testCases := []struct {
+		desc              string
+		virtualNodeExists bool
+		enqueueService    bool
+	}{
+		{
+			desc:              "Virtual node exists",
+			virtualNodeExists: true,
+			enqueueService:    true,
+		},
+		{
+			desc:              "Virtual node does not exist",
+			virtualNodeExists: false,
+			enqueueService:    false,
+		},
+	}
+
 	serviceName := "service-owning-endpointslice"
 	testSvc := newService(serviceName, "service-owning-endpointslice-uid", v1.ServiceTypeLoadBalancer)
-	fakeInformerFactory := informers.NewSharedInformerFactory(&fake.Clientset{}, 0*time.Second)
-	fakeInformerFactory.Core().V1().Services().Informer().GetStore().Add(testSvc)
-	controller, _, _ := newServiceController(func(controller *ServiceController) {
-		controller.serviceLister = fakeInformerFactory.Core().V1().Services().Lister()
-	})
 	testEndpointSlice := newEndpointSlice("basic-endpointslice", serviceName)
-	keyExpected := testSvc.GetObjectMeta().GetNamespace() + "/" + testSvc.GetObjectMeta().GetName()
 
-	controller.enqueueServiceForEndpointSlice(testEndpointSlice)
+	for _, testCase := range testCases {
+		t.Run(testCase.desc, func(t *testing.T) {
+			fakeInformerFactory := informers.NewSharedInformerFactory(&fake.Clientset{}, 0*time.Second)
+			fakeInformerFactory.Core().V1().Services().Informer().GetStore().Add(testSvc)
+			if testCase.virtualNodeExists {
+				fakeInformerFactory.Core().V1().Nodes().Informer().GetStore().Add(&v1.Node{Spec: v1.NodeSpec{ProviderID: virtualNodeOcidPrefix + ".xyz"}})
+			}
+			controller, _, _ := newServiceController(func(controller *ServiceController) {
+				controller.serviceLister = fakeInformerFactory.Core().V1().Services().Lister()
+				controller.nodeLister = fakeInformerFactory.Core().V1().Nodes().Lister()
+			})
 
-	err := wait.PollImmediate(100*time.Millisecond, 3*time.Second, func() (bool, error) {
-		if controller.queue.Len() > 0 {
-			return true, nil
-		}
-		return false, nil
-	})
-	if err != nil {
-		t.Fatalf("unexpected error waiting for add to queue")
-	}
-	keyGot, quit := controller.queue.Get()
-	if quit {
-		t.Fatalf("queue is empty")
-	}
-	if keyExpected != keyGot.(string) {
-		t.Fatalf("get service key error, expected: %s, got: %s", keyExpected, keyGot.(string))
+			controller.enqueueServiceForEndpointSlice(testEndpointSlice)
+			time.Sleep(500 * time.Millisecond)
+			if (controller.queue.Len() > 0) != testCase.enqueueService {
+				t.Fatalf("unexpected service enqueue")
+			}
+			if testCase.enqueueService {
+				keyExpected := testSvc.GetObjectMeta().GetNamespace() + "/" + testSvc.GetObjectMeta().GetName()
+				keyGot, quit := controller.queue.Get()
+				if quit {
+					t.Fatalf("queue is empty")
+				}
+				if keyExpected != keyGot.(string) {
+					t.Fatalf("get service key error, expected: %s, got: %s", keyExpected, keyGot.(string))
+				}
+			}
+		})
 	}
 }
 
 func TestEndpointsChanged(t *testing.T) {
-	testCases := []struct{
-		desc string
+	testCases := []struct {
+		desc         string
 		curEndpoints []discovery.Endpoint
 		oldEndpoints []discovery.Endpoint
-		changed bool
+		changed      bool
 	}{
 		{
 			desc: "cur endpoints length changed",

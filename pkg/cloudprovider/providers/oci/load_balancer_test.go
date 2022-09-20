@@ -42,10 +42,9 @@ func newNodeObj(name string, labels map[string]string) *v1.Node {
 
 func Test_filterNodes(t *testing.T) {
 	testCases := map[string]struct {
-		nodes                    []*v1.Node
-		service                  *v1.Service
-		expectedProvisionedNodes []*v1.Node
-		expectedVirtualNodes     []*v1.Node
+		nodes    []*v1.Node
+		service  *v1.Service
+		expected []*v1.Node
 	}{
 		"lb - no annotation": {
 			nodes: []*v1.Node{
@@ -59,11 +58,10 @@ func Test_filterNodes(t *testing.T) {
 					Annotations: map[string]string{},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
 			},
-			expectedVirtualNodes: nil,
 		},
 		"nlb - no annotation": {
 			nodes: []*v1.Node{
@@ -79,17 +77,15 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
 			},
-			expectedVirtualNodes: nil,
 		},
 		"lb - empty annotation": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
-				newVirtualNodeObj("vn1", nil),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -100,19 +96,15 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
-			},
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", nil),
 			},
 		},
 		"nlb - empty annotation": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
-				newVirtualNodeObj("vn1", nil),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -124,19 +116,15 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", nil),
 				newNodeObj("node2", nil),
-			},
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", nil),
 			},
 		},
 		"lb - single selector select all": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "bar"}),
-				newVirtualNodeObj("vn1", nil),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -147,19 +135,15 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "bar"}),
-			},
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", nil),
 			},
 		},
 		"nlb - single selector select all": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "bar"}),
-				newVirtualNodeObj("vn1", nil),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -171,19 +155,15 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "bar"}),
-			},
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", nil),
 			},
 		},
 		"lb - single selector select some": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
-				newVirtualNodeObj("vn1", map[string]string{"foo": "bar"}),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -194,18 +174,14 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
-			},
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", map[string]string{"foo": "bar"}),
 			},
 		},
 		"nlb - single selector select some": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
-				newVirtualNodeObj("vn1", map[string]string{"foo": "baz"}),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -217,18 +193,14 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
-			},
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", map[string]string{"foo": "baz"}),
 			},
 		},
 		"lb - multi selector select all": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
-				newVirtualNodeObj("vn1", map[string]string{"hello": "world"}),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -239,12 +211,9 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
-			},
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", map[string]string{"hello": "world"}),
 			},
 		},
 		"nlb - multi selector select all": {
@@ -262,18 +231,16 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
 			},
-			expectedVirtualNodes: nil,
 		},
 		"lb - multi selector select some": {
 			nodes: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "joe"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
-				newVirtualNodeObj("vn1", nil),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -284,12 +251,9 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
-			},
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", nil),
 			},
 		},
 		"nlb - multi selector select some": {
@@ -297,7 +261,6 @@ func Test_filterNodes(t *testing.T) {
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "joe"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
-				newVirtualNodeObj("vn1", map[string]string{"foo": "joe"}),
 			},
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -309,68 +272,22 @@ func Test_filterNodes(t *testing.T) {
 					},
 				},
 			},
-			expectedProvisionedNodes: []*v1.Node{
+			expected: []*v1.Node{
 				newNodeObj("node1", map[string]string{"foo": "bar"}),
 				newNodeObj("node2", map[string]string{"foo": "baz"}),
-			},
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", map[string]string{"foo": "joe"}),
-			},
-		},
-		"lb - only virtual nodes": {
-			nodes: []*v1.Node{
-				newVirtualNodeObj("vn1", nil),
-			},
-			service: &v1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "kube-system",
-					Name:      "testservice",
-					Annotations: map[string]string{
-						ServiceAnnotationLoadBalancerNodeFilter: "foo in (bar, baz)",
-					},
-				},
-			},
-			expectedProvisionedNodes: nil,
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", nil),
-			},
-		},
-		"nlb - only virtual nodes": {
-			nodes: []*v1.Node{
-				newVirtualNodeObj("vn1", map[string]string{"foo": "bar"}),
-				newVirtualNodeObj("vn2", map[string]string{"foo": "baz"}),
-			},
-			service: &v1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "kube-system",
-					Name:      "testservice",
-					Annotations: map[string]string{
-						ServiceAnnotationLoadBalancerType:              "nlb",
-						ServiceAnnotationNetworkLoadBalancerNodeFilter: "hello",
-					},
-				},
-			},
-			expectedProvisionedNodes: nil,
-			expectedVirtualNodes: []*v1.Node{
-				newVirtualNodeObj("vn1", map[string]string{"foo": "bar"}),
-				newVirtualNodeObj("vn2", map[string]string{"foo": "baz"}),
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			provisionedNodes, virtualNodes, err := filterNodes(zap.S(), tc.service, tc.nodes)
+			provisionedNodes, err := filterNodes(tc.service, tc.nodes)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(provisionedNodes, tc.expectedProvisionedNodes) {
-				t.Errorf("expected provisioned nodes: %+v got %+v", tc.expectedProvisionedNodes, provisionedNodes)
-			}
-
-			if !reflect.DeepEqual(virtualNodes, tc.expectedVirtualNodes) {
-				t.Errorf("expected virtual nodes: %+v got %+v", tc.expectedVirtualNodes, virtualNodes)
+			if !reflect.DeepEqual(provisionedNodes, tc.expected) {
+				t.Errorf("expected: %+v got %+v", tc.expected, provisionedNodes)
 			}
 		})
 	}
@@ -1013,7 +930,6 @@ func Test_getVirtualPodsOfService(t *testing.T) {
 		name    string
 		service *v1.Service
 		want    []*v1.Pod
-		wantErr bool
 	}{
 		{
 			name: "Virtual pods - no err",
@@ -1026,7 +942,6 @@ func Test_getVirtualPodsOfService(t *testing.T) {
 				podList["virtualPod1"],
 				podList["virtualPod2"],
 			},
-			wantErr: false,
 		},
 		{
 			name: "Zero virtual pods - no err",
@@ -1036,7 +951,6 @@ func Test_getVirtualPodsOfService(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: false,
 		},
 		{
 			name: "Multiple virtual pods and regular pods - no err",
@@ -1049,17 +963,27 @@ func Test_getVirtualPodsOfService(t *testing.T) {
 				podList["virtualPod1"],
 				podList["virtualPod2"],
 			},
-			wantErr: false,
 		},
 		{
-			name: "One virtual pod - not found err",
+			name: "One virtual pod - not found",
 			service: &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "unknownService",
 				},
 			},
 			want:    nil,
-			wantErr: true,
+		},
+		{
+			name: "Duplicate endpoints",
+			service: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "duplicateEndpointsService",
+				},
+			},
+			want: []*v1.Pod{
+				podList["virtualPod1"],
+				podList["virtualPod2"],
+			},
 		},
 	}
 	cp := &CloudProvider{
@@ -1076,9 +1000,8 @@ func Test_getVirtualPodsOfService(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := cp.getVirtualPodsOfService(context.TODO(), zap.S(), tt.service)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getVirtualPodsOfService() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if err != nil {
+				t.Fatalf("getVirtualPodsOfService() error = %v", err)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getVirtualPodsOfService() got = %v, want %v", got, tt.want)
@@ -1216,7 +1139,7 @@ func Test_getNodesAndPodsByIPs(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			nodes, pods, err := cp.getNodesAndPodsByIPs(context.TODO(), zap.S(), tc.backendIPs, tc.service)
+			nodes, pods, err := cp.getNodesAndPodsByIPs(context.TODO(), tc.backendIPs, tc.service)
 			if (err != nil) != tc.wantErr {
 				t.Errorf("getNodesAndPodsByIPs() error = %v, wantErr %v", err, tc.wantErr)
 				return
