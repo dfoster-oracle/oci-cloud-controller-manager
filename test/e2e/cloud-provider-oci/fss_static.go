@@ -21,26 +21,26 @@ import (
 	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Basic FSS test", func() {
+var _ = Describe("Basic Static FSS test", func() {
 	f := framework.NewDefaultFramework("fss-basic")
-	Context("[cloudprovider][storage][csi][fss]", func() {
+	Context("[cloudprovider][storage][csi][fss][static]", func() {
 		It("Create PVC and POD for CSI-FSS", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-fss-e2e-test")
-			pv := pvcJig.CreatePVorFailFSS(f.Namespace.Name, setupF.VolumeHandle, "false")
+			pv := pvcJig.CreatePVorFailFSS(f.Namespace.Name, setupF.VolumeHandle, "false", []string{})
 			pvc := pvcJig.CreateAndAwaitPVCOrFailFSS(f.Namespace.Name, pv.Name, "50Gi", nil)
 			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
-			pvcJig.CheckSinglePodReadWrite(f.Namespace.Name, pvc.Name, false)
+			pvcJig.CheckSinglePodReadWrite(f.Namespace.Name, pvc.Name, false, []string{})
 		})
 	})
 })
 
-var _ = Describe("FSS in-transit encryption test", func() {
+var _ = Describe("FSS Static in-transit encryption test", func() {
 	f := framework.NewDefaultFramework("fss-basic")
-	Context("[cloudprovider][storage][csi][fss]", func() {
+	Context("[cloudprovider][storage][csi][fss][static]", func() {
 		It("Create PVC and POD for FSS in-transit encryption", func() {
 			if setupF.Architecture == "AMD" {
 				checkNodeAvailability(f)
-				TestEncryptionType(f)
+				TestEncryptionType(f, []string{})
 			} else {
 				framework.Logf("CSI-FSS Intransit Encryption is not supported on ARM architecture")
 			}
@@ -48,20 +48,43 @@ var _ = Describe("FSS in-transit encryption test", func() {
 	})
 })
 
-func TestEncryptionType(f *framework.CloudProviderFramework) {
+var _ = Describe("Mount Options Static FSS test", func() {
+	f := framework.NewDefaultFramework("fss-mnt-opt")
+	Context("[cloudprovider][storage][csi][fss][static]", func() {
+		It("Create PV PVC and POD for CSI-FSS with mount options", func() {
+			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-fss-e2e-test")
+			mountOptions := []string{"sync", "hard", "noac", "nolock"}
+			pv := pvcJig.CreatePVorFailFSS(f.Namespace.Name, setupF.VolumeHandle, "false", mountOptions)
+			pvc := pvcJig.CreateAndAwaitPVCOrFailFSS(f.Namespace.Name, pv.Name, "50Gi", nil)
+			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
+			pvcJig.CheckSinglePodReadWrite(f.Namespace.Name, pvc.Name, false, mountOptions)
+		})
+		// TODO : Uncomment the below test once https://jira-sd.mc1.oracleiaas.com/browse/FSS-132761 is Done.
+		/*It("Create PV PVC and POD for FSS in-transit encryption with mount options", func() {
+			if setupF.Architecture == "AMD" {
+				checkNodeAvailability(f)
+				TestEncryptionType(f, []string{"sync", "hard", "noac", "nolock"})
+			} else {
+				framework.Logf("CSI-FSS Intransit Encryption is not supported on ARM architecture")
+			}
+		})*/
+	})
+})
+
+func TestEncryptionType(f *framework.CloudProviderFramework, mountOptions []string) {
 	pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-fss-e2e-test-intransit")
-	pv := pvcJig.CreatePVorFailFSS(f.Namespace.Name, setupF.VolumeHandle, "true")
+	pv := pvcJig.CreatePVorFailFSS(f.Namespace.Name, setupF.VolumeHandle, "true", mountOptions)
 	pvc := pvcJig.CreateAndAwaitPVCOrFailFSS(f.Namespace.Name, pv.Name, "50Gi", nil)
 	f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
-	pvcJig.CheckSinglePodReadWrite(f.Namespace.Name, pvc.Name, true)
+	pvcJig.CheckSinglePodReadWrite(f.Namespace.Name, pvc.Name, true, mountOptions)
 }
 
-var _ = Describe("Multiple Pods FSS test", func() {
+var _ = Describe("Multiple Pods Static FSS test", func() {
 	f := framework.NewDefaultFramework("multiple-pod")
-	Context("[cloudprovider][storage][csi][fss]", func() {
+	Context("[cloudprovider][storage][csi][fss][static]", func() {
 		It("Multiple Pods should be able to read write same file", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-fss-e2e-test")
-			pv := pvcJig.CreatePVorFailFSS(f.Namespace.Name, setupF.VolumeHandle, "false")
+			pv := pvcJig.CreatePVorFailFSS(f.Namespace.Name, setupF.VolumeHandle, "false", []string{})
 			pvc := pvcJig.CreateAndAwaitPVCOrFailFSS(f.Namespace.Name, pv.Name, "50Gi", nil)
 			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			pvcJig.CheckMultiplePodReadWrite(f.Namespace.Name, pvc.Name, false)
@@ -71,7 +94,7 @@ var _ = Describe("Multiple Pods FSS test", func() {
 			if setupF.Architecture == "AMD" {
 				checkNodeAvailability(f)
 				pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-fss-e2e-test")
-				pv := pvcJig.CreatePVorFailFSS(f.Namespace.Name, setupF.VolumeHandle, "true")
+				pv := pvcJig.CreatePVorFailFSS(f.Namespace.Name, setupF.VolumeHandle, "true", []string{})
 				pvc := pvcJig.CreateAndAwaitPVCOrFailFSS(f.Namespace.Name, pv.Name, "50Gi", nil)
 				f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 				pvcJig.CheckMultiplePodReadWrite(f.Namespace.Name, pvc.Name, true)
@@ -82,9 +105,9 @@ var _ = Describe("Multiple Pods FSS test", func() {
 	})
 })
 
-func checkNodeAvailability(f *framework.CloudProviderFramework){
+func checkNodeAvailability(f *framework.CloudProviderFramework) {
 	pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-fss-e2e-test")
-	nodeList, err := pvcJig.KubeClient.CoreV1().Nodes().List(context.Background(),v12.ListOptions{LabelSelector: "oke.oraclecloud.com/e2e.oci-fss-util"})
+	nodeList, err := pvcJig.KubeClient.CoreV1().Nodes().List(context.Background(), v12.ListOptions{LabelSelector: "oke.oraclecloud.com/e2e.oci-fss-util"})
 	if err != nil {
 		framework.Logf("Error getting applicable nodes: %v", err)
 	}
