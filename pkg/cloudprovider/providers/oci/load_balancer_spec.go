@@ -31,6 +31,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/pkg/errors"
+	helper "k8s.io/cloud-provider/service/helpers"
 )
 
 const (
@@ -665,7 +666,7 @@ func getHealthChecker(svc *v1.Service) (*client.GenericHealthChecker, error) {
 		return nil, err
 	}
 
-	checkPath, checkPort := apiservice.GetServiceHealthCheckPathPort(svc)
+	checkPath, checkPort := helper.GetServiceHealthCheckPathPort(svc)
 	if checkPath != "" {
 		return &client.GenericHealthChecker{
 			Protocol:         lbNodesHealthCheckProto,
