@@ -569,7 +569,7 @@ func getBackends(logger *zap.SugaredLogger, provisionedNodes []*v1.Node, virtual
 			logger.Warnf("Node %q has an empty Internal IP address.", node.Name)
 			continue
 		}
-		instanceID, err := MapProviderIDToInstanceID(node.Spec.ProviderID)
+		instanceID, err := MapProviderIDToResourceID(node.Spec.ProviderID)
 		if err != nil {
 			logger.Warnf("Node %q has an empty ProviderID.", node.Name)
 			continue

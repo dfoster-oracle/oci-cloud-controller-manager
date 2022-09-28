@@ -45,6 +45,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/instance/metadata"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
@@ -79,9 +80,10 @@ type CloudProvider struct {
 	securityListManagerFactory securityListManagerFactory
 	config                     *providercfg.Config
 
-	logger        *zap.SugaredLogger
-	instanceCache cache.Store
-	metricPusher  *metrics.MetricPusher
+	logger           *zap.SugaredLogger
+	instanceCache    cache.Store
+	virtualNodeCache cache.Store
+	metricPusher     *metrics.MetricPusher
 }
 
 func (cp *CloudProvider) InstancesV2() (cloudprovider.InstancesV2, bool) {
@@ -144,11 +146,12 @@ func NewCloudProvider(config *providercfg.Config) (cloudprovider.Interface, erro
 	}
 
 	return &CloudProvider{
-		client:        c,
-		config:        config,
-		logger:        logger.Sugar(),
-		instanceCache: cache.NewTTLStore(instanceCacheKeyFn, time.Duration(24)*time.Hour),
-		metricPusher:  metricPusher,
+		client:           c,
+		config:           config,
+		logger:           logger.Sugar(),
+		instanceCache:    cache.NewTTLStore(instanceCacheKeyFn, time.Duration(24)*time.Hour),
+		virtualNodeCache: cache.NewTTLStore(virtualNodeCacheKeyFn, time.Duration(24)*time.Hour),
+		metricPusher:     metricPusher,
 	}, nil
 }
 
@@ -184,6 +187,7 @@ func (cp *CloudProvider) Initialize(clientBuilder cloudprovider.ControllerClient
 		cp,
 		cp.logger,
 		cp.instanceCache,
+		cp.virtualNodeCache,
 		cp.client)
 
 	nodeInformer := factory.Core().V1().Nodes()
@@ -266,6 +270,10 @@ func (cp *CloudProvider) HasClusterID() bool {
 
 func instanceCacheKeyFn(obj interface{}) (string, error) {
 	return *obj.(*core.Instance).Id, nil
+}
+
+func virtualNodeCacheKeyFn(obj interface{}) (string, error) {
+	return *obj.(*containerengine.VirtualNode).Id, nil
 }
 
 func StartOciServiceControllerWrapper(initContext cloudControllerManager.ControllerInitContext, completedConfig *cloudcontrollerconfig.CompletedConfig, cloud cloudprovider.Interface) cloudControllerManager.InitFunc {

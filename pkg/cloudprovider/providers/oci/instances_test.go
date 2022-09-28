@@ -20,20 +20,21 @@ import (
 	"reflect"
 	"testing"
 
+	"go.uber.org/zap"
+	v1 "k8s.io/api/core/v1"
+	v1discovery "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	v1discoverylisters "k8s.io/client-go/listers/discovery/v1"
 
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle/oci-go-sdk/v65/filestorage"
 	"github.com/oracle/oci-go-sdk/v65/identity"
-	"go.uber.org/zap"
-	v1 "k8s.io/api/core/v1"
-	v1discovery "k8s.io/api/discovery/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	v1discoverylisters "k8s.io/client-go/listers/discovery/v1"
 )
 
 var (
@@ -180,6 +181,18 @@ var (
 		},
 	}
 
+	virtualNodes = map[string]*containerengine.VirtualNode{
+		"ocid1.virtualnode.oc1.iad.default": {
+			Id:                common.String("ocid1.virtualnode.oc1.iad.default"),
+			VirtualNodePoolId: common.String("vnpId"),
+		},
+		"ocid1.virtualnode.oc1.iad.zonetest": {
+			Id:                 common.String("ocid1.virtualnode.oc1.iad.zonetest"),
+			VirtualNodePoolId:  common.String("vnpId"),
+			AvailabilityDomain: common.String("PHX-AD-1"),
+		},
+	}
+
 	nodeList = map[string]*v1.Node{
 		"default": {
 			ObjectMeta: metav1.ObjectMeta{
@@ -238,8 +251,33 @@ var (
 			},
 		},
 		"virtualNodeDefault": {
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					VirtualNodePoolIdAnnotation: "vnpId",
+				},
+			},
 			Spec: v1.NodeSpec{
 				ProviderID: "ocid1.virtualnode.oc1.iad.default",
+			},
+		},
+		"virtualNodeZoneTest": {
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					VirtualNodePoolIdAnnotation: "vnpId",
+				},
+			},
+			Spec: v1.NodeSpec{
+				ProviderID: "ocid1.virtualnode.oc1.iad.zonetest",
+			},
+		},
+		"virtualNodeNonCache": {
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					VirtualNodePoolIdAnnotation: "vnpId",
+				},
+			},
+			Spec: v1.NodeSpec{
+				ProviderID: "ocid1.virtualnode.oc1.iad.noncache",
 			},
 		},
 	}
@@ -288,7 +326,7 @@ var (
 		},
 	}
 
-	ready = true
+	ready             = true
 	endpointSliceList = map[string]*v1discovery.EndpointSlice{
 		"endpointSliceVirtual": {
 			ObjectMeta: metav1.ObjectMeta{
@@ -303,7 +341,7 @@ var (
 						Name: "virtualPod1",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.9"},
 				},
@@ -313,7 +351,7 @@ var (
 						Name: "virtualPod2",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.10"},
 				},
@@ -332,7 +370,7 @@ var (
 						Name: "regularPod1",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.19"},
 				},
@@ -342,7 +380,7 @@ var (
 						Name: "regularPod2",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.20"},
 				},
@@ -362,7 +400,7 @@ var (
 						Name: "virtualPod1",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.9"},
 				},
@@ -372,7 +410,7 @@ var (
 						Name: "regularPod1",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.19"},
 				},
@@ -382,7 +420,7 @@ var (
 						Name: "virtualPod2",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.10"},
 				},
@@ -392,7 +430,7 @@ var (
 						Name: "regularPod2",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.20"},
 				},
@@ -411,7 +449,7 @@ var (
 						Name: "unknown",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.100"},
 				},
@@ -430,7 +468,7 @@ var (
 						Name: "virtualPod1",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.10"},
 				},
@@ -440,7 +478,7 @@ var (
 						Name: "virtualPod2",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
 					Addresses: []string{"0.0.0.9"},
 				},
@@ -456,22 +494,22 @@ var (
 				{
 					TargetRef: &v1.ObjectReference{
 						Kind: "Pod",
-						Name: "virtualPod2",
+						Name: "virtualPod1",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
-					Addresses: []string{"0.0.0.9"},
+					Addresses: []string{"0.0.0.10"},
 				},
 				{
 					TargetRef: &v1.ObjectReference{
 						Kind: "Pod",
-						Name: "virtualPod1",
+						Name: "virtualPod2",
 					},
 					Conditions: v1discovery.EndpointConditions{
-						Ready:       &ready,
+						Ready: &ready,
 					},
-					Addresses: []string{"0.0.0.10"},
+					Addresses: []string{"0.0.0.9"},
 				},
 			},
 		},
@@ -577,6 +615,10 @@ func (MockOCIClient) FSS() client.FileStorageInterface {
 
 func (MockOCIClient) Identity() client.IdentityInterface {
 	return &MockIdentityClient{}
+}
+
+func (MockOCIClient) ContainerEngine() client.ContainerEngineInterface {
+	return &MockContainerEngineClient{}
 }
 
 // MockComputeClient mocks Compute client implementation
@@ -699,7 +741,7 @@ func (c *MockVirtualNetworkClient) GetPublicIpByIpAddress(ctx context.Context, i
 	return nil, nil
 }
 
-//// MockFileStorageClient mocks FileStorage client implementation.
+// MockFileStorageClient mocks FileStorage client implementation.
 type MockLoadBalancerClient struct{}
 
 func (c *MockLoadBalancerClient) CreateLoadBalancer(ctx context.Context, details *client.GenericCreateLoadBalancerDetails) (string, error) {
@@ -911,6 +953,60 @@ func (m mockInstanceCache) Resync() error {
 	return nil
 }
 
+type mockVirtualNodeCache struct{}
+
+func (m mockVirtualNodeCache) Add(obj interface{}) error {
+	return nil
+}
+
+func (m mockVirtualNodeCache) Update(obj interface{}) error {
+	return nil
+}
+
+func (m mockVirtualNodeCache) Delete(obj interface{}) error {
+	return nil
+}
+
+func (m mockVirtualNodeCache) List() []interface{} {
+	return nil
+}
+
+func (m mockVirtualNodeCache) ListKeys() []string {
+	return nil
+}
+
+func (m mockVirtualNodeCache) Get(obj interface{}) (item interface{}, exists bool, err error) {
+	return virtualNodes["default"], true, nil
+}
+
+func (m mockVirtualNodeCache) GetByKey(key string) (item interface{}, exists bool, err error) {
+	if virtualNode, ok := virtualNodes[key]; ok {
+		return virtualNode, true, nil
+	}
+	return nil, false, nil
+}
+
+func (m mockVirtualNodeCache) Replace(i []interface{}, s string) error {
+	return nil
+}
+
+func (m mockVirtualNodeCache) Resync() error {
+	return nil
+}
+
+type MockContainerEngineClient struct{}
+
+func (m MockContainerEngineClient) GetVirtualNode(ctx context.Context, vnId, vnpId string) (*containerengine.VirtualNode, error) {
+	if virtualNode, ok := virtualNodes[vnId]; ok {
+		return virtualNode, nil
+	}
+	return &containerengine.VirtualNode{
+		Id:                 &vnId,
+		VirtualNodePoolId:  &vnpId,
+		AvailabilityDomain: common.String("PHX-AD-1"),
+	}, nil
+}
+
 func TestExtractNodeAddresses(t *testing.T) {
 	testCases := []struct {
 		name string
@@ -1119,6 +1215,18 @@ func TestInstanceTypeByProviderID(t *testing.T) {
 			out:  "VM.Standard1.2",
 			err:  nil,
 		},
+		{
+			name: "provider id for virtual node",
+			in:   "ocid1.virtualnode.oc1.iad.default",
+			out:  "",
+			err:  nil,
+		},
+		{
+			name: "provider id with provider prefix for virtual node",
+			in:   providerPrefix + "ocid1.virtualnode.oc1.iad.default",
+			out:  "",
+			err:  nil,
+		},
 	}
 
 	cp := &CloudProvider{
@@ -1166,6 +1274,18 @@ func TestNodeAddressesByProviderID(t *testing.T) {
 				{Type: v1.NodeExternalIP, Address: "0.0.0.1"},
 			},
 			err: nil,
+		},
+		{
+			name: "provider id for virtual node",
+			in:   "ocid1.virtualnode.oc1.iad.default",
+			out:  []v1.NodeAddress{},
+			err:  nil,
+		},
+		{
+			name: "provider id with provider prefix for virtual node",
+			in:   providerPrefix + "ocid1.virtualnode.oc1.iad.default",
+			out:  []v1.NodeAddress{},
+			err:  nil,
 		},
 	}
 
@@ -1215,14 +1335,27 @@ func TestInstanceExistsByProviderID(t *testing.T) {
 			out:  true,
 			err:  nil,
 		},
+		{
+			name: "provider id for virtual node and in cache",
+			in:   "ocid1.virtualnode.oc1.iad.default",
+			out:  true,
+			err:  nil,
+		},
+		{
+			name: "provider id for virtual node with provider prefix and not in cache",
+			in:   providerPrefix + "ocid1.virtualnode.oc1.iad.noncache",
+			out:  true,
+			err:  nil,
+		},
 	}
 
 	cp := &CloudProvider{
-		NodeLister:    &mockNodeLister{},
-		client:        MockOCIClient{},
-		config:        &providercfg.Config{CompartmentID: "testCompartment"},
-		logger:        zap.S(),
-		instanceCache: &mockInstanceCache{},
+		NodeLister:       &mockNodeLister{},
+		client:           MockOCIClient{},
+		config:           &providercfg.Config{CompartmentID: "testCompartment"},
+		logger:           zap.S(),
+		instanceCache:    &mockInstanceCache{},
+		virtualNodeCache: &mockVirtualNodeCache{},
 	}
 
 	for _, tt := range testCases {
@@ -1260,6 +1393,18 @@ func TestInstanceShutdownByProviderID(t *testing.T) {
 		{
 			name: "provider id with provider prefix and instance not in cache",
 			in:   providerPrefix + "noncacheinstance",
+			out:  false,
+			err:  nil,
+		},
+		{
+			name: "provider id for virtual node",
+			in:   "ocid1.virtualnode.oc1.iad.default",
+			out:  false,
+			err:  nil,
+		},
+		{
+			name: "provider id with provider prefix for virtual node",
+			in:   providerPrefix + "ocid1.virtualnode.oc1.iad.default",
 			out:  false,
 			err:  nil,
 		},

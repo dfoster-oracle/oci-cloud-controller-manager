@@ -30,8 +30,8 @@ const (
 	virtualNodeOcidIntegPrefix = "ocid1.virtualnodeinteg."
 )
 
-// MapProviderIDToInstanceID parses the provider id and returns the instance ocid.
-func MapProviderIDToInstanceID(providerID string) (string, error) {
+// MapProviderIDToResourceID parses the provider id and returns the instance ocid.
+func MapProviderIDToResourceID(providerID string) (string, error) {
 	if providerID == "" {
 		return providerID, errors.New("provider ID is empty")
 	}
@@ -72,7 +72,7 @@ func IsVirtualNodeId(resourceId string) bool {
 
 // IsVirtualNode returns true if a node object corresponds to a Virtual Node
 func IsVirtualNode(node *api.Node) bool {
-	resourceId, err := MapProviderIDToInstanceID(node.Spec.ProviderID)
+	resourceId, err := MapProviderIDToResourceID(node.Spec.ProviderID)
 	if err != nil {
 		// OVK ensures the providerId is set on a Virtual Node
 		// If the providerId is empty it is safe to assume the node is not virtual

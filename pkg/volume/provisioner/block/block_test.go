@@ -22,6 +22,7 @@ import (
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/containerengine"
 	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/oracle/oci-go-sdk/v65/filestorage"
 	"github.com/oracle/oci-go-sdk/v65/identity"
@@ -393,6 +394,16 @@ func (c *MockLoadBalancerClient) AwaitWorkRequest(ctx context.Context, id string
 
 func (c *MockLoadBalancerClient) UpdateNetworkSecurityGroups(context.Context, string, []string) (string, error) {
 	return "", nil
+}
+
+type MockContainerEngineClient struct{}
+
+func (m MockContainerEngineClient) GetVirtualNode(ctx context.Context, vnId, vnpId string) (*containerengine.VirtualNode, error) {
+	return nil, nil
+}
+
+func (p *MockProvisionerClient) ContainerEngine() client.ContainerEngineInterface {
+	return &MockContainerEngineClient{}
 }
 
 // NewClientProvisioner creates an OCI client from the given configuration.
