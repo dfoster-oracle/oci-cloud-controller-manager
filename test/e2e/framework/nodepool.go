@@ -10,8 +10,8 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/oracle/oci-go-sdk/v49/common"
-	oke "github.com/oracle/oci-go-sdk/v49/containerengine"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 )
 
 var (

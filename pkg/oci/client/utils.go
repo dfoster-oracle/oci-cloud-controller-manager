@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
-	"github.com/oracle/oci-go-sdk/v49/common"
+	"github.com/oracle/oci-go-sdk/v65/common"
 )
 
 const (

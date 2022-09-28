@@ -4,7 +4,7 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	sharedfw "github.com/oracle/oci-cloud-controller-manager/test/e2e/framework"
-	oke "github.com/oracle/oci-go-sdk/v49/containerengine"
+	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 )
 
 var setupF *sharedfw.Framework

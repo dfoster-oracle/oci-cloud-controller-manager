@@ -6,8 +6,8 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	oke "github.com/oracle/oci-go-sdk/v49/containerengine"
-	"github.com/oracle/oci-go-sdk/v49/core"
+	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
+	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
 // CrossValidateCluster checks a Cluster is consistent internally, and

@@ -305,6 +305,8 @@ type SubnetInfo struct {
 	ID                     string `protobuf:"bytes,1,opt,name=ID" json:"ID,omitempty"`
 	AD                     string `protobuf:"bytes,2,opt,name=AD" json:"AD,omitempty"`
 	ProhibitPublicIpOnVnic bool   `protobuf:"varint,3,opt,name=ProhibitPublicIpOnVnic" json:"ProhibitPublicIpOnVnic,omitempty"`
+	CapacityReservationId  string `protobuf:"bytes,4,opt,name=CapacityReservationId" json:"CapacityReservationId,omitempty"`
+	FaultDomains           []string `protobuf:"bytes,5,opt,name=FaultDomains" json:"FaultDomains,omitempty"`
 }
 
 func (m *SubnetInfo) Reset()                    { *m = SubnetInfo{} }
@@ -331,6 +333,20 @@ func (m *SubnetInfo) GetProhibitPublicIpOnVnic() bool {
 		return m.ProhibitPublicIpOnVnic
 	}
 	return false
+}
+
+func (m *SubnetInfo) GetCapacityReservationId() string {
+	if m != nil {
+		return m.CapacityReservationId
+	}
+	return ""
+}
+
+func (m *SubnetInfo) GetFaultDomains() []string {
+	if m != nil {
+		return m.FaultDomains
+	}
+	return nil
 }
 
 type NewRequest struct {

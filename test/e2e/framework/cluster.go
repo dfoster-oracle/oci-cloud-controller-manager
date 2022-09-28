@@ -9,8 +9,8 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	"github.com/oracle/oci-go-sdk/v49/common"
-	oke "github.com/oracle/oci-go-sdk/v49/containerengine"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	oke "github.com/oracle/oci-go-sdk/v65/containerengine"
 )
 
 // GetClusterOptions requires a clusterOptionId as input (must be "all" right now)
