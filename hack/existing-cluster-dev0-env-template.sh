@@ -6,7 +6,7 @@
 # Runs test on an existing cluster in dev0-iad
 
 # To run the tests:
-# 1. Change the FOCUS valiable here to specify the subset of E2E tests to run
+# 1. Change the FOCUS variable here to specify the subset of E2E tests to run
 # 2. Set CLUSTER_KUBECONFIG and CLOUD_CONFIG if needed
 # 3. run 'source existing-cluster-dev0-env-template.sh' to set the variables
 # 4. run 'make run-ccm-e2e-tests-local`
