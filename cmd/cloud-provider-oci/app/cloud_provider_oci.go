@@ -66,6 +66,7 @@ var (
 	minVolumeSize, resourcePrincipalFile, metricsEndpoint, logfilePath                        string
 	enableCSI, enableVolumeProvisioning, volumeRoundingEnabled, useResourcePrincipal, logJSON bool
 	enableNPNController                                                                       bool
+	enableOCIServiceController                                                                bool
 	resourcePrincipalInitialTimeout                                                           time.Duration
 )
 
@@ -162,6 +163,9 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	npnFlagSet := namedFlagSets.FlagSet("NPN Controller")
 	npnFlagSet.BoolVar(&enableNPNController, "enable-npn-controller", false, "Whether to enable Native Pod Network controller")
 
+	ociSvcCtrlFlagSet := namedFlagSets.FlagSet("OCI Service Controller")
+	ociSvcCtrlFlagSet.BoolVar(&enableOCIServiceController, "enable-oci-service-controller", false, "Whether to enable OCI service controller instead of Kubernetes Cloud Provider service controller")
+
 	if flag.CommandLine.Lookup("cloud-provider-gce-lb-src-cidrs") != nil {
 		// hoist this flag from the global flagset to preserve the commandline until
 		// the gce cloudprovider is removed.
@@ -233,7 +237,7 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 		// Run starts all the cloud controller manager control loops.
 		cloudProvider := cloudInitializer(logger, config)
 
-		controllerInitializers := cloudControllerManager.ConstructControllerInitializers(getInitFuncConstructors(), config, cloudProvider)
+		controllerInitializers := cloudControllerManager.ConstructControllerInitializers(getInitFuncConstructors(logger), config, cloudProvider)
 		// TODO move to newer cloudControllerManager dependency that provides a way to pass channel/context
 		if err := cloudControllerManager.Run(config, cloudProvider, controllerInitializers, ctx.Done()); err != nil {
 			logger.With(zap.Error(err)).Error("Error running cloud controller manager")
@@ -257,19 +261,9 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 		logger.Info("CSI is disabled.")
 	}
 
-	enableNPNEnvVar, ok := os.LookupEnv("ENABLE_NPN_CONTROLLER")
-	enableNPN := false
+	enableNPN := getIsFeatureEnabledFromEnv(logger, "ENABLE_NPN_CONTROLLER", false)
 
-	if ok {
-		var err error
-		enableNPN, err = strconv.ParseBool(enableNPNEnvVar)
-		if err != nil {
-			logger.Error("failed to parse NPN envvar, defaulting to false")
-
-		}
-	}
-
-	if (ok && enableNPN) || enableNPNController {
+	if enableNPN || enableNPNController {
 		wg.Add(1)
 		logger = logger.With(zap.String("component", "npn-controller"))
 		ctrl.SetLogger(zapr.NewLogger(logger.Desugar()))
@@ -371,18 +365,36 @@ func getOCIClient(logger *zap.SugaredLogger, config *providercfg.Config) client.
 	return c
 }
 
-func getInitFuncConstructors() map[string]cloudControllerManager.ControllerInitFuncConstructor{
-	// Disable default service controller
-	cloudControllerManager.ControllersDisabledByDefault.Insert("service")
+func getInitFuncConstructors(logger *zap.SugaredLogger) map[string]cloudControllerManager.ControllerInitFuncConstructor {
+	initConstructors := cloudControllerManager.DefaultInitFuncConstructors
 
-	// Add custom service controller init func
-	defaultConstructors := cloudControllerManager.DefaultInitFuncConstructors
-	defaultConstructors["oci-service"] = cloudControllerManager.ControllerInitFuncConstructor{
-		InitContext: cloudControllerManager.ControllerInitContext{
-			ClientName: "service-controller",
-		},
-		Constructor: oci.StartOciServiceControllerWrapper,
+	isOciSvcCtrlEnvEnabled := getIsFeatureEnabledFromEnv(logger, "ENABLE_OCI_SERVICE_CONTROLLER", false)
+	if isOciSvcCtrlEnvEnabled || enableOCIServiceController {
+		// Disable default Kubernetes Cloud Provider service controller
+		cloudControllerManager.ControllersDisabledByDefault.Insert("service")
+
+		// Add OCI service controller init func
+		initConstructors["oci-service"] = cloudControllerManager.ControllerInitFuncConstructor{
+			InitContext: cloudControllerManager.ControllerInitContext{
+				ClientName: "service-controller",
+			},
+			Constructor: oci.StartOciServiceControllerWrapper,
+		}
 	}
 
-	return defaultConstructors
+	return initConstructors
+}
+
+func getIsFeatureEnabledFromEnv(logger *zap.SugaredLogger, featureName string, defaultValue bool) bool {
+	enableFeature := defaultValue
+	enableFeatureEnvVar, ok := os.LookupEnv(featureName)
+	if ok {
+		var err error
+		enableFeature, err = strconv.ParseBool(enableFeatureEnvVar)
+		if err != nil {
+			logger.With(zap.Error(err)).Errorf("failed to parse %s envvar, defaulting to %t", featureName, defaultValue)
+			return defaultValue
+		}
+	}
+	return enableFeature
 }
