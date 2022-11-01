@@ -148,3 +148,74 @@ var _ = Describe("Instances", func() {
 		})
 	})
 })
+
+var _ = Describe("SKE - Instances", func() {
+	f := sharedfw.NewFrameworkWithCloudProvider("instances")
+	var (
+		cs        clientset.Interface
+		instances cloudprovider.Instances
+		node      v1.Node
+	)
+	BeforeEach(func() {
+		var enabled bool
+		instances, enabled = f.CloudProvider.Instances()
+		Expect(enabled).To(BeTrue())
+
+		cs = f.ClientSet
+		nodes := sharedfw.GetReadySchedulableVirtualNodesOrDie(cs)
+		Expect(len(nodes.Items)).NotTo(BeZero())
+		node = nodes.Items[0]
+	})
+
+	Context("[cloudprovider-ske][ccm]", func() {
+		It("should get slice of empty node addresses for a virtual node", func() {
+			nodeName := apitypes.NodeName(node.Name)
+			Expect(nodeName).NotTo(BeEmpty())
+
+			providerID := node.Spec.ProviderID
+			Expect(providerID).NotTo(BeEmpty())
+
+			By("calling NodeAddressesByProviderID()")
+			addresses, err := instances.NodeAddressesByProviderID(context.Background(), providerID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(addresses)).To(BeZero())
+			sharedfw.Logf("%q (%s): addresses=%v", node.Name, providerID, addresses)
+		})
+
+		It("should get empty string for type of an instance for a virtual node", func() {
+			nodeName := apitypes.NodeName(node.Name)
+			Expect(nodeName).NotTo(BeEmpty())
+
+			providerID := node.Spec.ProviderID
+			Expect(providerID).NotTo(BeEmpty())
+
+			By("calling InstanceTypeByProviderID()")
+			instanceType, err := instances.InstanceTypeByProviderID(context.Background(), providerID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(instanceType).To(BeEmpty())
+			sharedfw.Logf("%q (%s): instanceType=%q", node.Name, providerID, instanceType)
+		})
+
+		It("should be possible to check an instance exists for a virtual node", func() {
+			providerID := node.Spec.ProviderID
+			Expect(providerID).NotTo(BeEmpty())
+			By("calling InstanceExistsByProviderID()")
+			exists, err := instances.InstanceExistsByProviderID(context.Background(), providerID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exists).To(BeTrue())
+		})
+		It("should be possible to check required annotations and labels are added to a virtual node", func() {
+			// OCI Labels and Annotations
+			faultDomain := node.ObjectMeta.Labels[oci.FaultDomainLabel]
+			Expect(faultDomain).NotTo(BeEmpty())
+
+			// Kubernetes Beta Labels
+			fdZone := node.ObjectMeta.Labels[v1.LabelZoneFailureDomain]
+			Expect(fdZone).NotTo(BeEmpty())
+
+			// Kubernetes Stable Labels
+			fdZone = node.ObjectMeta.Labels[v1.LabelZoneFailureDomainStable]
+			Expect(fdZone).NotTo(BeEmpty())
+		})
+	})
+})

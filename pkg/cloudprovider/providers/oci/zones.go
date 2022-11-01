@@ -18,11 +18,12 @@ import (
 	"context"
 	"strings"
 
-	"github.com/oracle/oci-go-sdk/v49/core"
 	"github.com/pkg/errors"
-
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/cloud-provider"
+
+	"github.com/oracle/oci-go-sdk/v65/containerengine"
+	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
 var _ cloudprovider.Zones = &CloudProvider{}
@@ -48,11 +49,16 @@ func (cp *CloudProvider) GetZone(ctx context.Context) (cloudprovider.Zone, error
 // particularly used in the context of external cloud providers where node
 // initialization must be down outside the kubelets.
 func (cp *CloudProvider) GetZoneByProviderID(ctx context.Context, providerID string) (cloudprovider.Zone, error) {
-	instanceID, err := MapProviderIDToInstanceID(providerID)
+	resourceID, err := MapProviderIDToResourceID(providerID)
 	if err != nil {
 		return cloudprovider.Zone{}, err
 	}
-	item, exists, err := cp.instanceCache.GetByKey(instanceID)
+
+	if IsVirtualNodeId(resourceID) {
+		return cp.getZoneByResourceIDForVirtualNode(ctx, resourceID)
+	}
+
+	item, exists, err := cp.instanceCache.GetByKey(resourceID)
 	if err != nil {
 		return cloudprovider.Zone{}, errors.Wrap(err, "Error fetching instance from instanceCache, will retry")
 	}
@@ -62,7 +68,7 @@ func (cp *CloudProvider) GetZoneByProviderID(ctx context.Context, providerID str
 			Region:        *item.(*core.Instance).Region,
 		}, nil
 	}
-	instance, err := cp.client.Compute().GetInstance(ctx, instanceID)
+	instance, err := cp.client.Compute().GetInstance(ctx, resourceID)
 	if err != nil {
 		return cloudprovider.Zone{}, err
 	}
@@ -91,5 +97,32 @@ func (cp *CloudProvider) GetZoneByNodeName(ctx context.Context, nodeName types.N
 	return cloudprovider.Zone{
 		FailureDomain: mapAvailabilityDomainToFailureDomain(*instance.AvailabilityDomain),
 		Region:        *instance.Region,
+	}, nil
+}
+
+func (cp *CloudProvider) getZoneByResourceIDForVirtualNode(ctx context.Context, resourceID string) (cloudprovider.Zone, error) {
+	item, exists, err := cp.virtualNodeCache.GetByKey(resourceID)
+	if err != nil {
+		return cloudprovider.Zone{}, errors.Wrap(err, "Error fetching virtual node from virtualNodeCache, will retry")
+	}
+	if exists {
+		return cloudprovider.Zone{
+			FailureDomain: mapAvailabilityDomainToFailureDomain(*item.(*containerengine.VirtualNode).AvailabilityDomain),
+		}, nil
+	}
+
+	virtualNodePoolId, err := cp.getVirtualNodePoolIdByVirtualNodeId(resourceID)
+	if err != nil {
+		return cloudprovider.Zone{}, err
+	}
+	virtualNode, err := cp.client.ContainerEngine().GetVirtualNode(ctx, resourceID, virtualNodePoolId)
+	if err != nil {
+		return cloudprovider.Zone{}, err
+	}
+	if err := cp.virtualNodeCache.Add(virtualNode); err != nil {
+		return cloudprovider.Zone{}, errors.Wrap(err, "Failed to add virtual node in virtualNodeCache")
+	}
+	return cloudprovider.Zone{
+		FailureDomain: mapAvailabilityDomainToFailureDomain(*virtualNode.AvailabilityDomain),
 	}, nil
 }

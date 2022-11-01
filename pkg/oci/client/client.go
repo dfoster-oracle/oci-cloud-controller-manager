@@ -17,14 +17,16 @@ package client
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/oracle/oci-go-sdk/v49/common"
-	"github.com/oracle/oci-go-sdk/v49/core"
-	"github.com/oracle/oci-go-sdk/v49/filestorage"
-	"github.com/oracle/oci-go-sdk/v49/identity"
-	"github.com/oracle/oci-go-sdk/v49/loadbalancer"
-	"github.com/oracle/oci-go-sdk/v49/networkloadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/containerengine"
+	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/filestorage"
+	"github.com/oracle/oci-go-sdk/v65/identity"
+	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/networkloadbalancer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"k8s.io/client-go/tools/cache"
@@ -43,6 +45,7 @@ type Interface interface {
 	BlockStorage() BlockStorageInterface
 	FSS() FileStorageInterface
 	Identity() IdentityInterface
+	ContainerEngine() ContainerEngineInterface
 }
 
 // RateLimiter reader and writer.
@@ -136,6 +139,10 @@ type identityClient interface {
 	ListAvailabilityDomains(ctx context.Context, request identity.ListAvailabilityDomainsRequest) (identity.ListAvailabilityDomainsResponse, error)
 }
 
+type containerEngineClient interface {
+	GetVirtualNode(ctx context.Context, request containerengine.GetVirtualNodeRequest) (response containerengine.GetVirtualNodeResponse, err error)
+}
+
 type client struct {
 	compute             computeClient
 	network             virtualNetworkClient
@@ -144,6 +151,7 @@ type client struct {
 	filestorage         filestorageClient
 	bs                  blockstorageClient
 	identity            identityClient
+	containerEngine    containerEngineClient
 
 	requestMetadata common.RequestMetadata
 	rateLimiter     RateLimiter
@@ -152,9 +160,15 @@ type client struct {
 	logger      *zap.SugaredLogger
 }
 
-func setupBaseClient(client *common.BaseClient, signer common.HTTPRequestSigner, interceptor common.RequestInterceptor) {
+func setupBaseClient(client *common.BaseClient, signer common.HTTPRequestSigner, interceptor common.RequestInterceptor, endpointOverrideEnvVar string) {
 	client.Signer = signer
 	client.Interceptor = interceptor
+	if endpointOverrideEnvVar != "" {
+		endpointOverride, ok := os.LookupEnv(endpointOverrideEnvVar)
+		if ok && endpointOverride != "" {
+			client.Host = endpointOverride
+		}
+	}
 }
 
 // New constructs an OCI API client.
@@ -171,7 +185,7 @@ func New(logger *zap.SugaredLogger, cp common.ConfigurationProvider, opRateLimit
 		return nil, errors.Wrap(err, "NewComputeClientWithConfigurationProvider")
 	}
 
-	setupBaseClient(&compute.BaseClient, signer, interceptor)
+	setupBaseClient(&compute.BaseClient, signer, interceptor, "")
 
 	err = configureCustomTransport(logger, &compute.BaseClient)
 	if err != nil {
@@ -183,7 +197,7 @@ func New(logger *zap.SugaredLogger, cp common.ConfigurationProvider, opRateLimit
 		return nil, errors.Wrap(err, "NewVirtualNetworkClientWithConfigurationProvider")
 	}
 
-	setupBaseClient(&network.BaseClient, signer, interceptor)
+	setupBaseClient(&network.BaseClient, signer, interceptor, "")
 
 	err = configureCustomTransport(logger, &network.BaseClient)
 	if err != nil {
@@ -195,7 +209,7 @@ func New(logger *zap.SugaredLogger, cp common.ConfigurationProvider, opRateLimit
 		return nil, errors.Wrap(err, "NewLoadBalancerClientWithConfigurationProvider")
 	}
 
-	setupBaseClient(&lb.BaseClient, signer, interceptor)
+	setupBaseClient(&lb.BaseClient, signer, interceptor, "")
 
 	err = configureCustomTransport(logger, &lb.BaseClient)
 	if err != nil {
@@ -207,7 +221,7 @@ func New(logger *zap.SugaredLogger, cp common.ConfigurationProvider, opRateLimit
 		return nil, errors.Wrap(err, "NewNetworkLoadBalancerClientWithConfigurationProvider")
 	}
 
-	setupBaseClient(&nlb.BaseClient, signer, interceptor)
+	setupBaseClient(&nlb.BaseClient, signer, interceptor, "")
 
 	err = configureCustomTransport(logger, &nlb.BaseClient)
 	if err != nil {
@@ -219,7 +233,7 @@ func New(logger *zap.SugaredLogger, cp common.ConfigurationProvider, opRateLimit
 		return nil, errors.Wrap(err, "NewIdentityClientWithConfigurationProvider")
 	}
 
-	setupBaseClient(&identity.BaseClient, signer, interceptor)
+	setupBaseClient(&identity.BaseClient, signer, interceptor, "")
 
 	err = configureCustomTransport(logger, &identity.BaseClient)
 	if err != nil {
@@ -231,7 +245,7 @@ func New(logger *zap.SugaredLogger, cp common.ConfigurationProvider, opRateLimit
 		return nil, errors.Wrap(err, "NewBlockstorageClientWithConfigurationProvider")
 	}
 
-	setupBaseClient(&bs.BaseClient, signer, interceptor)
+	setupBaseClient(&bs.BaseClient, signer, interceptor, "")
 
 	err = configureCustomTransport(logger, &bs.BaseClient)
 	if err != nil {
@@ -243,11 +257,23 @@ func New(logger *zap.SugaredLogger, cp common.ConfigurationProvider, opRateLimit
 		return nil, errors.Wrap(err, "NewFileStorageClientWithConfigurationProvider")
 	}
 
-	setupBaseClient(&fss.BaseClient, signer, interceptor)
+	setupBaseClient(&fss.BaseClient, signer, interceptor, "")
 
 	err = configureCustomTransport(logger, &fss.BaseClient)
 	if err != nil {
 		return nil, errors.Wrap(err, "configuring file storage service client custom transport")
+	}
+
+	containerEngine, err := containerengine.NewContainerEngineClientWithConfigurationProvider(cp)
+	if err != nil {
+		return nil, errors.Wrap(err, "NewContainerEngineClientWithConfigurationProvider")
+	}
+
+	setupBaseClient(&containerEngine.BaseClient, signer, interceptor, "CE_ENDPOINT_OVERRIDE")
+
+	err = configureCustomTransport(logger, &containerEngine.BaseClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "configuring container engine service client custom transport")
 	}
 
 	requestMetadata := common.RequestMetadata{
@@ -273,6 +299,7 @@ func New(logger *zap.SugaredLogger, cp common.ConfigurationProvider, opRateLimit
 		networkloadbalancer: &networkloadbalancer,
 		bs:                  &bs,
 		filestorage:         &fss,
+		containerEngine:     &containerEngine,
 
 		rateLimiter:     *opRateLimiter,
 		requestMetadata: requestMetadata,
@@ -311,6 +338,10 @@ func (c *client) BlockStorage() BlockStorageInterface {
 }
 
 func (c *client) FSS() FileStorageInterface {
+	return c
+}
+
+func (c *client) ContainerEngine() ContainerEngineInterface {
 	return c
 }
 

@@ -19,14 +19,19 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/oracle/oci-go-sdk/v49/core"
-	"k8s.io/apimachinery/pkg/labels"
-
-	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	"github.com/pkg/errors"
 	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
+
+	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
+	"github.com/oracle/oci-go-sdk/v65/containerengine"
+	"github.com/oracle/oci-go-sdk/v65/core"
+)
+
+const (
+	VirtualNodePoolIdAnnotation = "oci.oraclecloud.com/virtual-node-pool-id"
 )
 
 var _ cloudprovider.Instances = &CloudProvider{}
@@ -50,7 +55,7 @@ func (cp *CloudProvider) getCompartmentIDByInstanceID(instanceID string) (string
 		return "", errors.Wrap(err, "error listing all the nodes using node informer")
 	}
 	for _, node := range nodeList {
-		providerID, err := MapProviderIDToInstanceID(node.Spec.ProviderID)
+		providerID, err := MapProviderIDToResourceID(node.Spec.ProviderID)
 		if err != nil {
 			return "", errors.New("Failed to map providerID to instanceID")
 		}
@@ -146,14 +151,18 @@ func (cp *CloudProvider) NodeAddresses(ctx context.Context, name types.NodeName)
 // nodeaddresses are being queried. i.e. local metadata services cannot be used
 // in this method to obtain nodeaddresses.
 func (cp *CloudProvider) NodeAddressesByProviderID(ctx context.Context, providerID string) ([]api.NodeAddress, error) {
-	cp.logger.With("instanceID", providerID).Debug("Getting node addresses by provider id")
+	cp.logger.With("resourceID", providerID).Debug("Getting node addresses by provider id")
 
-	instanceID, err := MapProviderIDToInstanceID(providerID)
+	resourceID, err := MapProviderIDToResourceID(providerID)
 	if err != nil {
-		return nil, errors.Wrap(err, "MapProviderIDToInstanceID")
+		return nil, errors.Wrap(err, "MapProviderIDToResourceOCID")
 	}
-	return cp.extractNodeAddresses(ctx, instanceID)
 
+	if IsVirtualNodeId(resourceID) {
+		return []api.NodeAddress{}, nil
+	}
+
+	return cp.extractNodeAddresses(ctx, resourceID)
 }
 
 // InstanceID returns the cloud provider ID of the node with the specified NodeName.
@@ -191,13 +200,19 @@ func (cp *CloudProvider) InstanceType(ctx context.Context, name types.NodeName) 
 
 // InstanceTypeByProviderID returns the type of the specified instance.
 func (cp *CloudProvider) InstanceTypeByProviderID(ctx context.Context, providerID string) (string, error) {
-	cp.logger.With("instanceID", providerID).Debug("Getting instance type by provider id")
+	cp.logger.With("resourceID", providerID).Debug("Getting instance type by provider id")
 
-	instanceID, err := MapProviderIDToInstanceID(providerID)
+	resourceID, err := MapProviderIDToResourceID(providerID)
 	if err != nil {
-		return "", errors.Wrap(err, "MapProviderIDToInstanceID")
+		return "", errors.Wrap(err, "MapProviderIDToResourceOCID")
 	}
-	item, exists, err := cp.instanceCache.GetByKey(instanceID)
+
+	if IsVirtualNodeId(resourceID) {
+		// Virtual nodes don't have an instance type, return empty string
+		return "", nil
+	}
+
+	item, exists, err := cp.instanceCache.GetByKey(resourceID)
 	if err != nil {
 		return "", errors.Wrap(err, "error fetching instance from instanceCache, will retry")
 	}
@@ -205,7 +220,7 @@ func (cp *CloudProvider) InstanceTypeByProviderID(ctx context.Context, providerI
 		return *item.(*core.Instance).Shape, nil
 	}
 	cp.logger.Debug("Unable to find the instance information from instanceCache. Calling OCI API")
-	inst, err := cp.client.Compute().GetInstance(ctx, instanceID)
+	inst, err := cp.client.Compute().GetInstance(ctx, resourceID)
 	if err != nil {
 		return "", errors.Wrap(err, "GetInstance")
 	}
@@ -232,13 +247,18 @@ func (cp *CloudProvider) CurrentNodeName(ctx context.Context, hostname string) (
 // provider id still is running. If false is returned with no error, the
 // instance will be immediately deleted by the cloud controller manager.
 func (cp *CloudProvider) InstanceExistsByProviderID(ctx context.Context, providerID string) (bool, error) {
-	//Please do not try to optimise it by using InstanceCache because we prefer correctness over efficiency here
-	cp.logger.With("instanceID", providerID).Debug("Checking instance exists by provider id")
-	instanceID, err := MapProviderIDToInstanceID(providerID)
+	//Please do not try to optimise it by using Cache because we prefer correctness over efficiency here
+	cp.logger.With("resourceID", providerID).Debug("Checking instance exists by provider id")
+	resourceID, err := MapProviderIDToResourceID(providerID)
 	if err != nil {
 		return false, err
 	}
-	instance, err := cp.client.Compute().GetInstance(ctx, instanceID)
+
+	if IsVirtualNodeId(resourceID) {
+		return cp.virtualNodeExistsByResourceID(ctx, resourceID)
+	}
+
+	instance, err := cp.client.Compute().GetInstance(ctx, resourceID)
 	if client.IsNotFound(err) {
 		return false, nil
 	}
@@ -252,13 +272,18 @@ func (cp *CloudProvider) InstanceExistsByProviderID(ctx context.Context, provide
 // InstanceShutdownByProviderID returns true if the instance is shutdown in cloudprovider.
 func (cp *CloudProvider) InstanceShutdownByProviderID(ctx context.Context, providerID string) (bool, error) {
 	//Please do not try to optimise it by using InstanceCache because we prefer correctness over efficiency here
-	cp.logger.With("instanceID", providerID).Debug("Checking instance is stopped by provider id")
-	instanceID, err := MapProviderIDToInstanceID(providerID)
+	cp.logger.With("resourceID", providerID).Debug("Checking instance is stopped by provider id")
+	resourceID, err := MapProviderIDToResourceID(providerID)
 	if err != nil {
 		return false, err
 	}
 
-	instance, err := cp.client.Compute().GetInstance(ctx, instanceID)
+	if IsVirtualNodeId(resourceID) {
+		// This does not apply to virtual nodes
+		return false, nil
+	}
+
+	instance, err := cp.client.Compute().GetInstance(ctx, resourceID)
 	if err != nil {
 		return false, err
 	}
@@ -279,4 +304,57 @@ func (cp *CloudProvider) getCompartmentIDByNodeName(nodeName string) (string, er
 	}
 	cp.logger.Debug("CompartmentID annotation is not present")
 	return "", errors.New("compartmentID annotation missing in the node. Would retry")
+}
+
+func (cp *CloudProvider) getVirtualNodePoolIdByVirtualNodeId(virtualNodeId string) (string, error) {
+	nodeList, err := cp.NodeLister.List(labels.Everything())
+	if err != nil {
+		return "", errors.Wrap(err, "error listing nodes using node informer")
+	}
+	for _, node := range nodeList {
+		resourceID, err := MapProviderIDToResourceID(node.Spec.ProviderID)
+		if err != nil {
+			// If providerId is empty ignore this node
+			continue
+		}
+		if virtualNodeId == resourceID {
+			if virtualNodePoolId, ok := node.Annotations[VirtualNodePoolIdAnnotation]; ok && virtualNodePoolId != "" {
+				return virtualNodePoolId, nil
+			}
+		}
+	}
+	return "", errors.Errorf("could not get virtualNodePoolId for virtualNodeId %s, annotation missing", virtualNodeId)
+}
+
+func (cp *CloudProvider) virtualNodeExistsByResourceID(ctx context.Context, resourceID string) (bool, error) {
+	item, exists, err := cp.virtualNodeCache.GetByKey(resourceID)
+	if err != nil {
+		return false, errors.Wrap(err, "Error fetching virtual node from virtualNodeCache, will retry")
+	}
+
+	var virtualNodePoolId string
+	if exists {
+		virtualNodePoolId = *item.(*containerengine.VirtualNode).VirtualNodePoolId
+	} else {
+		virtualNodePoolId, err = cp.getVirtualNodePoolIdByVirtualNodeId(resourceID)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	virtualNode, err := cp.client.ContainerEngine().GetVirtualNode(ctx, resourceID, virtualNodePoolId)
+	if client.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		if err := cp.virtualNodeCache.Add(virtualNode); err != nil {
+			return false, errors.Wrap(err, "Failed to add virtual node in virtualNodeCache")
+		}
+	}
+
+	return !client.IsVirtualNodeInTerminalState(virtualNode), nil
 }

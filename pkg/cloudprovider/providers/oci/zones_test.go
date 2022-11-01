@@ -16,12 +16,14 @@ package oci
 
 import (
 	"context"
-	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
+	"reflect"
+	"testing"
+
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
-	"reflect"
-	"testing"
+
+	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 )
 
 func TestMapAvailabilityDomainToFailureDomain(t *testing.T) {
@@ -76,14 +78,31 @@ func TestGetZoneByProviderID(t *testing.T) {
 			},
 			err: nil,
 		},
+		{
+			name: "provider id for virtual node and in cache",
+			in:   "ocid1.virtualnode.oc1.iad.zonetest",
+			out: cloudprovider.Zone{
+				FailureDomain: "PHX-AD-1",
+			},
+			err: nil,
+		},
+		{
+			name: "provider id with provider prefix for virtual node and not in cache",
+			in:   providerPrefix + "ocid1.virtualnode.oc1.iad.noncache",
+			out: cloudprovider.Zone{
+				FailureDomain: "PHX-AD-1",
+			},
+			err: nil,
+		},
 	}
 
 	cp := &CloudProvider{
-		NodeLister:    &mockNodeLister{},
-		client:        MockOCIClient{},
-		config:        &providercfg.Config{CompartmentID: "testCompartment"},
-		logger:        zap.S(),
-		instanceCache: &mockInstanceCache{},
+		NodeLister:       &mockNodeLister{},
+		client:           MockOCIClient{},
+		config:           &providercfg.Config{CompartmentID: "testCompartment"},
+		logger:           zap.S(),
+		instanceCache:    &mockInstanceCache{},
+		virtualNodeCache: &mockVirtualNodeCache{},
 	}
 
 	for _, tt := range testCases {

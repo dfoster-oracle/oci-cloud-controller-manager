@@ -32,7 +32,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/pkg/metrics"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util"
-	"github.com/oracle/oci-go-sdk/v49/core"
+	"github.com/oracle/oci-go-sdk/v65/core"
 	"github.com/pkg/errors"
 )
 
@@ -181,9 +181,9 @@ func getSubnetsForNodes(ctx context.Context, nodes []*v1.Node, client client.Int
 			return nil, errors.Errorf(".spec.providerID was not present on node %q", node.Name)
 		}
 
-		id, err := MapProviderIDToInstanceID(node.Spec.ProviderID)
+		id, err := MapProviderIDToResourceID(node.Spec.ProviderID)
 		if err != nil {
-			return nil, errors.Wrap(err, "MapProviderIDToInstanceID")
+			return nil, errors.Wrap(err, "MapProviderIDToResourceID")
 		}
 
 		compartmentID, ok := node.Annotations[CompartmentIDAnnotation]

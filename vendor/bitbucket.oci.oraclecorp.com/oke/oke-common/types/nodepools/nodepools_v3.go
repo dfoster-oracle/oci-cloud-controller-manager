@@ -3,11 +3,10 @@ package nodepools
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/golang/protobuf/ptypes/wrappers"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"sort"
 	"strings"
-
-	"github.com/golang/protobuf/ptypes/wrappers"
-	"github.com/oracle/oci-go-sdk/v49/common"
 
 	"bitbucket.oci.oraclecorp.com/oke/oke-common/protobuf"
 	nodes "bitbucket.oci.oraclecorp.com/oke/oke-common/types/nodes"

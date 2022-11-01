@@ -15,11 +15,12 @@ import (
 	providercfg "github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	csi_util "github.com/oracle/oci-cloud-controller-manager/pkg/csi-util"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
-	"github.com/oracle/oci-go-sdk/v49/common"
-	"github.com/oracle/oci-go-sdk/v49/core"
-	"github.com/oracle/oci-go-sdk/v49/filestorage"
-	"github.com/oracle/oci-go-sdk/v49/identity"
-	"github.com/oracle/oci-go-sdk/v49/loadbalancer"
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/containerengine"
+	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/filestorage"
+	"github.com/oracle/oci-go-sdk/v65/identity"
+	"github.com/oracle/oci-go-sdk/v65/loadbalancer"
 )
 
 const (
@@ -408,6 +409,16 @@ func (c *MockFileStorageClient) AwaitMountTargetActive(ctx context.Context, logg
 // FSS mocks client FileStorage implementation
 func (p *MockProvisionerClient) FSS() client.FileStorageInterface {
 	return &MockFileStorageClient{}
+}
+
+type MockContainerEngineClient struct{}
+
+func (m MockContainerEngineClient) GetVirtualNode(ctx context.Context, vnId, vnpId string) (*containerengine.VirtualNode, error) {
+	return nil, nil
+}
+
+func (p *MockProvisionerClient) ContainerEngine() client.ContainerEngineInterface {
+	return &MockContainerEngineClient{}
 }
 
 func NewClientProvisioner(pcData client.Interface, storage *MockBlockStorageClient) client.Interface {

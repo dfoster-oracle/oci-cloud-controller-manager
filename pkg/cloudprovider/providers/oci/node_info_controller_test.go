@@ -1,25 +1,29 @@
 package oci
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
-	"github.com/oracle/oci-go-sdk/v49/common"
-
 	"go.uber.org/zap"
-
-	"github.com/oracle/oci-go-sdk/v49/core"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/containerengine"
+	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
 var (
-	instanceCompID = "instanceCompID"
-	instanceFD     = "instanceFD"
-	instanceID     = "instanceID"
+	instanceCompID    = "instanceCompID"
+	instanceFD        = "instanceFD"
+	instanceID        = "instanceID"
+	virtualNodeId     = "ocid1.virtualnode.oc1.iad.default"
+	virtualNodePoolId = "vnpId"
+	virtualNodeFD     = "virtualNodeFD"
 )
 
-func TestGetPatchBytes(t *testing.T) {
+func TestGetNodePatchBytes(t *testing.T) {
 	testCases := map[string]struct {
 		node               *v1.Node
 		instance           *core.Instance
@@ -84,7 +88,7 @@ func TestGetPatchBytes(t *testing.T) {
 	logger := zap.L()
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			patchedBytes := getPatchBytes(tc.node, tc.instance, logger.Sugar())
+			patchedBytes := getNodePatchBytes(tc.node, tc.instance, logger.Sugar())
 			if !reflect.DeepEqual(patchedBytes, tc.expectedPatchBytes) {
 				t.Errorf("Expected PatchBytes \n%+v\nbut got\n%+v", tc.expectedPatchBytes, patchedBytes)
 			}
@@ -143,6 +147,93 @@ func TestGetInstanceByNode(t *testing.T) {
 			}
 			if !reflect.DeepEqual(instance, tc.expectedInstance) {
 				t.Errorf("Expected instance \n%+v\nbut got\n%+v", tc.expectedInstance, instanceID)
+			}
+		})
+	}
+}
+
+func TestGetVirtualNode(t *testing.T) {
+	testCases := map[string]struct {
+		node     *v1.Node
+		nic      *NodeInfoController
+		expected *containerengine.VirtualNode
+	}{
+		"Get Instance": {
+			node: &v1.Node{
+				Spec: v1.NodeSpec{
+					ProviderID: virtualNodeId,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						VirtualNodePoolIdAnnotation: virtualNodePoolId,
+					},
+				},
+			},
+			nic: &NodeInfoController{
+				ociClient: MockOCIClient{},
+			},
+			expected: &containerengine.VirtualNode{
+				Id: 			   &virtualNodeId,
+				VirtualNodePoolId: &virtualNodePoolId,
+			},
+		},
+		"Get Instance when providerID is prefixed with providerName": {
+			node: &v1.Node{
+				Spec: v1.NodeSpec{
+					ProviderID: providerPrefix + virtualNodeId,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						VirtualNodePoolIdAnnotation: virtualNodePoolId,
+					},
+				},
+			},
+			nic: &NodeInfoController{
+				ociClient: MockOCIClient{},
+			},
+			expected: &containerengine.VirtualNode{
+				Id:                &virtualNodeId,
+				VirtualNodePoolId: &virtualNodePoolId,
+			},
+		},
+	}
+
+	logger := zap.L()
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			virtualNode, err := getVirtualNode(tc.node, tc.nic, logger.Sugar())
+			if err != nil {
+				t.Fatalf("%s unexpected service add error: %v", name, err)
+			}
+			if !reflect.DeepEqual(virtualNode, tc.expected) {
+				t.Errorf("Expected virtual node \n%+v\nbut got\n%+v", tc.expected, virtualNodeId)
+			}
+		})
+	}
+}
+
+func TestGetVirtualNodePatchBytes(t *testing.T) {
+	testCases := map[string]struct {
+		node               *v1.Node
+		virtualNode        *containerengine.VirtualNode
+		expectedPatchBytes []byte
+	}{
+		"FD label not present": {
+			node: &v1.Node{
+				ObjectMeta: metav1.ObjectMeta{},
+			},
+			virtualNode: &containerengine.VirtualNode{
+				FaultDomain: &virtualNodeFD,
+			},
+			expectedPatchBytes: []byte(fmt.Sprintf("{\"metadata\": {\"labels\": {\"oci.oraclecloud.com/fault-domain\":\"%s\"}}}", virtualNodeFD)),
+		},
+	}
+	logger := zap.L()
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			patchedBytes := getVirtualNodePatchBytes(tc.virtualNode, logger.Sugar())
+			if !reflect.DeepEqual(patchedBytes, tc.expectedPatchBytes) {
+				t.Errorf("Expected PatchBytes \n%+v\nbut got\n%+v", tc.expectedPatchBytes, patchedBytes)
 			}
 		})
 	}

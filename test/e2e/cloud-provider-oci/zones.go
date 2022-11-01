@@ -73,3 +73,35 @@ var _ = Describe("Zones", func() {
 		})
 	})
 })
+
+var _ = Describe("SKE - Zones", func() {
+	f := sharedfw.NewFrameworkWithCloudProvider("zones")
+	var (
+		cs    clientset.Interface
+		zones cloudprovider.Zones
+		node  v1.Node
+	)
+	BeforeEach(func() {
+		var enabled bool
+		zones, enabled = f.CloudProvider.Zones()
+		Expect(enabled).To(BeTrue())
+
+		cs = f.ClientSet
+		nodes := sharedfw.GetReadySchedulableVirtualNodesOrDie(cs)
+		Expect(len(nodes.Items)).NotTo(BeZero())
+		node = nodes.Items[0]
+	})
+
+	Context("[cloudprovider-ske][ccm]", func() {
+		It("should be possible to get a non-empty zone by provider ID for a virtual node", func() {
+			providerID := node.Spec.ProviderID
+			Expect(providerID).NotTo(BeEmpty())
+
+			By("calling GetZoneByProviderID()")
+			zone, err := zones.GetZoneByProviderID(context.Background(), providerID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(zone.FailureDomain).NotTo(BeEmpty())
+			sharedfw.Logf("%q: FailureDomain=%q", providerID, zone.FailureDomain)
+		})
+	})
+})

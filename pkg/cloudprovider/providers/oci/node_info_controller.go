@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +37,8 @@ import (
 	"k8s.io/klog"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
-	"github.com/oracle/oci-go-sdk/v49/core"
+	"github.com/oracle/oci-go-sdk/v65/containerengine"
+	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
 // metadata labeling for placement info
@@ -48,14 +50,15 @@ const (
 
 // NodeInfoController helps compute workers in the cluster
 type NodeInfoController struct {
-	nodeInformer  coreinformers.NodeInformer
-	kubeClient    clientset.Interface
-	recorder      record.EventRecorder
-	cloud         *CloudProvider
-	queue         workqueue.RateLimitingInterface
-	logger        *zap.SugaredLogger
-	instanceCache cache.Store
-	ociClient     client.Interface
+	nodeInformer     coreinformers.NodeInformer
+	kubeClient       clientset.Interface
+	recorder         record.EventRecorder
+	cloud            *CloudProvider
+	queue            workqueue.RateLimitingInterface
+	logger           *zap.SugaredLogger
+	instanceCache    cache.Store
+	virtualNodeCache cache.Store
+	ociClient        client.Interface
 }
 
 // NewNodeInfoController creates a NodeInfoController object
@@ -65,6 +68,7 @@ func NewNodeInfoController(
 	cloud *CloudProvider,
 	logger *zap.SugaredLogger,
 	instanceCache cache.Store,
+	virtualNodeCache cache.Store,
 	ociClient client.Interface) *NodeInfoController {
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -78,14 +82,15 @@ func NewNodeInfoController(
 	}
 
 	nic := &NodeInfoController{
-		nodeInformer:  nodeInformer,
-		kubeClient:    kubeClient,
-		recorder:      recorder,
-		cloud:         cloud,
-		queue:         workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-		logger:        logger,
-		instanceCache: instanceCache,
-		ociClient:     ociClient,
+		nodeInformer:     nodeInformer,
+		kubeClient:       kubeClient,
+		recorder:         recorder,
+		cloud:            cloud,
+		queue:            workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		logger:           logger,
+		instanceCache:    instanceCache,
+		virtualNodeCache: virtualNodeCache,
+		ociClient:        ociClient,
 	}
 
 	// Use shared informer to listen to add nodes
@@ -154,35 +159,49 @@ func (nic *NodeInfoController) processItem(key string) error {
 	logger := nic.logger.With("node", key)
 
 	cacheNode, err := nic.nodeInformer.Lister().Get(key)
-
 	if err != nil {
 		return err
 	}
 
-	// if node has required labels already, don't process agin
-	if validateNodeHasRequiredLabels(cacheNode) {
-		logger.With("nodeName", cacheNode.Name).Debugf("The node has the fault domain label and compartmentID annotation already, will not process")
-		return nil
+	var patchBytes []byte
+	if IsVirtualNode(cacheNode) {
+		// if node has required labels already, don't process again
+		if validateVirtualNodeHasRequiredLabels(cacheNode) {
+			logger.With("nodeName", cacheNode.Name).Debugf("The virtual node has the fault domain label already, will not process")
+			return nil
+		}
+		virtualNode, err := getVirtualNode(cacheNode, nic, logger)
+		if err != nil {
+			return err
+		}
+		if err := nic.virtualNodeCache.Add(virtualNode); err != nil {
+			logger.With(zap.Error(err)).Error("Failed to add virtual node in virtualNodeCache")
+			return err
+		}
+		patchBytes = getVirtualNodePatchBytes(virtualNode, logger)
+	} else {
+		// if node has required labels already, don't process again
+		if validateNodeHasRequiredLabels(cacheNode) {
+			logger.With("nodeName", cacheNode.Name).Debugf("The node has the fault domain label and compartmentID annotation already, will not process")
+			return nil
+		}
+		instance, err := getInstanceByNode(cacheNode, nic, logger)
+		if err != nil {
+			return err
+		}
+		if err := nic.instanceCache.Add(instance); err != nil {
+			logger.With(zap.Error(err)).Error("Failed to add instance in instanceCache")
+			return err
+		}
+		patchBytes = getNodePatchBytes(cacheNode, instance, logger)
 	}
 
-	instance, err := getInstanceByNode(cacheNode, nic, logger)
-	if err != nil {
-		return err
-	}
-
-	if err := nic.instanceCache.Add(instance); err != nil {
-		logger.With(zap.Error(err)).Error("Failed to add instance in instanceCache")
-		return err
-	}
-
-	nodePatchBytes := getPatchBytes(cacheNode, instance, logger)
-
-	if nodePatchBytes == nil {
+	if patchBytes == nil {
 		return nil
 	}
 
 	err = retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		_, err := nic.kubeClient.CoreV1().Nodes().Patch(context.Background(), cacheNode.Name, types.StrategicMergePatchType, nodePatchBytes, metav1.PatchOptions{})
+		_, err := nic.kubeClient.CoreV1().Nodes().Patch(context.Background(), cacheNode.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
 		return err
 	})
 	if err != nil {
@@ -193,7 +212,7 @@ func (nic *NodeInfoController) processItem(key string) error {
 	return nil
 }
 
-func getPatchBytes(cacheNode *v1.Node, instance *core.Instance, logger *zap.SugaredLogger) []byte {
+func getNodePatchBytes(cacheNode *v1.Node, instance *core.Instance, logger *zap.SugaredLogger) []byte {
 	if validateNodeHasRequiredLabels(cacheNode) {
 		return nil
 	}
@@ -220,6 +239,12 @@ func getPatchBytes(cacheNode *v1.Node, instance *core.Instance, logger *zap.Suga
 	return nodePatchBytes
 }
 
+func getVirtualNodePatchBytes(virtualNode *containerengine.VirtualNode, logger *zap.SugaredLogger) []byte {
+	// Set faultDomain label on VirtualNode
+	logger.Infof("Adding virtual node label from cloud provider: %s=%s", FaultDomainLabel, *virtualNode.FaultDomain)
+	return []byte(fmt.Sprintf("{\"metadata\": {\"labels\": {\"%s\":\"%s\"}}}", FaultDomainLabel, *virtualNode.FaultDomain))
+}
+
 func getInstanceByNode(cacheNode *v1.Node, nic *NodeInfoController, logger *zap.SugaredLogger) (*core.Instance, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -234,7 +259,7 @@ func getInstanceByNode(cacheNode *v1.Node, nic *NodeInfoController, logger *zap.
 		}
 	}
 
-	instanceID, err := MapProviderIDToInstanceID(providerID)
+	instanceID, err := MapProviderIDToResourceID(providerID)
 	if err != nil {
 		logger.With(zap.Error(err)).Error("Failed to map providerID to instanceID")
 		return nil, err
@@ -247,6 +272,32 @@ func getInstanceByNode(cacheNode *v1.Node, nic *NodeInfoController, logger *zap.
 	return instance, nil
 }
 
+func getVirtualNode(cacheNode *v1.Node, nic *NodeInfoController, logger *zap.SugaredLogger) (*containerengine.VirtualNode, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	providerId := cacheNode.Spec.ProviderID
+	virtualNodeId, err := MapProviderIDToResourceID(providerId)
+	if err != nil {
+		logger.With(zap.Error(err)).Error("Failed to map providerId to virtualNodeId")
+		return nil, err
+	}
+
+	virtualNodePoolId, ok := cacheNode.Annotations[VirtualNodePoolIdAnnotation]
+	if !ok || virtualNodePoolId == "" {
+		logger.Error("Failed to get virtualNodePoolId for providerId, annotation missing")
+		return nil, errors.Errorf("could not get virtualNodePoolId for providerId %s, annotation missing", providerId)
+	}
+
+	virtualNode, err := nic.ociClient.ContainerEngine().GetVirtualNode(ctx, virtualNodeId, virtualNodePoolId)
+	if err != nil {
+		logger.With(zap.Error(err)).Error("Failed to get virtual node from virtualNodeId")
+		return nil, err
+	}
+
+	return virtualNode, nil
+}
+
 func validateNodeHasRequiredLabels(node *v1.Node) bool {
 	_, isFaultDomainLabelPresent := node.ObjectMeta.Labels[FaultDomainLabel]
 	_, isCompartmentIDAnnotationPresent := node.ObjectMeta.Annotations[CompartmentIDAnnotation]
@@ -254,4 +305,9 @@ func validateNodeHasRequiredLabels(node *v1.Node) bool {
 		return true
 	}
 	return false
+}
+
+func validateVirtualNodeHasRequiredLabels(node *v1.Node) bool {
+	_, isFaultDomainLabelPresent := node.ObjectMeta.Labels[FaultDomainLabel]
+	return isFaultDomainLabelPresent
 }

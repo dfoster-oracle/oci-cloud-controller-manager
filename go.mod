@@ -4,7 +4,7 @@ go 1.18
 
 replace (
 	github.com/docker/docker => github.com/docker/engine v0.0.0-20181106193140-f5749085e9cb
-	github.com/oracle/oci-go-sdk/v49 => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk/v49 v49.2.0-p
+	github.com/oracle/oci-go-sdk/v65 => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk/v65 v65.18.1-p.0.20220831194506-202dd70b5937
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.0
 	google.golang.org/grpc => google.golang.org/grpc v1.38.0
 	k8s.io/api => k8s.io/api v0.24.1
@@ -44,7 +44,7 @@ replace (
 )
 
 require (
-	bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20211021080439-0f28edfc51d4
+	bitbucket.oci.oraclecorp.com/oke/oke-common v1.0.1-0.20220429183118-f0129d710185
 	github.com/container-storage-interface/spec v1.6.0
 	github.com/go-logr/zapr v1.2.0
 	github.com/golang/protobuf v1.5.2
@@ -55,7 +55,7 @@ require (
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.0.1
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
-	github.com/oracle/oci-go-sdk/v49 v49.0.0-00010101000000-000000000000
+	github.com/oracle/oci-go-sdk/v65 v65.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.1
 	github.com/spf13/cobra v1.4.0
@@ -109,6 +109,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
 	github.com/go-openapi/swag v0.21.1 // indirect
+	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/gnostic v0.6.8 // indirect
@@ -143,7 +144,7 @@ require (
 	github.com/prometheus/common v0.33.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/sony/gobreaker v0.4.2-0.20210216022020-dd874f9dd33b // indirect
+	github.com/sony/gobreaker v0.5.0 // indirect
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect

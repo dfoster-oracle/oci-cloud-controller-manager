@@ -36,7 +36,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util/disk"
-	"github.com/oracle/oci-go-sdk/v49/core"
+	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
 const (
@@ -228,7 +228,7 @@ func (d OCIFlexvolumeDriver) Attach(logger *zap.SugaredLogger, opts flexvolume.O
 	}
 
 	// Handle possible oci:// prefix.
-	id, err = ociprovider.MapProviderIDToInstanceID(id)
+	id, err = ociprovider.MapProviderIDToResourceID(id)
 	if err != nil {
 		errorType = util.GetError(err)
 		fvdMetricDimension = util.GetMetricDimensionForComponent(errorType, util.FVDStorageType)

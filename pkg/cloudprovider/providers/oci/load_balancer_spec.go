@@ -29,7 +29,7 @@ import (
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
-	"github.com/oracle/oci-go-sdk/v49/common"
+	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/pkg/errors"
 )
 
@@ -569,7 +569,7 @@ func getBackends(logger *zap.SugaredLogger, provisionedNodes []*v1.Node, virtual
 			logger.Warnf("Node %q has an empty Internal IP address.", node.Name)
 			continue
 		}
-		instanceID, err := MapProviderIDToInstanceID(node.Spec.ProviderID)
+		instanceID, err := MapProviderIDToResourceID(node.Spec.ProviderID)
 		if err != nil {
 			logger.Warnf("Node %q has an empty ProviderID.", node.Name)
 			continue
