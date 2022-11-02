@@ -111,10 +111,15 @@ func (f *Framework) ListNodePoolImages() map[string]string {
 	return images
 }
 
-func (f *Framework) PickNonGPUImageWithAMDCompatibility(images map[string]string) (string, string, bool) {
+func (f *Framework) PickNonGPUImageWithAMDCompatibility(images map[string]string, kubeVersion string) (string, string, bool) {
 	for sourceName, imageId := range images {
 		if !strings.Contains(sourceName, "GPU") && !strings.Contains(sourceName, "-aarch64") {
-			return imageId, sourceName, true
+			if (!strings.Contains(sourceName, "-OKE")) {
+				return imageId, sourceName, true
+			}
+			if (strings.Contains(sourceName, "-OKE") && strings.Contains(sourceName, kubeVersion)) {
+				return imageId, sourceName, true
+			}
 		}
 	}
 	return "", "", false
@@ -322,7 +327,7 @@ func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentI
 	var nonGPUImageFound = false
 	var armCompatibleImageFound = false
 	if f.Architecture == "AMD" {
-		imageId, imageName, nonGPUImageFound = f.PickNonGPUImageWithAMDCompatibility(f.ListNodePoolImages())
+		imageId, imageName, nonGPUImageFound = f.PickNonGPUImageWithAMDCompatibility(f.ListNodePoolImages(), kubeVersion)
 		Expect(nonGPUImageFound).To(BeTrue())
 	} else {
 		imageId, imageName, armCompatibleImageFound = f.PickArmCompatibleImage(f.ListNodePoolImages())
@@ -383,7 +388,7 @@ func (f *Framework) CreateNodePoolWithVersion(clusterID, nodeImageName, nodeShap
 	return nil
 }
 
-//CreateNodePoolWithResponse creates a nodepool with the provide config and returns the raw CreateNodePool response.
+// CreateNodePoolWithResponse creates a nodepool with the provide config and returns the raw CreateNodePool response.
 func (f *Framework) CreateNodePoolWithResponse(cfg *NodePoolCreateConfig) (response oke.CreateNodePoolResponse, err error) {
 	ctx, cancel := context.WithTimeout(f.context, f.timeout)
 	defer cancel()
