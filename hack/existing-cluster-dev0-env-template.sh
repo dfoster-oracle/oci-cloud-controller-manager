@@ -55,8 +55,14 @@ export SCOPE="BOTH"
 
 # FSS volume handle
 # format is FileSystemOCID:serverIP:path
-export FSS_VOLUME_HANDLE="ocid1.filesystem.oc1.iad.aaaaaaaaaaa5wj2infqwillqojxwiotjmfsc2ylefuzqaaaa:10.0.10.104:/FileSystem-20210820-0454-50"
+export FSS_VOLUME_HANDLE=""
+export FSS_VOLUME_HANDLE_ARM=""
+
+export MNT_TARGET_ID=""
+export MNT_TARGET_SUBNET_ID=
+export MNT_TARGET_COMPARTMENT_ID=
 
 # For SKE node, node_info, node_lifecycle controller tests against PDE
 # To setup PDE and point your localhost:25000 to the PDE CP API refer: Refer: https://bitbucket.oci.oraclecorp.com/projects/OKE/repos/oke-control-plane/browse/personal-environments/README.md
 # export CE_ENDPOINT_OVERRIDE="http://localhost:25000"
+
