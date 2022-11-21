@@ -22,6 +22,8 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util/signals"
 	provisioner "github.com/oracle/oci-cloud-controller-manager/pkg/volume/provisioner/core"
 	"go.uber.org/zap"
+
+	"bitbucket.oci.oraclecorp.com/cryptography/go_ensurefips"
 )
 
 // version/build is set at build time to the version of the provisioner being built.
@@ -29,6 +31,9 @@ var version string
 var build string
 
 func main() {
+	// Ensure service is FIPS Compliant
+	go_ensurefips.Compliant()
+
 	syscall.Umask(0)
 
 	log := logging.Logger()

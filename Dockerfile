@@ -2,9 +2,8 @@ FROM odo-docker-signed-local.artifactory.oci.oraclecorp.com/odx-oke/oke/golang-b
 
 ARG COMPONENT
 
-ENV SRC /go/src/github.com/oracle/oci-cloud-controller-manager
+ENV SRC /gopath/src/github.com/oracle/oci-cloud-controller-manager
 
-ENV GOPATH /go/
 RUN mkdir -p /go/bin $SRC
 ADD . $SRC
 WORKDIR $SRC
@@ -20,4 +19,4 @@ RUN yum install -y util-linux \
   && yum install -y xfsprogs \
   && yum clean all
 
-COPY --from=0 /go/src/github.com/oracle/oci-cloud-controller-manager/dist/* /usr/local/bin/
+COPY --from=0 /gopath/src/github.com/oracle/oci-cloud-controller-manager/dist/* /usr/local/bin/

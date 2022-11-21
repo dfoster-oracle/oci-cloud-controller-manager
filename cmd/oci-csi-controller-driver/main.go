@@ -19,9 +19,14 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util/signals"
+
+	"bitbucket.oci.oraclecorp.com/cryptography/go_ensurefips"
 )
 
 func main() {
+	// Ensure service is FIPS Compliant
+	go_ensurefips.Compliant()
+
 	csioptions := csioptions.NewCSIOptions()
 	flag.Parse()
 	stopCh := signals.SetupSignalHandler()

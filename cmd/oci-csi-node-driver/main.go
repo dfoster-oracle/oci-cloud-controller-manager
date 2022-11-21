@@ -26,9 +26,14 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-node-driver/nodedriverregistrar"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/csi/driver"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util/signals"
+
+	"bitbucket.oci.oraclecorp.com/cryptography/go_ensurefips"
 )
 
 func main() {
+	// Ensure service is FIPS Compliant
+	go_ensurefips.Compliant()
+
 	nodecsioptions := nodedriveroptions.NodeCSIOptions{}
 
 	flag.StringVar(&nodecsioptions.Endpoint, "endpoint", "unix://tmp/csi.sock", "Block Volume CSI endpoint")

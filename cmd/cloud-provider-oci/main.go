@@ -27,12 +27,17 @@ import (
 	"go.uber.org/zap"
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/logs"
+
+	"bitbucket.oci.oraclecorp.com/cryptography/go_ensurefips"
 )
 
 var version string
 var build string
 
 func main() {
+	// Ensure service is FIPS Compliant
+	go_ensurefips.Compliant()
+
 	viper.AutomaticEnv()
 	syscall.Umask(0)
 	rand.Seed(time.Now().UTC().UnixNano())
