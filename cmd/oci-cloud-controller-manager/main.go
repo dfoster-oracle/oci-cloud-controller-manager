@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci"
@@ -43,8 +44,10 @@ var version string
 var build string
 
 func main() {
-	// Ensure service is FIPS Compliant
-	go_ensurefips.Compliant()
+	// Ensure AMD service is FIPS Compliant
+	if runtime.GOARCH == "amd64" {
+		go_ensurefips.Compliant()
+	}
 
 	rand.Seed(time.Now().UTC().UnixNano())
 

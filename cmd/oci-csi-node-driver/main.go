@@ -16,6 +16,7 @@ package main
 
 import (
 	"flag"
+	"runtime"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap/zapcore"
@@ -31,8 +32,10 @@ import (
 )
 
 func main() {
-	// Ensure service is FIPS Compliant
-	go_ensurefips.Compliant()
+	// Ensure AMD service is FIPS Compliant
+	if runtime.GOARCH == "amd64" {
+		go_ensurefips.Compliant()
+	}
 
 	nodecsioptions := nodedriveroptions.NodeCSIOptions{}
 

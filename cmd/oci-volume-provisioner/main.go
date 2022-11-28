@@ -16,6 +16,7 @@ package main
 
 import (
 	"flag"
+	"runtime"
 	"syscall"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
@@ -31,8 +32,10 @@ var version string
 var build string
 
 func main() {
-	// Ensure service is FIPS Compliant
-	go_ensurefips.Compliant()
+	// Ensure AMD service is FIPS Compliant
+	if runtime.GOARCH == "amd64" {
+		go_ensurefips.Compliant()
+	}
 
 	syscall.Umask(0)
 

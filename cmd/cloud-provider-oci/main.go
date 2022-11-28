@@ -17,6 +17,7 @@ package main
 import (
 	goflag "flag"
 	"math/rand"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -35,8 +36,10 @@ var version string
 var build string
 
 func main() {
-	// Ensure service is FIPS Compliant
-	go_ensurefips.Compliant()
+	// Ensure AMD service is FIPS Compliant
+	if runtime.GOARCH == "amd64" {
+		go_ensurefips.Compliant()
+	}
 
 	viper.AutomaticEnv()
 	syscall.Umask(0)

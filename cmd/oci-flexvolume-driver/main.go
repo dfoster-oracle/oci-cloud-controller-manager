@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/flexvolume"
@@ -46,8 +47,10 @@ func GetLogPath() string {
 }
 
 func main() {
-	// Ensure service is FIPS Compliant
-	go_ensurefips.Compliant()
+	// Ensure AMD service is FIPS Compliant
+	if runtime.GOARCH == "amd64" {
+		go_ensurefips.Compliant()
+	}
 
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
