@@ -54,6 +54,7 @@ import (
 	csitranslationlib "k8s.io/csi-translation-lib"
 	"k8s.io/klog"
 
+	"github.com/oracle/oci-cloud-controller-manager/pkg/csi/driver"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/v8/controller"
 )
 
@@ -61,8 +62,7 @@ var (
 	extraCreateMetadata = false
 	defaultFSType       = "ext4"
 	version             = "unknown"
-	provisionController *controller.ProvisionController
-	csiEndpoint         = flag.String("csi-address", "/run/csi/socket", "The gRPC endpoint for Target CSI Volume.")
+	bvCsiDriver         = "BV"
 	capacityThreads     = flag.Uint("capacity-threads", 1, "Number of simultaneously running threads, handling CSIStorageCapacity objects")
 	kubeAPIQPS          = flag.Float32("kube-api-qps", 5, "QPS to use while communicating with the kubernetes apiserver. Defaults to 5.0.")
 	kubeAPIBurst        = flag.Int("kube-api-burst", 10, "Burst to use while communicating with the kubernetes apiserver. Defaults to 10.")
@@ -84,9 +84,23 @@ var (
 )
 
 //StartCSIProvisioner main function to start CSI Controller Provisioner
-func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
+func StartCSIProvisioner(csioptions csioptions.CSIOptions, csiDriver driver.CSIDriver) {
 	var config *rest.Config
 	var err error
+
+	fsType := defaultFSType
+	csiAddress := ""
+	endpoint := ""
+	volumeNamePrefix := csioptions.VolumeNamePrefix
+	if string(csiDriver) == bvCsiDriver {
+		csiAddress = csioptions.CsiAddress
+		endpoint = csioptions.Endpoint
+	} else {
+		csiAddress = csioptions.FssCsiAddress
+		volumeNamePrefix = csioptions.FssVolumeNamePrefix
+		fsType = ""
+		endpoint = csioptions.FssEndpoint
+	}
 
 	if err := utilfeature.DefaultMutableFeatureGate.SetFromMap(csioptions.FeatureGates); err != nil {
 		klog.Fatal(err)
@@ -156,7 +170,8 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 
 	metricsManager := metrics.NewCSIMetricsManager("" /* driverName */)
 
-	grpcClient, err := ctrl.Connect(csioptions.CsiAddress, metricsManager)
+	klog.V(2).Infof("Creating grpcClient with address %s", csiAddress)
+	grpcClient, err := ctrl.Connect(csiAddress, metricsManager)
 	if err != nil {
 		klog.Error(err.Error())
 		os.Exit(1)
@@ -251,7 +266,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 			// Will be provided via default gatherer.
 			metrics.WithProcessStartTime(false),
 			metrics.WithMigration())
-		migratedGrpcClient, err := ctrl.Connect(*csiEndpoint, metricsManager)
+		migratedGrpcClient, err := ctrl.Connect(endpoint, metricsManager)
 		if err != nil {
 			klog.Error(err.Error())
 			os.Exit(1)
@@ -276,7 +291,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		clientset,
 		csioptions.OperationTimeout,
 		identity,
-		csioptions.VolumeNamePrefix,
+		volumeNamePrefix,
 		csioptions.VolumeNameUUIDLength,
 		grpcClient,
 		snapClient,
@@ -293,7 +308,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		claimLister,
 		vaLister,
 		extraCreateMetadata,
-		defaultFSType,
+		fsType,
 		nodeDeployment,
 		csioptions.ControllerPublishReadOnly,
 		*preventVolumeModeConversion,
@@ -424,7 +439,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions) {
 		// Wrap Provision and Delete to detect when it is time to refresh capacity.
 		csiProvisioner = capacity.NewProvisionWrapper(csiProvisioner, capacityController)
 	}
-	provisionController = controller.NewProvisionController(
+	provisionController := controller.NewProvisionController(
 		clientset,
 		provisionerName,
 		csiProvisioner,

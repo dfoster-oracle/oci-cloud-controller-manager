@@ -86,24 +86,27 @@ function test_oci () {
 function check_environment () {
     ENABLE_CREATE_CLUSTER=${ENABLE_CREATE_CLUSTER:-"true"}
     if [ "$ENABLE_CREATE_CLUSTER" == "true" ]; then
-        check-env "OCI_USER"            $OCI_USER
-        check-env "OCI_FINGERPRINT"     $OCI_FINGERPRINT
-        check-env "OCI_KEY"             $OCI_KEY
-        check-env "OCI_TENANCY"         $OCI_TENANCY
-        check-env "OCI_REGION"          $OCI_REGION
-        check-env "ADLOCATION"          $ADLOCATION
-        check-env "COMPARTMENT1"        $COMPARTMENT
-        check-env "LBSUBNET1"           $LBSUBNET1
-        check-env "LBSUBNET2"           $LBSUBNET2
-        check-env "OCI_SUBNET1"         $OCI_SUBNET1
-        check-env "OCI_SUBNET2"         $OCI_SUBNET2
-        check-env "OCI_SUBNET3"         $OCI_SUBNET3
-        check-env "OCI_K8SSUBNET"       $OCI_K8SSUBNET
-        check-env "PUB_SSHKEY"          $PUB_SSHKEY
-        check-env "SECRETS_LOCAL"       $SECRETS_LOCAL
-        check-env "REGION_SECRETS"      $REGION_SECRETS
-        check-env "DELEGATION_GROUP_ID" $DELEGATION_GROUP_ID
-        check-env "FSS_VOLUME_HANDLE"   $FSS_VOLUME_HANDLE
+        check-env "OCI_USER"                  $OCI_USER
+        check-env "OCI_FINGERPRINT"           $OCI_FINGERPRINT
+        check-env "OCI_KEY"                   $OCI_KEY
+        check-env "OCI_TENANCY"               $OCI_TENANCY
+        check-env "OCI_REGION"                $OCI_REGION
+        check-env "ADLOCATION"                $ADLOCATION
+        check-env "COMPARTMENT1"              $COMPARTMENT
+        check-env "LBSUBNET1"                 $LBSUBNET1
+        check-env "LBSUBNET2"                 $LBSUBNET2
+        check-env "OCI_SUBNET1"               $OCI_SUBNET1
+        check-env "OCI_SUBNET2"               $OCI_SUBNET2
+        check-env "OCI_SUBNET3"               $OCI_SUBNET3
+        check-env "OCI_K8SSUBNET"             $OCI_K8SSUBNET
+        check-env "PUB_SSHKEY"                $PUB_SSHKEY
+        check-env "SECRETS_LOCAL"             $SECRETS_LOCAL
+        check-env "REGION_SECRETS"            $REGION_SECRETS
+        check-env "DELEGATION_GROUP_ID"       $DELEGATION_GROUP_ID
+        check-env "FSS_VOLUME_HANDLE"         $FSS_VOLUME_HANDLE
+        check-env "MNT_TARGET_ID"             $MNT_TARGET_ID
+        check-env "MNT_TARGET_SUBNET_ID"      $MNT_TARGET_SUBNET_ID
+        check-env "MNT_TARGET_COMPARTMENT_ID" $MNT_TARGET_COMPARTMENT_ID
         check-env-k8s-version-index-exist
         if [ -z "$CLUSTER_KUBECONFIG" ]; then
             CLUSTER_KUBECONFIG="/tmp/clusterkubeconfig"
@@ -180,6 +183,9 @@ function run_e2e_tests() {
         --delete-namespace=${DELETE_NAMESPACE} \
         --image-pull-repo=${IMAGE_PULL_REPO} \
         --cmek-kms-key=${CMEK_KMS_KEY} \
+        --mnt-target-id=${MNT_TARGET_ID} \
+        --mnt-target-subnet-id=${MNT_TARGET_SUBNET_ID} \
+        --mnt-target-compartment-id=${MNT_TARGET_COMPARTMENT_ID} \
         --nsg-ocids=${NSG_OCIDS} \
         --reserved-ip=${RESERVED_IP} \
         --architecture=${ARCHITECTURE} \
@@ -199,6 +205,9 @@ function run_e2e_tests_existing_cluster() {
         --delete-namespace=${DELETE_NAMESPACE} \
         --image-pull-repo=${IMAGE_PULL_REPO} \
         --cmek-kms-key=${CMEK_KMS_KEY} \
+        --mnt-target-id=${MNT_TARGET_ID} \
+        --mnt-target-subnet-id=${MNT_TARGET_SUBNET_ID} \
+        --mnt-target-compartment-id=${MNT_TARGET_COMPARTMENT_ID} \
         --nsg-ocids=${NSG_OCIDS} \
         --reserved-ip=${RESERVED_IP} \
         --architecture=${ARCHITECTURE} \
@@ -236,6 +245,9 @@ function setup_arm() {
         export NSG_OCIDS=$NSG_OCIDS_ARM
         export OKE_ENDPOINT=$OKE_ENDPOINT_ARM
         export FSS_VOLUME_HANDLE=$FSS_VOLUME_HANDLE_ARM
+        export MNT_TARGET_ID=$MNT_TARGET_ID
+        export MNT_TARGET_SUBNET_ID=$MNT_TARGET_SUBNET_ID
+        export MNT_TARGET_COMPARTMENT_ID=$MNT_TARGET_COMPARTMENT_ID
         declare_setup "CREATE"
     elif [[ "$#" -ne  "0" && "$1" == "EXIST" ]]; then
         export CLUSTER_KUBECONFIG=$CLUSTER_KUBECONFIG_ARM
@@ -262,6 +274,10 @@ function declare_setup () {
     echo "OCI_NODESUBNET is ${OCI_NODESUBNET}"
     echo "NODE_SHAPE is ${NODE_SHAPE}"
     echo "NSG_OCIDS is ${NSG_OCIDS}"
+    echo "ADLOCATION is ${ADLOCATION}"
+    echo "MNT_TARGET_ID is ${MNT_TARGET_ID}"
+    echo "MNT_TARGET_SUBNET_ID is ${MNT_TARGET_SUBNET_ID}"
+    echo "MNT_TARGET_COMPARTMENT_ID is ${MNT_TARGET_COMPARTMENT_ID}"
 }
 
 function set_focus () {
@@ -316,6 +332,10 @@ function declare_environment () {
         echo "SECRETS_LOCAL is  ${SECRETS_LOCAL}"
         echo "REGION_SECRETS is ${REGION_SECRETS}"
         echo "DELEGATION_GROUP_ID is ${DELEGATION_GROUP_ID}"
+        echo "ADLOCATION is ${ADLOCATION}"
+        echo "MNT_TARGET_ID is ${MNT_TARGET_ID}"
+        echo "MNT_TARGET_SUBNET_ID is ${MNT_TARGET_SUBNET_ID}"
+        echo "MNT_TARGET_COMPARTMENT_ID is ${MNT_TARGET_COMPARTMENT_ID}"
     else
         echo "CLUSTER_KUBECONFIG is ${CLUSTER_KUBECONFIG}"
         echo "CLOUD_CONFIG is ${CLOUD_CONFIG}"

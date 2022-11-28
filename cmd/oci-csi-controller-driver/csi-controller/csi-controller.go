@@ -28,6 +28,7 @@ import (
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-provisioner"
 	csiresizer "github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-resizer"
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	"github.com/oracle/oci-cloud-controller-manager/pkg/csi/driver"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/logging"
 )
 
@@ -35,6 +36,7 @@ import (
 func Run(csioptions csioptions.CSIOptions, stopCh <-chan struct{}) error {
 	log := logging.Logger()
 	logger := log.Sugar()
+
 	config, err := clientcmd.BuildConfigFromFlags(csioptions.Master, csioptions.Kubeconfig)
 	clientset, err := kubernetes.NewForConfig(config)
 	err = wait.PollUntil(15*time.Second, func() (done bool, err error) {
@@ -49,13 +51,25 @@ func Run(csioptions csioptions.CSIOptions, stopCh <-chan struct{}) error {
 		return errors.Wrapf(err, "failed to get kube-apiserver version")
 	}
 
-	go csiprovisioner.StartCSIProvisioner(csioptions)
+	// provisioner for block volume
+	logger.Info("starting csi-provisioner go routine for BV")
+	go csiprovisioner.StartCSIProvisioner(csioptions, driver.BV)
+	// provisioner for fss
+	logger.Info("starting csi-provisioner go routine for FSS")
+	go csiprovisioner.StartCSIProvisioner(csioptions, driver.FSS)
+
+	logger.Info("starting csi-attacher go routine for BV")
 	go csiattacher.StartCSIAttacher(csioptions)
 	if csioptions.EnableResizer {
 		logger.Info("starting csi-resizer go routine")
 		go csiresizer.StartCSIResizer(csioptions)
 	}
-	go csicontrollerdriver.StartControllerDriver(csioptions)
+	// controller for block volume
+	logger.Info("starting csi-controller go routine for BV")
+	go csicontrollerdriver.StartControllerDriver(csioptions, driver.BV)
+	// controller for fss
+	logger.Info("starting csi-controller go routine for FSS")
+	go csicontrollerdriver.StartControllerDriver(csioptions, driver.FSS)
 	<-stopCh
 	return nil
 }

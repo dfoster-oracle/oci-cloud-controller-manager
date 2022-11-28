@@ -78,6 +78,11 @@ var (
 	configFilePath = "/etc/oci/config.yaml"
 )
 
+const (
+	defaultFssAddress  = "/var/run/shared-tmpfs/csi-fss.sock"
+	defaultFssEndpoint = "unix:///var/run/shared-tmpfs/csi-fss.sock"
+)
+
 // NewCloudProviderOCICommand creates a *cobra.Command object with default parameters
 func NewCloudProviderOCICommand(logger *zap.SugaredLogger) *cobra.Command {
 
@@ -140,8 +145,8 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	// csi flag set.
 	csiFlagSet := namedFlagSets.FlagSet("CSI Controller")
 	csiFlagSet.BoolVar(&enableCSI, "csi-enabled", false, "Whether to enable CSI feature in OKE")
-	csiFlagSet.StringVar(&csioption.CsiAddress, "csi-address", "/run/csi/socket", "Address of the CSI driver socket.")
-	csiFlagSet.StringVar(&csioption.Endpoint, "csi-endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	csiFlagSet.StringVar(&csioption.CsiAddress, "csi-address", "/run/csi/socket", "Address of the CSI Block Volume driver socket.")
+	csiFlagSet.StringVar(&csioption.Endpoint, "csi-endpoint", "unix://tmp/csi.sock", "CSI Block Volume endpoint")
 	csiFlagSet.StringVar(&csioption.VolumeNamePrefix, "csi-volume-name-prefix", "pvc", "Prefix to apply to the name of a created volume.")
 	csiFlagSet.IntVar(&csioption.VolumeNameUUIDLength, "csi-volume-name-uuid-length", -1, "Truncates generated UUID of a created volume to this length. Defaults behavior is to NOT truncate.")
 	csiFlagSet.BoolVar(&csioption.ShowVersion, "csi-version", false, "Show version.")
@@ -157,6 +162,7 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	csiFlagSet.DurationVar(&csioption.Timeout, "csi-timeout", 15*time.Second, "Timeout for waiting for attaching or detaching the volume.")
 	csiFlagSet.BoolVar(&csioption.EnableResizer, "csi-bv-expansion-enabled", false, "Enables go routine csi-resizer.")
 	csiFlagSet.Var(utilflag.NewMapStringBool(&csioption.FeatureGates), "csi-feature-gates", "A set of key=value pairs that describe feature gates for alpha/experimental features. ")
+
 	verflag.AddFlags(namedFlagSets.FlagSet("global"))
 	globalflag.AddGlobalFlags(namedFlagSets.FlagSet("global"), command.Name())
 
@@ -253,7 +259,13 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 			defer wg.Done()
 			csioption.Master = options.Master
 			csioption.Kubeconfig = options.Kubeconfig
-			csicontroller.Run(csioption, ctx.Done())
+			csioption.FssCsiAddress = csioptions.GetFssAddress(csioption.CsiAddress, defaultFssAddress)
+			csioption.FssEndpoint = csioptions.GetFssAddress(csioption.Endpoint, defaultFssEndpoint)
+			csioption.FssVolumeNamePrefix = csioptions.GetFssVolumeNamePrefix(csioption.VolumeNamePrefix)
+			err := csicontroller.Run(csioption, ctx.Done())
+			if err != nil {
+				logger.With(zap.Error(err)).Error("Error running csi-controller")
+			}
 			cancelFunc()
 		}()
 	} else {

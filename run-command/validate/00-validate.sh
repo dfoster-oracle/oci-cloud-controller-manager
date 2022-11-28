@@ -77,6 +77,9 @@ run_tests() {
           -e ODO_APPLICATION_CHANGE \
           -e KMS_SECRETS_KEY \
           -e CMEK_KMS_KEY \
+          -e MNT_TARGET_ID \
+          -e MNT_TARGET_SUBNET_ID \
+          -e MNT_TARGET_COMPARTMENT_ID \
           -e NSG_OCIDS \
           -e RESERVED_IP \
           -e FSS_VOLUME_HANDLE \
