@@ -17,6 +17,7 @@ package csiprovisioner
 import (
 	"context"
 	"fmt"
+	"github.com/kubernetes-csi/external-provisioner/pkg/features"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	storagev1 "k8s.io/api/storage/v1"
@@ -55,6 +56,9 @@ import (
 	"k8s.io/klog"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/csi/driver"
+	gatewayclientset "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+	gatewayInformers "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
+	referenceGrantv1beta1 "sigs.k8s.io/gateway-api/pkg/client/listers/apis/v1beta1"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/v8/controller"
 )
 
@@ -83,7 +87,7 @@ var (
 	nodeDeployment              *ctrl.NodeDeployment
 )
 
-//StartCSIProvisioner main function to start CSI Controller Provisioner
+// StartCSIProvisioner main function to start CSI Controller Provisioner
 func StartCSIProvisioner(csioptions csioptions.CSIOptions, csiDriver driver.CSIDriver) {
 	var config *rest.Config
 	var err error
@@ -227,6 +231,22 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions, csiDriver driver.CSID
 		klog.Info("CSI driver does not support PUBLISH_UNPUBLISH_VOLUME, not watching VolumeAttachments")
 	}
 
+	var gatewayClient gatewayclientset.Interface
+	if utilfeature.DefaultFeatureGate.Enabled(features.CrossNamespaceVolumeDataSource) {
+		// gatewayclientset.NewForConfig creates a new Clientset for GatewayClient
+		gatewayClient, err = gatewayclientset.NewForConfig(config)
+		if err != nil {
+			klog.Fatalf("Failed to create gateway client: %v", err)
+		}
+	}
+	var refGrantLister referenceGrantv1beta1.ReferenceGrantLister
+	var gatewayFactory gatewayInformers.SharedInformerFactory
+	if utilfeature.DefaultFeatureGate.Enabled(features.CrossNamespaceVolumeDataSource) {
+		gatewayFactory = gatewayInformers.NewSharedInformerFactory(gatewayClient, ctrl.ResyncPeriodOfReferenceGrantInformer)
+		referenceGrants := gatewayFactory.Gateway().V1beta1().ReferenceGrants()
+		refGrantLister = referenceGrants.Lister()
+	}
+
 	var csiNodeLister storagelistersv1.CSINodeLister
 	var nodeLister v1.NodeLister
 	if ctrl.SupportsTopology(pluginCapabilities) {
@@ -286,7 +306,6 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions, csiDriver driver.CSID
 
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
-
 	csiProvisioner := ctrl.NewCSIProvisioner(
 		clientset,
 		csioptions.OperationTimeout,
@@ -307,6 +326,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions, csiDriver driver.CSID
 		nodeLister,
 		claimLister,
 		vaLister,
+		refGrantLister,
 		extraCreateMetadata,
 		fsType,
 		nodeDeployment,
