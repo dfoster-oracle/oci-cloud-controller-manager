@@ -17,7 +17,6 @@ package csiprovisioner
 import (
 	"context"
 	"fmt"
-	"github.com/kubernetes-csi/external-provisioner/pkg/features"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	storagev1 "k8s.io/api/storage/v1"
@@ -41,7 +40,7 @@ import (
 	ctrl "github.com/kubernetes-csi/external-provisioner/pkg/controller"
 	"github.com/kubernetes-csi/external-provisioner/pkg/owner"
 	snapclientset "github.com/kubernetes-csi/external-snapshotter/client/v6/clientset/versioned"
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	csioptionapi "github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
 	flag "github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -88,7 +87,7 @@ var (
 )
 
 // StartCSIProvisioner main function to start CSI Controller Provisioner
-func StartCSIProvisioner(csioptions csioptions.CSIOptions, csiDriver driver.CSIDriver) {
+func StartCSIProvisioner(csioptions csioptionapi.CSIOptions, csiDriver driver.CSIDriver) {
 	var config *rest.Config
 	var err error
 
@@ -232,7 +231,8 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions, csiDriver driver.CSID
 	}
 
 	var gatewayClient gatewayclientset.Interface
-	if utilfeature.DefaultFeatureGate.Enabled(features.CrossNamespaceVolumeDataSource) {
+	enableCrossNamespaceVolumeDataSource := csioptions.FeatureGates[csioptionapi.CrossNamespaceVolumeDataSource]
+	if enableCrossNamespaceVolumeDataSource {
 		// gatewayclientset.NewForConfig creates a new Clientset for GatewayClient
 		gatewayClient, err = gatewayclientset.NewForConfig(config)
 		if err != nil {
@@ -241,7 +241,7 @@ func StartCSIProvisioner(csioptions csioptions.CSIOptions, csiDriver driver.CSID
 	}
 	var refGrantLister referenceGrantv1beta1.ReferenceGrantLister
 	var gatewayFactory gatewayInformers.SharedInformerFactory
-	if utilfeature.DefaultFeatureGate.Enabled(features.CrossNamespaceVolumeDataSource) {
+	if enableCrossNamespaceVolumeDataSource {
 		gatewayFactory = gatewayInformers.NewSharedInformerFactory(gatewayClient, ctrl.ResyncPeriodOfReferenceGrantInformer)
 		referenceGrants := gatewayFactory.Gateway().V1beta1().ReferenceGrants()
 		refGrantLister = referenceGrants.Lister()
