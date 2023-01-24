@@ -181,7 +181,7 @@ build-local: build-dirs
 			 -v $(PWD):$(DOCKER_REPO_ROOT) \
 			 -e COMPONENT="$(COMPONENT)" \
 			 -e GOPATH=/go/ \
-			odo-docker-signed-local.artifactory.oci.oraclecorp.com/odx-oke/oke/k8-manager-base:go1.19.4-1.0.15 /bin/bash -c \
+			odo-docker-signed-local.artifactory.oci.oraclecorp.com/odx-oke/oke/k8-manager-base:go1.19.5-1.0.16 /bin/bash -c \
 			'for component in ${COMPONENT}; do \
 				echo building $$component && GOOS=$(GOOS) GOARCH=$(ARCH) CGO_ENABLED=1 go build -mod vendor -o dist/$$component -ldflags "-X main.version=$(VERSION) -X main.build=$(BUILD)" ./cmd/$$component ; \
 			 done'
@@ -194,7 +194,7 @@ test-local: build-dirs
 			 -v $(PWD):$(DOCKER_REPO_ROOT) \
 			 -e COMPONENT="$(COMPONENT)" \
 			 -e GOPATH=/go/ \
-			odo-docker-signed-local.artifactory.oci.oraclecorp.com/odx-oke/oke/k8-manager-base:go1.19.4-1.0.15 \
+			odo-docker-signed-local.artifactory.oci.oraclecorp.com/odx-oke/oke/k8-manager-base:go1.19.5-1.0.16 \
 			make coverage image
 
 .PHONY: run-ccm-e2e-tests-local
