@@ -162,8 +162,6 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	csiFlagSet.DurationVar(&csioption.Timeout, "csi-timeout", 15*time.Second, "Timeout for waiting for attaching or detaching the volume.")
 	csiFlagSet.BoolVar(&csioption.EnableResizer, "csi-bv-expansion-enabled", false, "Enables go routine csi-resizer.")
 	csiFlagSet.Var(utilflag.NewMapStringBool(&csioption.FeatureGates), "csi-feature-gates", "A set of key=value pairs that describe feature gates for alpha/experimental features. ")
-	//Adding default value
-	csioptions.CSIfeatureGates(csioption.FeatureGates)
 
 	verflag.AddFlags(namedFlagSets.FlagSet("global"))
 	globalflag.AddGlobalFlags(namedFlagSets.FlagSet("global"), command.Name())
@@ -264,6 +262,8 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 			csioption.FssCsiAddress = csioptions.GetFssAddress(csioption.CsiAddress, defaultFssAddress)
 			csioption.FssEndpoint = csioptions.GetFssAddress(csioption.Endpoint, defaultFssEndpoint)
 			csioption.FssVolumeNamePrefix = csioptions.GetFssVolumeNamePrefix(csioption.VolumeNamePrefix)
+			// Check and update feature gate for CrossNamespaceDataSource
+			csioption.FeatureGates = csioptions.UpdateFeatureGates(csioption.FeatureGates)
 			err := csicontroller.Run(csioption, ctx.Done())
 			if err != nil {
 				logger.With(zap.Error(err)).Error("Error running csi-controller")

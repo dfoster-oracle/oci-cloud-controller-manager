@@ -38,9 +38,10 @@ import (
 	"github.com/kubernetes-csi/external-provisioner/pkg/capacity"
 	"github.com/kubernetes-csi/external-provisioner/pkg/capacity/topology"
 	ctrl "github.com/kubernetes-csi/external-provisioner/pkg/controller"
+	"github.com/kubernetes-csi/external-provisioner/pkg/features"
 	"github.com/kubernetes-csi/external-provisioner/pkg/owner"
 	snapclientset "github.com/kubernetes-csi/external-snapshotter/client/v6/clientset/versioned"
-	csioptionapi "github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
 	flag "github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
@@ -87,7 +88,7 @@ var (
 )
 
 // StartCSIProvisioner main function to start CSI Controller Provisioner
-func StartCSIProvisioner(csioptions csioptionapi.CSIOptions, csiDriver driver.CSIDriver) {
+func StartCSIProvisioner(csioptions csioptions.CSIOptions, csiDriver driver.CSIDriver) {
 	var config *rest.Config
 	var err error
 
@@ -231,7 +232,9 @@ func StartCSIProvisioner(csioptions csioptionapi.CSIOptions, csiDriver driver.CS
 	}
 
 	var gatewayClient gatewayclientset.Interface
-	enableCrossNamespaceVolumeDataSource := csioptions.FeatureGates[csioptionapi.CrossNamespaceVolumeDataSource]
+
+	enableCrossNamespaceVolumeDataSource := utilfeature.DefaultFeatureGate.Enabled(features.CrossNamespaceVolumeDataSource)
+
 	if enableCrossNamespaceVolumeDataSource {
 		// gatewayclientset.NewForConfig creates a new Clientset for GatewayClient
 		gatewayClient, err = gatewayclientset.NewForConfig(config)

@@ -22,15 +22,10 @@ import (
 )
 
 const (
-	fssAddressSuffix            = "-fss.sock"
-	fssVolumeNameAppendedPrefix = "-fss"
-	// Enable usage of Provision of PVCs from snapshots in other namespaces
+	fssAddressSuffix               = "-fss.sock"
+	fssVolumeNameAppendedPrefix    = "-fss"
 	CrossNamespaceVolumeDataSource = "CrossNamespaceVolumeDataSource"
 )
-
-var crossNamespaceVolumeDataSource = map[string]bool{ // Map literal
-	CrossNamespaceVolumeDataSource: false,
-}
 
 // CSIOptions structure which contains flag values
 type CSIOptions struct {
@@ -124,9 +119,11 @@ func GetFssVolumeNamePrefix(csiVolumeNamePrefix string) string {
 	return csiVolumeNamePrefix + fssVolumeNameAppendedPrefix
 }
 
-func CSIfeatureGates(FeatureGate map[string]bool) map[string]bool {
-	for key, value := range crossNamespaceVolumeDataSource {
-		FeatureGate[key] = value
+// UpdateFeatureGates add CrossNamespaceVolumeDataSource (default value false) to featureGate if not present
+func UpdateFeatureGates(featureGate map[string]bool) map[string]bool {
+	//If key does not exist
+	if featureGate != nil && !featureGate[CrossNamespaceVolumeDataSource] {
+		featureGate[CrossNamespaceVolumeDataSource] = false
 	}
-	return FeatureGate
+	return featureGate
 }
