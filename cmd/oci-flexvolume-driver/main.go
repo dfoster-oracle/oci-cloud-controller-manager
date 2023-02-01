@@ -17,7 +17,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/flexvolume"
@@ -26,8 +25,6 @@ import (
 	"github.com/spf13/viper"
 
 	"go.uber.org/zap"
-
-	"bitbucket.oci.oraclecorp.com/cryptography/go_ensurefips"
 )
 
 // version/build is set at build time to the version of the driver being built.
@@ -47,10 +44,6 @@ func GetLogPath() string {
 }
 
 func main() {
-	// Ensure AMD service is FIPS Compliant
-	if runtime.GOARCH == "amd64" {
-		go_ensurefips.Compliant()
-	}
 
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
