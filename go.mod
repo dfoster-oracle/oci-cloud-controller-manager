@@ -7,32 +7,32 @@ replace (
 	github.com/oracle/oci-go-sdk/v65 => bitbucket.oci.oraclecorp.com/sdk/oci-go-sdk/v65 v65.18.1-p.0.20220831194506-202dd70b5937
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.14.0
 	google.golang.org/grpc => google.golang.org/grpc v1.38.0
-	k8s.io/api => k8s.io/api v0.26.1
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.26.1
-	k8s.io/apimachinery => k8s.io/apimachinery v0.26.1
-	k8s.io/apiserver => k8s.io/apiserver v0.26.1
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.26.1
-	k8s.io/client-go => k8s.io/client-go v0.26.1
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.26.1
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.26.1
-	k8s.io/code-generator => k8s.io/code-generator v0.26.1
-	k8s.io/component-base => k8s.io/component-base v0.26.1
-	k8s.io/component-helpers => k8s.io/component-helpers v0.26.1
-	k8s.io/controller-manager => k8s.io/controller-manager v0.26.1
-	k8s.io/cri-api => k8s.io/cri-api v0.26.1
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.26.1
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.26.1
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.26.1
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.26.1
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.26.1
-	k8s.io/kubectl => k8s.io/kubectl v0.26.1
-	k8s.io/kubelet => k8s.io/kubelet v0.26.1
-	k8s.io/kubernetes => k8s.io/kubernetes v1.26.1
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.26.1
-	k8s.io/metrics => k8s.io/metrics v0.26.1
-	k8s.io/mount-utils => k8s.io/mount-utils v0.26.1
-	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.26.1
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.26.1
+	k8s.io/api => k8s.io/api v0.26.2
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.26.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.26.2
+	k8s.io/apiserver => k8s.io/apiserver v0.26.2
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.26.2
+	k8s.io/client-go => k8s.io/client-go v0.26.2
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.26.2
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.26.2
+	k8s.io/code-generator => k8s.io/code-generator v0.26.2
+	k8s.io/component-base => k8s.io/component-base v0.26.2
+	k8s.io/component-helpers => k8s.io/component-helpers v0.26.2
+	k8s.io/controller-manager => k8s.io/controller-manager v0.26.2
+	k8s.io/cri-api => k8s.io/cri-api v0.26.2
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.26.2
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.26.2
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.26.2
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.26.2
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.26.2
+	k8s.io/kubectl => k8s.io/kubectl v0.26.2
+	k8s.io/kubelet => k8s.io/kubelet v0.26.2
+	k8s.io/kubernetes => k8s.io/kubernetes v1.26.2
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.26.2
+	k8s.io/metrics => k8s.io/metrics v0.26.2
+	k8s.io/mount-utils => k8s.io/mount-utils v0.26.2
+	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.26.2
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.26.2
 	oracle.com/oci/httpiam => bitbucket.oci.oraclecorp.com/goiam/httpiam v0.0.0-20190319165730-973dbb679788
 	oracle.com/oci/httpsigner => bitbucket.oci.oraclecorp.com/goiam/httpsigner v0.0.0-20190320175442-e8cb27ebf440
 	oracle.com/oci/ociauthz => bitbucket.oci.oraclecorp.com/goiam/ociauthz v0.0.0-20200515161105-5b1e37d2dc95
@@ -48,8 +48,8 @@ require (
 	github.com/container-storage-interface/spec v1.7.0
 	github.com/go-logr/zapr v1.2.3
 	github.com/golang/protobuf v1.5.2
-	github.com/kubernetes-csi/csi-lib-utils v0.12.0
-	github.com/kubernetes-csi/external-attacher v0.0.0-20221228013529-0e00c8ada1ec //v4.1.0
+	github.com/kubernetes-csi/csi-lib-utils v0.13.0
+	github.com/kubernetes-csi/external-attacher v0.0.0-20230201091707-9a4dd5eb1e2a //v4.2.0
 	github.com/kubernetes-csi/external-provisioner v0.0.0-20221227233529-831b9c5d8037 // v3.4.0
 	github.com/kubernetes-csi/external-resizer v0.0.0-20221228012328-91b9107634e4 // v1.7.0
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.1.0
@@ -63,25 +63,25 @@ require (
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
-	golang.org/x/net v0.4.0
-	golang.org/x/sys v0.3.0
-	google.golang.org/grpc v1.51.0
+	golang.org/x/net v0.7.0
+	golang.org/x/sys v0.5.0
+	google.golang.org/grpc v1.52.3
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.26.1
-	k8s.io/apimachinery v0.26.1
-	k8s.io/apiserver v0.26.1
-	k8s.io/client-go v0.26.1
-	k8s.io/cloud-provider v0.26.1
-	k8s.io/component-base v0.26.1
-	k8s.io/component-helpers v0.26.1
-	k8s.io/controller-manager v0.26.1
-	k8s.io/csi-translation-lib v0.26.1
+	k8s.io/api v0.26.2
+	k8s.io/apimachinery v0.26.2
+	k8s.io/apiserver v0.26.2
+	k8s.io/client-go v0.26.2
+	k8s.io/cloud-provider v0.26.2
+	k8s.io/component-base v0.26.2
+	k8s.io/component-helpers v0.26.2
+	k8s.io/controller-manager v0.26.2
+	k8s.io/csi-translation-lib v0.26.2
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.80.1
-	k8s.io/kubelet v0.26.1
-	k8s.io/kubernetes v1.26.1
-	k8s.io/mount-utils v0.26.1
+	k8s.io/klog/v2 v2.90.0
+	k8s.io/kubelet v0.26.2
+	k8s.io/kubernetes v1.26.2
+	k8s.io/mount-utils v0.26.2
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
 	sigs.k8s.io/controller-runtime v0.14.1
 	sigs.k8s.io/sig-storage-lib-external-provisioner/v8 v8.0.0
@@ -179,20 +179,20 @@ require (
 	golang.org/x/mod v0.6.0 // indirect
 	golang.org/x/oauth2 v0.2.0 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
-	golang.org/x/term v0.3.0 // indirect
-	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.2.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20221111202108-142d8a6fa32e // indirect
+	google.golang.org/genproto v0.0.0-20221118155620-16455021b5e6 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.26.1 // indirect
-	k8s.io/kms v0.26.1 // indirect
+	k8s.io/apiextensions-apiserver v0.26.2 // indirect
+	k8s.io/kms v0.26.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20221110221610-a28e98eb7c70 // indirect
 	k8s.io/kube-scheduler v0.0.0 // indirect
 	k8s.io/kubectl v0.0.0 // indirect
