@@ -21,6 +21,8 @@ replace (
 	k8s.io/controller-manager => k8s.io/controller-manager v0.26.2
 	k8s.io/cri-api => k8s.io/cri-api v0.26.2
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.26.2
+	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.26.2
+	k8s.io/kms => k8s.io/kms v0.26.2
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.26.2
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.26.2
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.26.2
@@ -52,13 +54,13 @@ require (
 	github.com/kubernetes-csi/external-attacher v0.0.0-20230201091707-9a4dd5eb1e2a //v4.2.0
 	github.com/kubernetes-csi/external-provisioner v0.0.0-20221227233529-831b9c5d8037 // v3.4.0
 	github.com/kubernetes-csi/external-resizer v0.0.0-20221228012328-91b9107634e4 // v1.7.0
-	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.1.0
+	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.2.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.24.1
 	github.com/oracle/oci-go-sdk/v65 v65.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
-	github.com/spf13/cobra v1.6.0
+	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.8.1
@@ -89,6 +91,8 @@ require (
 
 require (
 	bitbucket.oci.oraclecorp.com/cryptography/go_ensurefips v0.0.0-20220825162208-b1975cae9a19
+	github.com/kubernetes-csi/external-snapshotter/v6 v6.2.0
+	k8s.io/apiextensions-apiserver v0.26.2
 	sigs.k8s.io/gateway-api v0.6.0
 )
 
@@ -191,7 +195,6 @@ require (
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.26.2 // indirect
 	k8s.io/kms v0.26.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20221110221610-a28e98eb7c70 // indirect
 	k8s.io/kube-scheduler v0.0.0 // indirect
