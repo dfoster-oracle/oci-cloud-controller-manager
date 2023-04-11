@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"k8s.io/kubernetes/pkg/volume/util/hostutil"
 	"os"
 	"regexp"
+	"strconv"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"go.uber.org/zap"
@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 	kubeAPI "k8s.io/api/core/v1"
 	"k8s.io/kubernetes/pkg/volume"
+	"k8s.io/kubernetes/pkg/volume/util/hostutil"
 
 	"github.com/oracle/oci-cloud-controller-manager/pkg/csi-util"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
@@ -351,6 +352,72 @@ func (d BlockVolumeNodeDriver) NodePublishVolume(ctx context.Context, req *csi.N
 	}
 
 	logger.With("attachmentType", attachment).Info("Publish volume to the Node is Completed.")
+
+	if req.PublishContext[needResize] != "" {
+		needsResize, err := strconv.ParseBool(req.PublishContext[needResize])
+		if err != nil {
+			logger.With(zap.Error(err)).Error("failed to determine if resize is required")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		if needsResize {
+			logger.Info("Starting to expand volume restored from snapshot")
+
+			requestedSize, err := strconv.ParseInt(req.PublishContext[newSize], 10, 64)
+			if err != nil {
+				logger.With(zap.Error(err)).Error("failed to get new requested size of volume")
+				return nil, status.Errorf(codes.OutOfRange, "failed to get new requested size of volume: %v", err)
+			}
+			requestedSizeGB := csi_util.RoundUpSize(requestedSize, 1*client.GiB)
+
+			var devicePath string
+
+			switch attachment {
+				case attachmentTypeISCSI:
+					scsiInfo, err := csi_util.ExtractISCSIInformation(req.PublishContext)
+					if err != nil {
+						logger.With(zap.Error(err)).Error("Failed to get SCSI info from publish context.")
+						return nil, status.Error(codes.InvalidArgument, "PublishContext is invalid.")
+					}
+
+					// Get the device path using the publish context
+					devicePath = csi_util.GetDevicePath(scsiInfo)
+				case attachmentTypeParavirtualized:
+					devicePath, ok = req.PublishContext[device]
+					if !ok {
+						logger.Error("Unable to get the device from the attribute list")
+						return nil, status.Error(codes.InvalidArgument, "Unable to get the device from the attribute list")
+					}
+				default:
+					logger.Error("unknown attachment type. supported attachment types are iscsi and paravirtualized")
+					return nil, status.Error(codes.InvalidArgument, "unknown attachment type. supported attachment types are iscsi and paravirtualized")
+			}
+
+			logger.With("devicePath", devicePath).Infof("Extracted device path")
+
+			if err := csi_util.Rescan(logger, devicePath); err != nil {
+				return nil, status.Errorf(codes.Internal, "Failed to rescan volume %q (%q):  %v", req.VolumeId, devicePath, err)
+			}
+			logger.With("devicePath", devicePath).Debug("Rescan completed")
+
+			if _, err := mountHandler.Resize(devicePath, req.TargetPath); err != nil {
+				return nil, status.Errorf(codes.Internal, "Failed to resize volume %q (%q):  %v", req.VolumeId, devicePath, err)
+			}
+
+			allocatedSizeBytes, err := csi_util.GetBlockSizeBytes(logger, devicePath)
+			if err != nil {
+				return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to get size of block volume at path %s: %v", devicePath, err))
+			}
+
+			allocatedSizeGB := csi_util.RoundUpSize(allocatedSizeBytes, 1*client.GiB)
+
+			if allocatedSizeGB < requestedSizeGB {
+				return nil, status.Error(codes.Internal, fmt.Sprintf("Expand volume after restore from snapshot failed, requested size in GB %d but resize allocated only %d", requestedSizeGB, allocatedSizeGB))
+			}
+
+			logger.Info("Volume successfully expanded after restore from snapshot")
+		}
+	}
 
 	return &csi.NodePublishVolumeResponse{}, nil
 }
