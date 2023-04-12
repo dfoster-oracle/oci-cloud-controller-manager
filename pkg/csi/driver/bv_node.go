@@ -24,6 +24,7 @@ import (
 const (
 	maxVolumesPerNode               = 32
 	volumeOperationAlreadyExistsFmt = "An operation for the volume: %s already exists."
+	FSTypeXfs						= "xfs"
 )
 
 // NodeStageVolume mounts the volume to a staging path on the node.
@@ -163,6 +164,15 @@ func (d BlockVolumeNodeDriver) NodeStageVolume(ctx context.Context, req *csi.Nod
 		if err := os.MkdirAll(req.StagingTargetPath, 0750); err != nil {
 			logger.With(zap.Error(err)).Error("Failed to create StagingTargetPath directory")
 			return nil, status.Error(codes.Internal, "Failed to create StagingTargetPath directory")
+		}
+	}
+
+	//XFS does not allow mounting two volumes with same UUID,
+	//this block is needed for mounting a volume and a volume
+	//restored from it's snapshot on the same node
+	if fsType == FSTypeXfs {
+		if !hasMountOption(options, "nouuid") {
+			options = append(options, "nouuid")
 		}
 	}
 
@@ -344,6 +354,15 @@ func (d BlockVolumeNodeDriver) NodePublishVolume(ctx context.Context, req *csi.N
 	}
 
 	fsType := csi_util.ValidateFsType(logger, mnt.FsType)
+
+	//XFS does not allow mounting two volumes with same UUID,
+	//this block is needed for mounting a volume and a volume
+	//restored from it's snapshot on the same node
+	if fsType == FSTypeXfs {
+		if !hasMountOption(options, "nouuid") {
+			options = append(options, "nouuid")
+		}
+	}
 
 	err := mountHandler.Mount(req.StagingTargetPath, req.TargetPath, fsType, options)
 	if err != nil {
@@ -683,4 +702,16 @@ func (d BlockVolumeNodeDriver) NodeExpandVolume(ctx context.Context, req *csi.No
 	return &csi.NodeExpandVolumeResponse{
 		CapacityBytes: allocatedSizeBytes,
 	}, nil
+}
+
+// hasMountOption returns a boolean indicating whether the given
+// slice already contains a mount option. This is used to prevent
+// passing duplicate option to the mount command.
+func hasMountOption(options []string, opt string) bool {
+	for _, o := range options {
+		if o == opt {
+			return true
+		}
+	}
+	return false
 }
