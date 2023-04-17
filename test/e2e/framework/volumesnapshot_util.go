@@ -146,9 +146,18 @@ func (j *PVCTestJig) WaitForVSReadyToUse(ns string, vsName string) error {
 }
 
 // GetBackupIDFromSnapshot gets the backup OCID using the VolumeSnapshot
-func (j *PVCTestJig) GetBackupIDFromSnapshot(vs *snapshot.VolumeSnapshot) string {
+func (j *PVCTestJig) GetBackupIDFromSnapshot(vsName string, ns string) string {
 	var vscontent *snapshot.VolumeSnapshotContent
 	var err error
+
+	vs, err := j.SnapClient.SnapshotV1().VolumeSnapshots(ns).Get(context.Background(), vsName, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		Failf("VolumeSnapshot %q not found", vsName)
+	}
+	if err != nil {
+		Failf("Error fetching volume snapshot %q: %v", vsName, err)
+	}
+
 	if vs != nil{
 		if vs.Status != nil {
 			if vs.Status.BoundVolumeSnapshotContentName != nil {
@@ -339,4 +348,32 @@ func (j *PVCTestJig) DeleteVolumeBackup(bs ocicore.BlockstorageClient, backupId 
 	if err != nil {
 		Failf("VolumeBackup %q creation API error: %v", backupId, err)
 	}
+}
+
+// GetVsContentNameFromVS is a function to get VS Content Name from VS
+func (j *PVCTestJig) GetVsContentNameFromVS(vsName string, ns string) *string {
+	var vscontentName *string
+
+	vs, err := j.SnapClient.SnapshotV1().VolumeSnapshots(ns).Get(context.Background(), vsName, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		Failf("VolumeSnapshot %q not found", vsName)
+	}
+	if err != nil {
+		Failf("Error fetching volume snapshot %q: %v", vsName, err)
+	}
+	if vs != nil{
+		if vs.Status != nil {
+			if vs.Status.BoundVolumeSnapshotContentName != nil {
+				vscontentName = vs.Status.BoundVolumeSnapshotContentName
+			} else {
+				Failf("Volume snapshot object BoundVolumeSnapshotContentName field empty when trying to get volume snapshot content name from snapshot")
+			}
+		} else {
+			Failf("Volume snapshot object status field empty when trying to get volume snapshot content name from snapshot")
+		}
+	} else {
+		Failf("Volume snapshot object empty when trying to get volume snapshot content name from snapshot")
+	}
+
+	return vscontentName
 }
