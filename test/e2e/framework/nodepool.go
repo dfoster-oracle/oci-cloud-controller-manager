@@ -98,41 +98,47 @@ func (f *Framework) ListNodePoolShapes() []string {
 }
 
 // ListNodePoolImages return the set of images available to nodepools.
-func (f *Framework) ListNodePoolImages() map[string]string {
-	nodePoolOptions := f.GetNodePoolOptions("all")
+func (f *Framework) ListNodePoolImages(nodePoolOptionId string) [][]string {
+	nodePoolOptions := f.GetNodePoolOptions(nodePoolOptionId)
 	sources := nodePoolOptions.Sources
 	Expect(len(sources) > 0).To(BeTrue())
-	images := make(map[string]string)
-	for _, source := range sources {
-		sourceName := *source.(oke.NodeSourceViaImageOption).SourceName
-		imageId := *source.(oke.NodeSourceViaImageOption).ImageId
-		images[sourceName] = imageId
+	npImages := make([][]string, len(sources))
+
+	for i, source := range sources {
+		npImages[i] = make([]string, 2)
+		npImages[i][0] = *source.(oke.NodeSourceViaImageOption).SourceName
+		npImages[i][1] = *source.(oke.NodeSourceViaImageOption).ImageId
 	}
-	return images
+	return npImages
 }
 
-func (f *Framework) PickNonGPUImageWithAMDCompatibility(images map[string]string, kubeVersion string) (string, string, bool) {
-	for sourceName, imageId := range images {
-		if !strings.Contains(sourceName, "GPU") && !strings.Contains(sourceName, "-aarch64") {
-			if !strings.Contains(sourceName, "-OKE") {
-				return imageId, sourceName, true
+func (f *Framework) PickNonGPUImageWithArchCompatibility(images [][]string, kubeVersion string, npImageArch string) (nodePoolImageId string, nodePoolImageName string, imageFound bool) {
+	latestPlatformImageId := ""
+	latestPlatformImageSourceName := ""
+	platformImageFound := false
+	for _, image := range images {
+		nodePoolImageName := image[0]
+		nodePoolImageId := image[1]
+		Logf("Image name: %s, OCID: %s", nodePoolImageName, nodePoolImageId)
+		// To skip the GPU images
+		if strings.Contains(nodePoolImageName, "GPU") {
+			continue
+		}
+		if (npImageArch == "AMD" && !strings.Contains(nodePoolImageName, "-aarch64")) || (npImageArch == "ARM" && strings.Contains(nodePoolImageName, "-aarch64")) {
+			// Prefer a pre-baked image, if available for this Kubernetes version
+			if strings.Contains(nodePoolImageName, "-OKE") && strings.Contains(nodePoolImageName, kubeVersion) {
+				imageFound = true
+				return
 			}
-			if strings.Contains(sourceName, "-OKE") && strings.Contains(sourceName, kubeVersion) {
-				return imageId, sourceName, true
+			// Use the latest platform image if pre-baked images are not present
+			if !strings.Contains(nodePoolImageName, "-OKE") && !platformImageFound {
+				latestPlatformImageId = nodePoolImageId
+				latestPlatformImageSourceName = nodePoolImageName
+				platformImageFound = true
 			}
 		}
 	}
-	return "", "", false
-}
-
-func (f *Framework) PickArmCompatibleImage(images map[string]string) (string, string, bool) {
-	for sourceName, imageId := range images {
-		// Hardcoding OL 7.x for now. Needs to be filtered for FIPS compatibility
-		if strings.Contains(sourceName, "7.9-aarch64") {
-			return imageId, sourceName, true
-		}
-	}
-	return "", "", false
+	return latestPlatformImageId, latestPlatformImageSourceName, platformImageFound
 }
 
 // IsValidNodePoolShape return true if the specified nodeShape is valid.
@@ -325,14 +331,10 @@ func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentI
 	imageId = ""
 	imageName = ""
 	var nonGPUImageFound = false
-	var armCompatibleImageFound = false
-	if f.Architecture == "AMD" {
-		imageId, imageName, nonGPUImageFound = f.PickNonGPUImageWithAMDCompatibility(f.ListNodePoolImages(), kubeVersion)
-		Expect(nonGPUImageFound).To(BeTrue())
-	} else {
-		imageId, imageName, armCompatibleImageFound = f.PickArmCompatibleImage(f.ListNodePoolImages())
-		Expect(armCompatibleImageFound).To(BeTrue())
-	}
+	images := f.ListNodePoolImages(clusterID)
+
+	imageId, imageName, nonGPUImageFound = f.PickNonGPUImageWithArchCompatibility(images, kubeVersion, f.Architecture)
+	Expect(nonGPUImageFound).To(BeTrue(), "Unable to find a Non-GPU Node Pool image")
 
 	nodeSourceViaImageDetails := &oke.NodeSourceViaImageDetails{
 		ImageId: common.String(imageId),
@@ -349,7 +351,7 @@ func (f *Framework) CreateNodePoolInRgnSubnetWithVersion(clusterID, compartmentI
 		Options:           TestOptions{ExpectedError: expectedError},
 	}
 
-	if f.Architecture == "ARM" {
+	if f.Architecture == "ARM" || strings.Contains(nodeShape, "Flex") {
 		cfg.NodeShapeConfig = nodeShapeConfig
 	}
 
@@ -413,7 +415,7 @@ func (f *Framework) createNodePoolWithConfig(cfg *NodePoolCreateConfig, ctx cont
 			NodeSourceDetails: cfg.NodeSourceDetails,
 		},
 	}
-	if f.Architecture == "ARM" {
+	if f.Architecture == "ARM" || strings.Contains(cfg.NodeShape, "Flex") {
 		request.CreateNodePoolDetails.NodeShapeConfig = &cfg.NodeShapeConfig
 	}
 	requestB, _ := json.MarshalIndent(request, "", "  ")
