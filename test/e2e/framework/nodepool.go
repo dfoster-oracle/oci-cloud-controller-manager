@@ -117,8 +117,8 @@ func (f *Framework) PickNonGPUImageWithArchCompatibility(images [][]string, kube
 	latestPlatformImageSourceName := ""
 	platformImageFound := false
 	for _, image := range images {
-		nodePoolImageName := image[0]
-		nodePoolImageId := image[1]
+		nodePoolImageName = image[0]
+		nodePoolImageId = image[1]
 		Logf("Image name: %s, OCID: %s", nodePoolImageName, nodePoolImageId)
 		// To skip the GPU images
 		if strings.Contains(nodePoolImageName, "GPU") {
