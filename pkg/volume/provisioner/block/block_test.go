@@ -31,7 +31,7 @@ import (
 	v12 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v8/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v9/controller"
 )
 
 var (
@@ -91,7 +91,7 @@ func (c *MockBlockStorageClient) AwaitVolumeBackupAvailableOrTimeout(ctx context
 func (c *MockBlockStorageClient) CreateVolumeBackup(ctx context.Context, details core.CreateVolumeBackupDetails) (*core.VolumeBackup, error) {
 	id := "oc1.volumebackup1.xxxx"
 	return &core.VolumeBackup{
-		Id:                 &id,
+		Id: &id,
 	}, nil
 }
 
@@ -101,7 +101,7 @@ func (c *MockBlockStorageClient) DeleteVolumeBackup(ctx context.Context, id stri
 
 func (c *MockBlockStorageClient) GetVolumeBackup(ctx context.Context, id string) (*core.VolumeBackup, error) {
 	return &core.VolumeBackup{
-		Id:                 &id,
+		Id: &id,
 	}, nil
 }
 

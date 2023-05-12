@@ -1,4 +1,4 @@
-FROM odo-docker-signed-local.artifactory.oci.oraclecorp.com/odx-oke/oke/golang-buildbox:1.19.6-fips-f9488f495286d0430428a403cb43580e175a31fc-81 as builder
+FROM odo-docker-signed-local.artifactory.oci.oraclecorp.com/odx-oke/oke/golang-buildbox:1.20.4-fips-1cc664bee5e5ba4787a772e349bdcd60e8b8acb5-91 as builder
 
 ARG COMPONENT
 

@@ -59,7 +59,7 @@ import (
 	gatewayclientset "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 	gatewayInformers "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 	referenceGrantv1beta1 "sigs.k8s.io/gateway-api/pkg/client/listers/apis/v1beta1"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v8/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v9/controller"
 )
 
 var (

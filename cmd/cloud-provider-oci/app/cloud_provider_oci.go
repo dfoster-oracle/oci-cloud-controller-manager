@@ -106,7 +106,7 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 			})
 
 			c, err := s.Config(cloudControllerManager.ControllerNames(cloudControllerManager.DefaultInitFuncConstructors),
-				cloudControllerManager.ControllersDisabledByDefault.List())
+				cloudControllerManager.ControllersDisabledByDefault.List(), cloudControllerManager.AllWebhooks, cloudControllerManager.DisabledByDefaultWebhooks)
 			if err != nil {
 				logger.With(zap.Error(err)).Fatalf("Unable to create cloud controller manager config")
 			}
@@ -117,7 +117,7 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	}
 
 	namedFlagSets := s.Flags(cloudControllerManager.ControllerNames(cloudControllerManager.DefaultInitFuncConstructors),
-		cloudControllerManager.ControllersDisabledByDefault.List())
+		cloudControllerManager.ControllersDisabledByDefault.List(), cloudControllerManager.AllWebhooks, cloudControllerManager.DisabledByDefaultWebhooks)
 
 	// logging parameters flagset
 	loggingFlagSet := namedFlagSets.FlagSet("logging variables")
@@ -231,7 +231,7 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 			return
 		}
 		// TODO Pass an options/config struct instead of config variables
-		if err := provisioner.Run(logger, options.Kubeconfig, options.Master, minVolumeSize, volumeRoundingEnabled, ctx.Done()); err != nil {
+		if err := provisioner.Run(logger, options.Generic.ClientConnection.Kubeconfig, options.Master, minVolumeSize, volumeRoundingEnabled, ctx.Done()); err != nil {
 			logger.With(zap.Error(err)).Error("Error running volume provisioner")
 		}
 		cancelFunc()
@@ -245,7 +245,7 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 
 		controllerInitializers := cloudControllerManager.ConstructControllerInitializers(getInitFuncConstructors(logger), config, cloudProvider)
 		// TODO move to newer cloudControllerManager dependency that provides a way to pass channel/context
-		if err := cloudControllerManager.Run(config, cloudProvider, controllerInitializers, ctx.Done()); err != nil {
+		if err := cloudControllerManager.Run(config, cloudProvider, controllerInitializers, make(map[string]cloudControllerManager.WebhookHandler), ctx.Done()); err != nil {
 			logger.With(zap.Error(err)).Error("Error running cloud controller manager")
 		}
 		cancelFunc()
@@ -258,7 +258,7 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 		go func() {
 			defer wg.Done()
 			csioption.Master = options.Master
-			csioption.Kubeconfig = options.Kubeconfig
+			csioption.Kubeconfig = options.Generic.ClientConnection.Kubeconfig
 			csioption.FssCsiAddress = csioptions.GetFssAddress(csioption.CsiAddress, defaultFssAddress)
 			csioption.FssEndpoint = csioptions.GetFssAddress(csioption.Endpoint, defaultFssEndpoint)
 			csioption.FssVolumeNamePrefix = csioptions.GetFssVolumeNamePrefix(csioption.VolumeNamePrefix)
