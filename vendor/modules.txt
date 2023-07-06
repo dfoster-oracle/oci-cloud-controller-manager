@@ -552,6 +552,7 @@ golang.org/x/oauth2
 golang.org/x/oauth2/internal
 # golang.org/x/sync v0.2.0
 ## explicit
+golang.org/x/sync/semaphore
 golang.org/x/sync/singleflight
 # golang.org/x/sys v0.8.0
 ## explicit; go 1.17
