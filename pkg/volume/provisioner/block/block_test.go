@@ -27,6 +27,7 @@ import (
 	"github.com/oracle/oci-go-sdk/v65/filestorage"
 	"github.com/oracle/oci-go-sdk/v65/identity"
 	"go.uber.org/zap"
+	authv1 "k8s.io/api/authentication/v1"
 	v1 "k8s.io/api/core/v1"
 	v12 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -349,7 +350,7 @@ func (p *MockProvisionerClient) Networking() client.NetworkingInterface {
 }
 
 // Networking mocks client VirtualNetwork implementation.
-func (p *MockProvisionerClient) LoadBalancer(string) client.GenericLoadBalancerInterface {
+func (p *MockProvisionerClient) LoadBalancer(*zap.SugaredLogger, string, string, *authv1.TokenRequest) client.GenericLoadBalancerInterface {
 	return &MockLoadBalancerClient{}
 }
 
