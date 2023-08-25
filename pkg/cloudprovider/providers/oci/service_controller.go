@@ -43,7 +43,6 @@ import (
 	servicehelper "k8s.io/cloud-provider/service/helpers"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/component-base/metrics"
-	"k8s.io/component-base/metrics/legacyregistry"
 	"k8s.io/klog/v2"
 )
 
@@ -71,8 +70,11 @@ var register sync.Once
 // registerMetrics registers service-controller metrics.
 func registerMetrics() {
 	register.Do(func() {
-		legacyregistry.MustRegister(nodeSyncLatency)
-		legacyregistry.MustRegister(updateLoadBalancerHostLatency)
+		// Removing the metric registry as it is registered from upstream
+		// at vendor/k8s.io/cloud-provider/controllers/service/metrics.go:37
+		// Created https://jira.oci.oraclecorp.com/browse/SKE-4577 to clean-up this code
+		// legacyregistry.MustRegister(nodeSyncLatency)
+		// legacyregistry.MustRegister(updateLoadBalancerHostLatency)
 	})
 }
 

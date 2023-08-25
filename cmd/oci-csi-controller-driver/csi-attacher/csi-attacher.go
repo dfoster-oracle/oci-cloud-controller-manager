@@ -148,7 +148,9 @@ func StartCSIAttacher(csioptions csioptions.CSIOptions) {
 			vaLister := factory.Storage().V1().VolumeAttachments().Lister()
 			csiNodeLister := factory.Storage().V1().CSINodes().Lister()
 			volAttacher := attacher.NewAttacher(csiConn)
-			CSIVolumeLister := attacher.NewVolumeLister(csiConn)
+			// Max entries per each page in volume lister call, 0 means no limit.
+			maxEntries := 0
+			CSIVolumeLister := attacher.NewVolumeLister(csiConn, maxEntries)
 			handler = controller.NewCSIHandler(clientset, csiAttacher, volAttacher, CSIVolumeLister, pvLister, csiNodeLister, vaLister, &csioptions.Timeout, supportsReadOnly, false, csitranslationlib.New(), csioptions.DefaultFSType)
 			klog.V(2).Infof("CSI driver supports ControllerPublishUnpublish, using real CSI handler")
 		} else {
