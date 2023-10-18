@@ -43,7 +43,6 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	cloudprovider "k8s.io/cloud-provider"
 	cloudcontrollerconfig "k8s.io/cloud-provider/app/config"
-	"k8s.io/cloud-provider/names"
 	"k8s.io/cloud-provider/options"
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/cli/globalflag"
@@ -81,7 +80,7 @@ const (
 // NewCloudControllerManagerCommand creates a *cobra.Command object with default parameters
 // controllerInitFuncConstructors is a map of controller name(as defined by controllers flag in https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/#options) to their InitFuncConstructor.
 // additionalFlags provides controller specific flags to be included in the complete set of controller manager flags
-func NewCloudControllerManagerCommand(s *options.CloudControllerManagerOptions, cloudInitializer InitCloudFunc, controllerInitFuncConstructors map[string]ControllerInitFuncConstructor, controllerAliases map[string]string, additionalFlags cliflag.NamedFlagSets, stopCh <-chan struct{}) *cobra.Command {
+func NewCloudControllerManagerCommand(s *options.CloudControllerManagerOptions, cloudInitializer InitCloudFunc, controllerInitFuncConstructors map[string]ControllerInitFuncConstructor, additionalFlags cliflag.NamedFlagSets, stopCh <-chan struct{}) *cobra.Command {
 	logOptions := logs.NewOptions()
 
 	cmd := &cobra.Command{
@@ -97,7 +96,7 @@ the cloud specific control loops shipped with Kubernetes.`,
 				return err
 			}
 
-			c, err := s.Config(ControllerNames(controllerInitFuncConstructors), ControllersDisabledByDefault.List(), controllerAliases, AllWebhooks, DisabledByDefaultWebhooks)
+			c, err := s.Config(ControllerNames(controllerInitFuncConstructors), ControllersDisabledByDefault.List(), AllWebhooks, DisabledByDefaultWebhooks)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
 				return err
@@ -124,7 +123,7 @@ the cloud specific control loops shipped with Kubernetes.`,
 	}
 
 	fs := cmd.Flags()
-	namedFlagSets := s.Flags(ControllerNames(controllerInitFuncConstructors), ControllersDisabledByDefault.List(), controllerAliases, AllWebhooks, DisabledByDefaultWebhooks)
+	namedFlagSets := s.Flags(ControllerNames(controllerInitFuncConstructors), ControllersDisabledByDefault.List(), AllWebhooks, DisabledByDefaultWebhooks)
 
 	globalFlagSet := namedFlagSets.FlagSet("global")
 	verflag.AddFlags(globalFlagSet)
@@ -442,25 +441,25 @@ var DefaultInitFuncConstructors = map[string]ControllerInitFuncConstructor{
 	// The cloud-node controller shares the "node-controller" identity with the cloud-node-lifecycle
 	// controller for historical reasons.  See
 	// https://github.com/kubernetes/kubernetes/pull/72764#issuecomment-453300990 for more context.
-	names.CloudNodeController: {
+	"cloud-node": {
 		InitContext: ControllerInitContext{
 			ClientName: "node-controller",
 		},
 		Constructor: StartCloudNodeControllerWrapper,
 	},
-	names.CloudNodeLifecycleController: {
+	"cloud-node-lifecycle": {
 		InitContext: ControllerInitContext{
 			ClientName: "node-controller",
 		},
 		Constructor: StartCloudNodeLifecycleControllerWrapper,
 	},
-	names.ServiceLBController: {
+	"service": {
 		InitContext: ControllerInitContext{
 			ClientName: "service-controller",
 		},
 		Constructor: StartServiceControllerWrapper,
 	},
-	names.NodeRouteController: {
+	"route": {
 		InitContext: ControllerInitContext{
 			ClientName: "route-controller",
 		},

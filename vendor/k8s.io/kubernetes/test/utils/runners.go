@@ -183,11 +183,8 @@ type RCConfig struct {
 
 	ServiceAccountTokenProjections int
 
-	// Additional containers to run in the pod
+	//Additional containers to run in the pod
 	AdditionalContainers []v1.Container
-
-	// Security context for created pods
-	SecurityContext *v1.SecurityContext
 }
 
 func (rc *RCConfig) RCConfigLog(fmt string, args ...interface{}) {
@@ -338,12 +335,11 @@ func (config *DeploymentConfig) create() error {
 					TerminationGracePeriodSeconds: config.getTerminationGracePeriodSeconds(nil),
 					Containers: []v1.Container{
 						{
-							Name:            config.Name,
-							Image:           config.Image,
-							Command:         config.Command,
-							Ports:           []v1.ContainerPort{{ContainerPort: 80}},
-							Lifecycle:       config.Lifecycle,
-							SecurityContext: config.SecurityContext,
+							Name:      config.Name,
+							Image:     config.Image,
+							Command:   config.Command,
+							Ports:     []v1.ContainerPort{{ContainerPort: 80}},
+							Lifecycle: config.Lifecycle,
 						},
 					},
 				},
@@ -425,12 +421,11 @@ func (config *ReplicaSetConfig) create() error {
 					TerminationGracePeriodSeconds: config.getTerminationGracePeriodSeconds(nil),
 					Containers: []v1.Container{
 						{
-							Name:            config.Name,
-							Image:           config.Image,
-							Command:         config.Command,
-							Ports:           []v1.ContainerPort{{ContainerPort: 80}},
-							Lifecycle:       config.Lifecycle,
-							SecurityContext: config.SecurityContext,
+							Name:      config.Name,
+							Image:     config.Image,
+							Command:   config.Command,
+							Ports:     []v1.ContainerPort{{ContainerPort: 80}},
+							Lifecycle: config.Lifecycle,
 						},
 					},
 				},
@@ -504,11 +499,10 @@ func (config *JobConfig) create() error {
 					TerminationGracePeriodSeconds: config.getTerminationGracePeriodSeconds(nil),
 					Containers: []v1.Container{
 						{
-							Name:            config.Name,
-							Image:           config.Image,
-							Command:         config.Command,
-							Lifecycle:       config.Lifecycle,
-							SecurityContext: config.SecurityContext,
+							Name:      config.Name,
+							Image:     config.Image,
+							Command:   config.Command,
+							Lifecycle: config.Lifecycle,
 						},
 					},
 					RestartPolicy: v1.RestartPolicyOnFailure,
@@ -618,13 +612,12 @@ func (config *RCConfig) create() error {
 					Affinity: config.Affinity,
 					Containers: []v1.Container{
 						{
-							Name:            config.Name,
-							Image:           config.Image,
-							Command:         config.Command,
-							Ports:           []v1.ContainerPort{{ContainerPort: 80}},
-							ReadinessProbe:  config.ReadinessProbe,
-							Lifecycle:       config.Lifecycle,
-							SecurityContext: config.SecurityContext,
+							Name:           config.Name,
+							Image:          config.Image,
+							Command:        config.Command,
+							Ports:          []v1.ContainerPort{{ContainerPort: 80}},
+							ReadinessProbe: config.ReadinessProbe,
+							Lifecycle:      config.Lifecycle,
 						},
 					},
 					DNSPolicy:                     *config.DNSPolicy,
