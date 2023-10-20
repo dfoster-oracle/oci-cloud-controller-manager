@@ -32,6 +32,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/cloud-provider/names"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -106,7 +107,7 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 			})
 
 			c, err := s.Config(cloudControllerManager.ControllerNames(cloudControllerManager.DefaultInitFuncConstructors),
-				cloudControllerManager.ControllersDisabledByDefault.List(), cloudControllerManager.AllWebhooks, cloudControllerManager.DisabledByDefaultWebhooks)
+				cloudControllerManager.ControllersDisabledByDefault.List(), names.CCMControllerAliases(), cloudControllerManager.AllWebhooks, cloudControllerManager.DisabledByDefaultWebhooks)
 			if err != nil {
 				logger.With(zap.Error(err)).Fatalf("Unable to create cloud controller manager config")
 			}
@@ -117,7 +118,7 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	}
 
 	namedFlagSets := s.Flags(cloudControllerManager.ControllerNames(cloudControllerManager.DefaultInitFuncConstructors),
-		cloudControllerManager.ControllersDisabledByDefault.List(), cloudControllerManager.AllWebhooks, cloudControllerManager.DisabledByDefaultWebhooks)
+		cloudControllerManager.ControllersDisabledByDefault.List(), names.CCMControllerAliases(), cloudControllerManager.AllWebhooks, cloudControllerManager.DisabledByDefaultWebhooks)
 
 	// logging parameters flagset
 	loggingFlagSet := namedFlagSets.FlagSet("logging variables")
