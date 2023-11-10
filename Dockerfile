@@ -16,12 +16,15 @@ WORKDIR $SRC
 RUN SRC_DIRS=${SRC_DIRS} make coverage
 RUN COMPONENT=${COMPONENT} make clean build
 
-FROM ocr-docker-remote.artifactory.oci.oraclecorp.com/os/oraclelinux:7-slim
+FROM ocr-docker-remote.artifactory.oci.oraclecorp.com/os/oraclelinux:8-slim-fips
+RUN rm -f /etc/yum.repos.d/*
+COPY artifactory.repo /etc/yum.repos.d/.
+RUN microdnf install -y io-ol8-container-hardening
 
-RUN yum-config-manager --disable \* && yum-config-manager --add-repo https://artifactory.oci.oraclecorp.com/io-ol7-latest-yum-local && yum repolist enabled \
-  && yum install -y util-linux e2fsprogs \
-  && yum install -y xfsprogs \
-  && rm -rf /var/cache/yum
+RUN microdnf -y install util-linux e2fsprogs xfsprogs && \
+    microdnf update && \
+    microdnf clean all && \
+    rm -rf /var/cache/yum
 
 COPY scripts/encrypt-mount /sbin/encrypt-mount
 COPY scripts/encrypt-umount /sbin/encrypt-umount
