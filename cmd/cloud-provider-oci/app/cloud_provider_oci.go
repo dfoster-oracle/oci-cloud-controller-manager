@@ -32,13 +32,13 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"k8s.io/cloud-provider/names"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	cloudprovider "k8s.io/cloud-provider"
 	cloudControllerManager "k8s.io/cloud-provider/app"
 	cloudControllerManagerConfig "k8s.io/cloud-provider/app/config"
+	"k8s.io/cloud-provider/names"
 	"k8s.io/cloud-provider/options"
 	cliflag "k8s.io/component-base/cli/flag"
 	utilflag "k8s.io/component-base/cli/flag"
@@ -47,6 +47,7 @@ import (
 	"k8s.io/component-base/version/verflag"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	npnv1beta1 "github.com/oracle/oci-cloud-controller-manager/api/v1beta1"
 	csicontroller "github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csi-controller"
@@ -297,9 +298,10 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 			ociClient := getOCIClient(logger, cfg)
 
 			mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-				Scheme:                  scheme,
-				MetricsBindAddress:      ":8080",
-				Port:                    9443,
+				Scheme: scheme,
+				Metrics: metricsserver.Options{
+					BindAddress: ":8080",
+				},
 				HealthProbeBindAddress:  ":8081",
 				LeaderElection:          true,
 				LeaderElectionID:        "npn.oci.oraclecloud.com",

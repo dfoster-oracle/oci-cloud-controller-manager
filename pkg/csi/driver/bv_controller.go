@@ -17,13 +17,14 @@ import (
 	kubeAPI "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/oracle/oci-go-sdk/v65/core"
+
 	"github.com/oracle/oci-cloud-controller-manager/pkg/cloudprovider/providers/oci/config"
 	csi_util "github.com/oracle/oci-cloud-controller-manager/pkg/csi-util"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/metrics"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/oci/client"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util"
 	"github.com/oracle/oci-cloud-controller-manager/pkg/util/disk"
-	"github.com/oracle/oci-go-sdk/v65/core"
 )
 
 const (
@@ -1255,6 +1256,10 @@ func (d *BlockVolumeControllerDriver) ControllerExpandVolume(ctx context.Context
 // ControllerGetVolume returns ControllerGetVolumeResponse response
 func (d *BlockVolumeControllerDriver) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "ControllerGetVolume is not supported yet")
+}
+
+func (d *BlockVolumeControllerDriver) ControllerModifyVolume(ctx context.Context, request *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "ControllerModifyVolume is not supported yet")
 }
 
 func provision(ctx context.Context, log *zap.SugaredLogger, c client.Interface, volName string, volSize int64, availDomainName, compartmentID,
