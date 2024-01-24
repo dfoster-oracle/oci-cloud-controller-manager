@@ -16,15 +16,17 @@ package csioptions
 
 import (
 	"flag"
-	"go.uber.org/zap"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 const (
 	fssAddressSuffix               = "-fss.sock"
 	fssVolumeNameAppendedPrefix    = "-fss"
 	CrossNamespaceVolumeDataSource = "CrossNamespaceVolumeDataSource"
+	VolumeAttributesClass		   = "VolumeAttributesClass"
 )
 
 //CSIOptions structure which contains flag values
@@ -60,6 +62,10 @@ type CSIOptions struct {
 	EnableResizer             bool
 	ControllerPublishReadOnly bool
 	DefaultFSType             string
+	GroupSnapshotNamePrefix   string
+	GroupSnapshotNameUUIDLength int
+	EnableNodeDeployment	  bool
+
 }
 
 //NewCSIOptions initializes the flag
@@ -96,6 +102,10 @@ func NewCSIOptions() *CSIOptions {
 		EnableResizer:             *flag.Bool("csi-bv-expansion-enabled", false, "Enables go routine csi-resizer."),
 		ControllerPublishReadOnly: *flag.Bool("csi-controller-publish-readonly", false, "If the request only has one accessmode and if its ROX, set readonly to true."),
 		DefaultFSType:             *flag.String("default-fstype", "ext4", "Default File System Type."),
+		GroupSnapshotNamePrefix:   *flag.String("groupsnapshot-name-prefix", "groupsnapshot", "Prefix to apply to the name of a created group snapshot"),
+		GroupSnapshotNameUUIDLength: *flag.Int("groupsnapshot-name-uuid-length", -1, "Length in characters for the generated uuid of a created group snapshot. Defaults behavior is to NOT truncate."),
+		EnableNodeDeployment: 		*flag.Bool("node-deployment", false, "Enables deploying the sidecar controller together with a CSI driver on nodes to manage snapshots for node-local volumes."),
+
 	}
 	return &csioptions
 }
@@ -120,10 +130,15 @@ func GetFssVolumeNamePrefix(csiVolumeNamePrefix string) string {
 }
 
 // UpdateFeatureGates add CrossNamespaceVolumeDataSource (default value false) to featureGate if not present
+// add VolumeAttributesClass (default value false) to featureGate if not present
+
 func UpdateFeatureGates(featureGate map[string]bool) map[string]bool {
 	//If key does not exist
 	if featureGate != nil && !featureGate[CrossNamespaceVolumeDataSource] {
 		featureGate[CrossNamespaceVolumeDataSource] = false
+	}
+	if featureGate != nil && !featureGate[VolumeAttributesClass] {
+		featureGate[VolumeAttributesClass] = false
 	}
 	return featureGate
 }

@@ -26,8 +26,13 @@ import (
 	"github.com/kubernetes-csi/csi-lib-utils/metrics"
 	"github.com/kubernetes-csi/external-resizer/pkg/controller"
 	"github.com/kubernetes-csi/external-resizer/pkg/csi"
+	"github.com/kubernetes-csi/external-resizer/pkg/features"
+	"github.com/kubernetes-csi/external-resizer/pkg/modifier"
+	"github.com/kubernetes-csi/external-resizer/pkg/modifycontroller"
 	"github.com/kubernetes-csi/external-resizer/pkg/resizer"
 	"github.com/kubernetes-csi/external-resizer/pkg/util"
+	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -35,8 +40,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
-	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
 )
 
 var (
@@ -55,13 +60,17 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 	}
 	klog.Infof("Version : %s", version)
 	if csioptions.MetricsAddress != "" && csioptions.HttpEndpoint != "" {
-		klog.Error("only one of `--metrics-address` and `--http-endpoint` can be set.")
-		os.Exit(1)
+		klog.ErrorS(nil, "Only one of `--metrics-address` and `--http-endpoint` can be set.")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 	addr := csioptions.MetricsAddress
 	if addr == "" {
 		addr = csioptions.HttpEndpoint
 	}
+	if err := utilfeature.DefaultMutableFeatureGate.SetFromMap(csioptions.FeatureGates); err != nil {
+		klog.Fatal(err)
+	}
+
 	var config *rest.Config
 	var err error
 	if csioptions.Master != "" || csioptions.Kubeconfig != "" {
@@ -70,7 +79,8 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 		config, err = rest.InClusterConfig()
 	}
 	if err != nil {
-		klog.Fatal(err.Error())
+		klog.ErrorS(err, "Failed to create cluster config")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	config.QPS = float32(*kubeAPIQPS)
@@ -78,7 +88,8 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		klog.Fatal(err.Error())
+		klog.ErrorS(err, "Failed to create kube client")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	informerFactory := informers.NewSharedInformerFactory(kubeClient, csioptions.Resync)
@@ -89,23 +100,36 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 
 	csiClient, err := csi.New(csioptions.CsiAddress, csioptions.Timeout, metricsManager)
 	if err != nil {
-		klog.Fatal(err.Error())
+		klog.ErrorS(err, "Failed to create CSI client")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	driverName, err := getDriverName(csiClient, csioptions.Timeout)
 	if err != nil {
-		klog.Fatal(fmt.Errorf("get driver name failed: %v", err))
+		klog.ErrorS(err, "Get driver name failed")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
-	klog.V(2).Infof("CSI driver name: %q", driverName)
+	klog.V(2).InfoS("CSI driver name", "driverName", driverName)
 
 	csiResizer, err := resizer.NewResizerFromClient(
+		csiClient,
+		csioptions.Timeout,
+		kubeClient,
+		driverName)
+	if err != nil {
+		klog.ErrorS(err, "Failed to create CSI resizer")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+	}
+
+	csiModifier, err := modifier.NewModifierFromClient(
 		csiClient,
 		csioptions.Timeout,
 		kubeClient,
 		informerFactory,
 		driverName)
 	if err != nil {
-		klog.Fatal(err.Error())
+		klog.ErrorS(err, "Failed to create CSI modifier")
+		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
 	// Start HTTP server for metrics + leader election healthz
@@ -113,11 +137,11 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 		metricsManager.RegisterToServer(mux, csioptions.MetricsPath)
 		metricsManager.SetDriverName(driverName)
 		go func() {
-			klog.Infof("ServeMux listening at %q", addr)
+			klog.InfoS("ServeMux listening", "address", addr)
 			err := http.ListenAndServe(addr, mux)
 			if err != nil {
-				klog.Fatalf("Failed to start HTTP server at specified address (%q) and metrics path (%q): %s", addr, csioptions.MetricsPath, err)
-			}
+				klog.ErrorS(err, "Failed to start HTTP server", "address", addr, "metricsPath", csioptions.MetricsPath)
+				klog.FlushAndExit(klog.ExitFlushTimeout, 1)			}
 		}()
 	}
 
@@ -125,10 +149,21 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 	rc := controller.NewResizeController(resizerName, csiResizer, kubeClient, csioptions.Resync, informerFactory,
 		workqueue.NewItemExponentialFailureRateLimiter(csioptions.RetryIntervalStart, csioptions.RetryIntervalMax),
 		*handleVolumeInUseError)
+	modifierName := csiModifier.Name()
+	var mc modifycontroller.ModifyController
+	// Add modify controller only if the feature gate is enabled
+	if utilfeature.DefaultFeatureGate.Enabled(features.VolumeAttributesClass) {
+		mc = modifycontroller.NewModifyController(modifierName, csiModifier, kubeClient, csioptions.Resync, informerFactory,
+			workqueue.NewItemExponentialFailureRateLimiter(csioptions.RetryIntervalStart, csioptions.RetryIntervalMax))
+	}
+
 	run := func(ctx context.Context) {
 		informerFactory.Start(wait.NeverStop)
-		rc.Run(int(csioptions.WorkerThreads), ctx)
-
+ 		go rc.Run(int(csioptions.WorkerThreads), ctx)
+		if utilfeature.DefaultFeatureGate.Enabled(features.VolumeAttributesClass) {
+			go mc.Run(int(csioptions.WorkerThreads), ctx)
+		}
+		<-ctx.Done()
 	}
 
 	if !csioptions.EnableLeaderElection {
@@ -137,7 +172,8 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 		lockName := "external-resizer-" + util.SanitizeName(resizerName)
 		leKubeClient, err := kubernetes.NewForConfig(config)
 		if err != nil {
-			klog.Fatal(err.Error())
+			klog.ErrorS(err, "Failed to create leKubeClient")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}
 		le := leaderelection.NewLeaderElection(leKubeClient, lockName, run)
 
@@ -146,7 +182,8 @@ func StartCSIResizer(csioptions csioptions.CSIOptions) {
 		}
 
 		if err := le.Run(); err != nil {
-			klog.Fatalf("error initializing leader election: %v", err)
+			klog.ErrorS(err, "Error initializing leader election")
+			klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 		}
 	}
 }

@@ -32,7 +32,10 @@ import (
 	informers "github.com/kubernetes-csi/external-snapshotter/client/v6/informers/externalversions"
 	controller "github.com/kubernetes-csi/external-snapshotter/v6/pkg/sidecar-controller"
 	"github.com/kubernetes-csi/external-snapshotter/v6/pkg/snapshotter"
+	"github.com/kubernetes-csi/external-snapshotter/v6/pkg/utils"
 	"google.golang.org/grpc"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	coreinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -41,6 +44,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 
+	"github.com/kubernetes-csi/external-snapshotter/v6/pkg/group_snapshotter"
 	"github.com/oracle/oci-cloud-controller-manager/cmd/oci-csi-controller-driver/csioptions"
 )
 
@@ -72,8 +76,19 @@ func StartCSISnapshotter(csioptions csioptions.CSIOptions, stopCh chan struct{})
 
 	factory 	:= informers.NewSharedInformerFactory(snapClient, csioptions.Resync)
 	coreFactory := coreinformers.NewSharedInformerFactory(kubeClient, csioptions.Resync)
-
-	// Add Snapshot types to the default Kubernetes so events can be logged for them
+	var snapshotContentfactory informers.SharedInformerFactory
+	if csioptions.EnableNodeDeployment {
+		node := os.Getenv("NODE_NAME")
+		if node == "" {
+			klog.Fatal("The NODE_NAME environment variable must be set when using --enable-node-deployment.")
+		}
+		snapshotContentfactory = informers.NewSharedInformerFactoryWithOptions(snapClient, csioptions.Resync, informers.WithTweakListOptions(func(lo *v1.ListOptions) {
+			lo.LabelSelector = labels.Set{utils.VolumeSnapshotContentManagedByLabel: node}.AsSelector().String()
+		}),
+		)
+	} else {
+		snapshotContentfactory = factory
+	}	// Add Snapshot types to the default Kubernetes so events can be logged for them
 	snapshotscheme.AddToScheme(scheme.Scheme)
 
 	metricsManager := metrics.NewCSIMetricsManager("" /* driverName */)
@@ -108,6 +123,26 @@ func StartCSISnapshotter(csioptions csioptions.CSIOptions, stopCh chan struct{})
 	}
 
 	snapShotter := snapshotter.NewSnapshotter(conn)
+
+	var groupSnapshotter group_snapshotter.GroupSnapshotter
+	//Upstream Code Disable enableVolumeGroupSnapshots
+	bEnable := false
+	enableVolumeGroupSnapshots := &bEnable
+	if *enableVolumeGroupSnapshots {
+		supportsCreateVolumeGroupSnapshot, err := supportsGroupControllerCreateVolumeGroupSnapshot(ctx, conn)
+		if err != nil {
+			klog.Errorf("error determining if driver supports create/delete group snapshot operations: %v", err)
+		} else if !supportsCreateVolumeGroupSnapshot {
+			klog.Warningf("CSI driver %s does not support GroupControllerCreateVolumeGroupSnapshot when the --enable-volume-group-snapshots flag is true", driverName)
+		}
+		groupSnapshotter = group_snapshotter.NewGroupSnapshotter(conn)
+		if len(csioptions.GroupSnapshotNamePrefix) == 0 {
+			klog.Error("group snapshot name prefix cannot be of length 0")
+			os.Exit(1)
+		}
+	}
+
+
 	ctrl := controller.NewCSISnapshotSideCarController(
 		snapClient,
 		kubeClient,
@@ -115,11 +150,18 @@ func StartCSISnapshotter(csioptions csioptions.CSIOptions, stopCh chan struct{})
 		factory.Snapshot().V1().VolumeSnapshotContents(),
 		factory.Snapshot().V1().VolumeSnapshotClasses(),
 		snapShotter,
+		groupSnapshotter,
 		csiTimeout,
 		csioptions.Resync,
 		snapshotNamePrefix,
 		snapshotNameUUIDLength,
+		csioptions.GroupSnapshotNamePrefix,
+		csioptions.GroupSnapshotNameUUIDLength,
 		extraCreateMetadata,
+		workqueue.NewItemExponentialFailureRateLimiter(retryIntervalStart, retryIntervalMax),
+		*enableVolumeGroupSnapshots,
+		snapshotContentfactory.Groupsnapshot().V1alpha1().VolumeGroupSnapshotContents(),
+		snapshotContentfactory.Groupsnapshot().V1alpha1().VolumeGroupSnapshotClasses(),
 		workqueue.NewItemExponentialFailureRateLimiter(retryIntervalStart, retryIntervalMax),
 	)
 
@@ -162,6 +204,16 @@ func supportsControllerCreateDeleteSnapshot(ctx context.Context, conn *grpc.Clie
 		return false, err
 	}
 	return capabilities[csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT], nil
+}
+
+
+func supportsGroupControllerCreateVolumeGroupSnapshot(ctx context.Context, conn *grpc.ClientConn) (bool, error) {
+	capabilities, err := csirpc.GetGroupControllerCapabilities(ctx, conn)
+	if err != nil {
+		return false, err
+	}
+
+	return capabilities[csi.GroupControllerServiceCapability_RPC_CREATE_DELETE_GET_VOLUME_GROUP_SNAPSHOT], nil
 }
 
 func BuildConfig(csioptions csioptions.CSIOptions) *rest.Config {
