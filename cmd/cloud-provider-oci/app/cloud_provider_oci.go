@@ -165,6 +165,8 @@ manager and oci volume provisioner. It embeds the cloud specific control loops s
 	csiFlagSet.BoolVar(&csioption.EnableResizer, "csi-bv-expansion-enabled", false, "Enables go routine csi-resizer.")
 	csiFlagSet.UintVar(&csioption.FinalizerThreads, "cloning-protection-threads", 1, "Number of simultaneously running threads, handling cloning finalizer removal")
 	csiFlagSet.Var(utilflag.NewMapStringBool(&csioption.FeatureGates), "csi-feature-gates", "A set of key=value pairs that describe feature gates for alpha/experimental features. ")
+	csiFlagSet.StringVar(&csioption.GroupSnapshotNamePrefix, "groupsnapshot-name-prefix", "groupsnapshot", "Prefix to apply to the name of a created group snapshot.")
+	csiFlagSet.IntVar(&csioption.GroupSnapshotNameUUIDLength, "groupsnapshot-name-uuid-length", -1, "Length in characters for the generated uuid of a created group snapshot. Defaults behavior is to NOT truncate.")
 
 	verflag.AddFlags(namedFlagSets.FlagSet("global"))
 	globalflag.AddGlobalFlags(namedFlagSets.FlagSet("global"), command.Name())

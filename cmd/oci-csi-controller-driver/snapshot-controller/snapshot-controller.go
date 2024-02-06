@@ -65,8 +65,8 @@ func StartSnapshotController(csioptions csioptions.CSIOptions, stopCh chan struc
 
 	var nodeInformer v1.NodeInformer
 	//Upstream Code Disable enableVolumeGroupSnapshots
-	bEnable := false
-	enableVolumeGroupSnapshots := &bEnable
+	volumeGroupSnapshotFeature := false
+	enableVolumeGroupSnapshots := &volumeGroupSnapshotFeature
 	ctrl := controller.NewCSISnapshotCommonController(
 		snapClient,
 		kubeClient,

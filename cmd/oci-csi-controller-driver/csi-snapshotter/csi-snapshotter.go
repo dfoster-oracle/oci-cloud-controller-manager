@@ -32,10 +32,7 @@ import (
 	informers "github.com/kubernetes-csi/external-snapshotter/client/v6/informers/externalversions"
 	controller "github.com/kubernetes-csi/external-snapshotter/v6/pkg/sidecar-controller"
 	"github.com/kubernetes-csi/external-snapshotter/v6/pkg/snapshotter"
-	"github.com/kubernetes-csi/external-snapshotter/v6/pkg/utils"
 	"google.golang.org/grpc"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	coreinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -76,19 +73,7 @@ func StartCSISnapshotter(csioptions csioptions.CSIOptions, stopCh chan struct{})
 
 	factory 	:= informers.NewSharedInformerFactory(snapClient, csioptions.Resync)
 	coreFactory := coreinformers.NewSharedInformerFactory(kubeClient, csioptions.Resync)
-	var snapshotContentfactory informers.SharedInformerFactory
-	if csioptions.EnableNodeDeployment {
-		node := os.Getenv("NODE_NAME")
-		if node == "" {
-			klog.Fatal("The NODE_NAME environment variable must be set when using --enable-node-deployment.")
-		}
-		snapshotContentfactory = informers.NewSharedInformerFactoryWithOptions(snapClient, csioptions.Resync, informers.WithTweakListOptions(func(lo *v1.ListOptions) {
-			lo.LabelSelector = labels.Set{utils.VolumeSnapshotContentManagedByLabel: node}.AsSelector().String()
-		}),
-		)
-	} else {
-		snapshotContentfactory = factory
-	}	// Add Snapshot types to the default Kubernetes so events can be logged for them
+	// Add Snapshot types to the default Kubernetes so events can be logged for them
 	snapshotscheme.AddToScheme(scheme.Scheme)
 
 	metricsManager := metrics.NewCSIMetricsManager("" /* driverName */)
@@ -126,8 +111,8 @@ func StartCSISnapshotter(csioptions csioptions.CSIOptions, stopCh chan struct{})
 
 	var groupSnapshotter group_snapshotter.GroupSnapshotter
 	//Upstream Code Disable enableVolumeGroupSnapshots
-	bEnable := false
-	enableVolumeGroupSnapshots := &bEnable
+	volumeGroupSnapshotFeature := false
+	enableVolumeGroupSnapshots := &volumeGroupSnapshotFeature
 	if *enableVolumeGroupSnapshots {
 		supportsCreateVolumeGroupSnapshot, err := supportsGroupControllerCreateVolumeGroupSnapshot(ctx, conn)
 		if err != nil {
@@ -160,8 +145,8 @@ func StartCSISnapshotter(csioptions csioptions.CSIOptions, stopCh chan struct{})
 		extraCreateMetadata,
 		workqueue.NewItemExponentialFailureRateLimiter(retryIntervalStart, retryIntervalMax),
 		*enableVolumeGroupSnapshots,
-		snapshotContentfactory.Groupsnapshot().V1alpha1().VolumeGroupSnapshotContents(),
-		snapshotContentfactory.Groupsnapshot().V1alpha1().VolumeGroupSnapshotClasses(),
+		factory.Groupsnapshot().V1alpha1().VolumeGroupSnapshotContents(),
+		factory.Groupsnapshot().V1alpha1().VolumeGroupSnapshotClasses(),
 		workqueue.NewItemExponentialFailureRateLimiter(retryIntervalStart, retryIntervalMax),
 	)
 
