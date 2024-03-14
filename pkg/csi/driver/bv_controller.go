@@ -51,7 +51,10 @@ const (
 	multipathEnabled              = "multipathEnabled"
 	multipathDevices              = "multipathDevices"
 	//device is the consistent device path that would be used for paravirtualized attachment
-	device = "device"
+	device                          = "device"
+	resourceTrackingFeatureFlagName = "CPO_ENABLE_RESOURCE_ATTRIBUTION"
+	OkeSystemTagNamesapce           = "orcl-containerengine"
+	MaxDefinedTagPerVolume          = 64
 )
 
 var (
@@ -62,6 +65,8 @@ var (
 		Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 	}
 )
+
+var enableOkeSystemTags = csi_util.GetIsFeatureEnabledFromEnv(zap.S(), resourceTrackingFeatureFlagName, false)
 
 // VolumeParameters holds configuration
 type VolumeParameters struct {
@@ -391,10 +396,23 @@ func (d *BlockVolumeControllerDriver) CreateVolume(ctx context.Context, req *csi
 			return nil, status.Errorf(codes.InvalidArgument, "invalid available domain: %s or compartment ID: %s", availableDomainShortName, d.config.CompartmentID)
 		}
 
-		bvTags := getBVTags(d.config.Tags, volumeParams)
+		bvTags := getBVTags(log, d.config.Tags, volumeParams)
 
 		provisionedVolume, err = provision(ctx, log, d.client, volumeName, size, *ad.Name, d.config.CompartmentID, srcSnapshotId, srcVolumeId,
 			volumeParams.diskEncryptionKey, volumeParams.vpusPerGB, bvTags)
+
+		if err != nil && client.IsSystemTagNotFoundOrNotAuthorisedError(log, errors.Unwrap(err)) {
+			log.With("Ad name", *ad.Name, "Compartment Id", d.config.CompartmentID).With(zap.Error(err)).Warn("New volume creation failed due to oke system tags error. sending metric & retrying without oke system tags")
+			errorType = util.SystemTagErrTypePrefix + util.GetError(err)
+			metricDimension = util.GetMetricDimensionForComponent(errorType, metricType)
+			dimensionsMap[metrics.ComponentDimension] = metricDimension
+			metrics.SendMetricData(d.metricPusher, metric, time.Since(startTime).Seconds(), dimensionsMap)
+
+			// retry provision without oke system tags
+			delete(bvTags.DefinedTags, OkeSystemTagNamesapce)
+			provisionedVolume, err = provision(ctx, log, d.client, volumeName, size, *ad.Name, d.config.CompartmentID, srcSnapshotId, srcVolumeId,
+				volumeParams.diskEncryptionKey, volumeParams.vpusPerGB, bvTags)
+		}
 		if err != nil {
 			log.With("Ad name", *ad.Name, "Compartment Id", d.config.CompartmentID).With(zap.Error(err)).Error("New volume creation failed.")
 			errorType = util.GetError(err)
@@ -1288,6 +1306,11 @@ func provision(ctx context.Context, log *zap.SugaredLogger, c client.Interface, 
 	}
 	if bvTags != nil && bvTags.DefinedTags != nil {
 		volumeDetails.DefinedTags = bvTags.DefinedTags
+		if len(volumeDetails.DefinedTags) > MaxDefinedTagPerVolume {
+			log.With("service", "blockstorage", "verb", "create", "resource", "volume", "volumeName", volName).
+				Warn("the number of defined tags in the volume create request is beyond the limit. removing system tags from the details")
+			delete(volumeDetails.DefinedTags, OkeSystemTagNamesapce)
+		}
 	}
 
 	newVolume, err := c.BlockStorage().CreateVolume(ctx, volumeDetails)
@@ -1331,7 +1354,7 @@ func isBlockVolumeAvailable(backup core.VolumeBackup) (bool, error) {
 	return false, nil
 }
 
-func getBVTags(tags *config.InitialTags, vp VolumeParameters) *config.TagConfig {
+func getBVTags(logger *zap.SugaredLogger, tags *config.InitialTags, vp VolumeParameters) *config.TagConfig {
 
 	bvTags := &config.TagConfig{}
 	if tags != nil && tags.BlockVolume != nil {
@@ -1347,7 +1370,7 @@ func getBVTags(tags *config.InitialTags, vp VolumeParameters) *config.TagConfig 
 		bvTags = scTags
 	}
 	// merge final tags with common tags
-	if util.IsCommonTagPresent(tags) {
+	if enableOkeSystemTags && util.IsCommonTagPresent(tags) {
 		bvTags = util.MergeTagConfig(bvTags, tags.Common)
 	}
 	return bvTags
