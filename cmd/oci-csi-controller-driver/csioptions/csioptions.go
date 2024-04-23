@@ -17,6 +17,7 @@ package csioptions
 import (
 	"flag"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -29,7 +30,7 @@ const (
 	VolumeAttributesClass		   = "VolumeAttributesClass"
 )
 
-//CSIOptions structure which contains flag values
+// CSIOptions structure which contains flag values
 type CSIOptions struct {
 	Master                    string
 	Kubeconfig                string
@@ -64,10 +65,10 @@ type CSIOptions struct {
 	DefaultFSType             string
 	GroupSnapshotNamePrefix   string
 	GroupSnapshotNameUUIDLength int
-
+	RuntimeSchemeMutex        *sync.Mutex
 }
 
-//NewCSIOptions initializes the flag
+// NewCSIOptions initializes the flag
 func NewCSIOptions() *CSIOptions {
 	csioptions := CSIOptions{
 		Master:                  *flag.String("master", "", "kube master"),
@@ -105,6 +106,7 @@ func NewCSIOptions() *CSIOptions {
 		GroupSnapshotNameUUIDLength: *flag.Int("groupsnapshot-name-uuid-length", -1, "Length in characters for the generated uuid of a created group snapshot. Defaults behavior is to NOT truncate."),
 
 	}
+
 	return &csioptions
 }
 

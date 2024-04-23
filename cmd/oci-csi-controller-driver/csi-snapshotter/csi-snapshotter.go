@@ -17,6 +17,7 @@ package csisnapshotter
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"os/signal"
 	"time"
@@ -47,17 +48,17 @@ import (
 
 var (
 	// the csiTimeout is kept as 1 minute
-	csiTimeout   			= time.Minute
-	snapshotNamePrefix		= "snapshot"
-	snapshotNameUUIDLength 	= -1
-	extraCreateMetadata    	= false
+	csiTimeout             = time.Minute
+	snapshotNamePrefix     = "snapshot"
+	snapshotNameUUIDLength = -1
+	extraCreateMetadata    = false
 	// the retryIntervalStart is kept as 1 second
-	retryIntervalStart   	= time.Second
-	retryIntervalMax     	= 5*time.Minute
+	retryIntervalStart = time.Second
+	retryIntervalMax   = 5 * time.Minute
 
-	kubeAPIQPS   			= 5
-	kubeAPIBurst 			= 10
-	version = "0.0.1"
+	kubeAPIQPS   = 5
+	kubeAPIBurst = 10
+	version      = "0.0.1"
 )
 
 func StartCSISnapshotter(csioptions csioptions.CSIOptions, stopCh chan struct{}) {
@@ -71,10 +72,13 @@ func StartCSISnapshotter(csioptions csioptions.CSIOptions, stopCh chan struct{})
 
 	kubeClient, snapClient := InitializeClients(config)
 
-	factory 	:= informers.NewSharedInformerFactory(snapClient, csioptions.Resync)
+	factory := informers.NewSharedInformerFactory(snapClient, csioptions.Resync)
 	coreFactory := coreinformers.NewSharedInformerFactory(kubeClient, csioptions.Resync)
 	// Add Snapshot types to the default Kubernetes so events can be logged for them
-	snapshotscheme.AddToScheme(scheme.Scheme)
+	err := addToScheme(csioptions, scheme.Scheme)
+	if err != nil {
+		klog.Error("error adding to runtime.scheme ", err)
+	}
 
 	metricsManager := metrics.NewCSIMetricsManager("" /* driverName */)
 
@@ -219,7 +223,7 @@ func BuildConfig(csioptions csioptions.CSIOptions) *rest.Config {
 	return config
 }
 
-func InitializeClients(config *rest.Config) (*kubernetes.Clientset, *clientset.Clientset){
+func InitializeClients(config *rest.Config) (*kubernetes.Clientset, *clientset.Clientset) {
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		klog.Error(err.Error())
@@ -233,4 +237,11 @@ func InitializeClients(config *rest.Config) (*kubernetes.Clientset, *clientset.C
 	}
 
 	return kubeClient, snapClient
+}
+
+func addToScheme(csioptions csioptions.CSIOptions, scheme2 *runtime.Scheme) error {
+	csioptions.RuntimeSchemeMutex.Lock()
+	defer csioptions.RuntimeSchemeMutex.Unlock()
+	err := snapshotscheme.AddToScheme(scheme.Scheme)
+	return err
 }
