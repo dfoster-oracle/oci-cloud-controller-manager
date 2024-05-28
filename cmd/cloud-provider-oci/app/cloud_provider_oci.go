@@ -269,6 +269,7 @@ func run(logger *zap.SugaredLogger, config *cloudControllerManagerConfig.Complet
 			csioption.FssVolumeNamePrefix = csioptions.GetFssVolumeNamePrefix(csioption.VolumeNamePrefix)
 			// Check and update feature gate for CrossNamespaceDataSource
 			csioption.FeatureGates = csioptions.UpdateFeatureGates(csioption.FeatureGates)
+			csioption.RuntimeSchemeMutex = new(sync.Mutex)
 			err := csicontroller.Run(csioption, ctx.Done())
 			if err != nil {
 				logger.With(zap.Error(err)).Error("Error running csi-controller")
@@ -390,7 +391,7 @@ func getInitFuncConstructors(logger *zap.SugaredLogger) map[string]cloudControll
 	isOciSvcCtrlEnvEnabled := oci.GetIsFeatureEnabledFromEnv(logger, "ENABLE_OCI_SERVICE_CONTROLLER", false)
 	if isOciSvcCtrlEnvEnabled || enableOCIServiceController {
 		// Disable default Kubernetes Cloud Provider service controller
-		cloudControllerManager.ControllersDisabledByDefault.Insert("service")
+		cloudControllerManager.ControllersDisabledByDefault.Insert(names.ServiceLBController)
 
 		// Add OCI service controller init func
 		initConstructors["oci-service"] = cloudControllerManager.ControllerInitFuncConstructor{

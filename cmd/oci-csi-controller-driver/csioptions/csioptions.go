@@ -17,6 +17,7 @@ package csioptions
 import (
 	"flag"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -64,7 +65,7 @@ type CSIOptions struct {
 	DefaultFSType             string
 	GroupSnapshotNamePrefix   string
 	GroupSnapshotNameUUIDLength int
-
+	RuntimeSchemeMutex        *sync.Mutex
 }
 
 //NewCSIOptions initializes the flag
