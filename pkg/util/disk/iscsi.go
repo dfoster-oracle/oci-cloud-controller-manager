@@ -110,6 +110,8 @@ type Interface interface {
 	GetDiskFormat(devicePath string) (string, error)
 
 	WaitForPathToExist(path string, maxRetries int) bool
+
+	UnmountDeviceBindAndDelete(path string) error
 }
 
 // iSCSIMounter implements Interface.
@@ -456,6 +458,10 @@ func formatAndMount(source string, target string, fstype string, options []strin
 
 func (c *iSCSIMounter) GetDiskFormat(disk string) (string, error) {
 	return getDiskFormat(c.runner, disk, c.logger)
+}
+
+func (c *iSCSIMounter) UnmountDeviceBindAndDelete(path string) error {
+	return UnmountFileAndDelete(c.logger, path, c.mounter)
 }
 
 func (c *iSCSIMounter) Mount(source string, target string, fstype string, options []string) error {

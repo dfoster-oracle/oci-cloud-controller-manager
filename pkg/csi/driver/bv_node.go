@@ -156,6 +156,15 @@ func (d BlockVolumeNodeDriver) NodeStageVolume(ctx context.Context, req *csi.Nod
 			logger.Info("volume is already mounted on the staging path.")
 			return &csi.NodeStageVolumeResponse{}, nil
 		}
+	if !isRawBlockVolume {
+		isMounted, oErr := mountHandler.DeviceOpened(devicePath)
+		if oErr != nil {
+			logger.With(zap.Error(oErr)).Error("getting error to get the details about volume is already mounted or not.")
+			return nil, status.Error(codes.Internal, oErr.Error())
+		} else if isMounted {
+			logger.Info("volume is already mounted on the staging path.")
+			return &csi.NodeStageVolumeResponse{}, nil
+		}
 	}
 
 	err = mountHandler.AddToDB()
@@ -329,6 +338,15 @@ func (d BlockVolumeNodeDriver) NodeUnstageVolume(ctx context.Context, req *csi.N
 	} else {
 		diskPath, err = disk.GetDiskPathFromMountPath(logger, req.GetStagingTargetPath())
 
+		if err != nil {
+			// do a clean exit in case of mount point not found
+			if err == disk.ErrMountPointNotFound {
+				logger.With(zap.Error(err)).With("mountPath", req.GetStagingTargetPath()).Warn("unable to fetch mount point")
+				return &csi.NodeUnstageVolumeResponse{}, nil
+			}
+			logger.With(zap.Error(err)).With("mountPath", req.GetStagingTargetPath()).Error("unable to get diskPath from mount path")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 		if err != nil {
 			// do a clean exit in case of mount point not found
 			if err == disk.ErrMountPointNotFound {
@@ -722,9 +740,16 @@ func (d BlockVolumeNodeDriver) NodeUnpublishVolume(ctx context.Context, req *csi
 		return nil, status.Error(codes.InvalidArgument, "unknown attachment type. supported attachment types are iscsi and paravirtualized")
 	}
 
-	if err := mountHandler.UnmountPath(req.TargetPath); err != nil {
-		logger.With(zap.Error(err)).Error("failed to unmount the target path, error")
-		return nil, status.Error(codes.Internal, err.Error())
+	if isRawBlockVolume {
+		if err := mountHandler.UnmountDeviceBindAndDelete(req.TargetPath); err != nil {
+			logger.With(zap.Error(err)).Error("failed to unmount the target path and bind delete.")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	} else {
+		if err := mountHandler.UnmountPath(req.TargetPath); err != nil {
+			logger.With(zap.Error(err)).Error("failed to unmount the target path, error")
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	}
 
 	logger.Info("Un-publish volume from the Node is Completed.")

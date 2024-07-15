@@ -123,6 +123,18 @@ func UnmountPath(logger *zap.SugaredLogger, mountPath string, mounter mount.Inte
 	return fmt.Errorf("Failed to unmount path %v", mountPath)
 }
 
+func UnmountFileAndDelete(logger *zap.SugaredLogger, mountPath string, mounter mount.Interface) error {
+	if err := mounter.Unmount(mountPath); err != nil {
+		logger.With(zap.Error(err)).Warn("Failed to unmount the block device")
+		return err
+	}
+	if err := os.Remove(mountPath); err != nil {
+		logger.Warn("Failed to delete the mountpath for the block device")
+		return err
+	}
+	return nil
+}
+
 func WaitForDirectoryDeletion(logger *zap.SugaredLogger, mountPath string) error {
 	var err error
 	// Try removing the mount path thrice, else suppress the error
