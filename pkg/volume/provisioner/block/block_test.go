@@ -263,7 +263,7 @@ func (c *MockComputeClient) AttachVnic(ctx context.Context, instanceID, subnetID
 	return core.VnicAttachment{}, nil
 }
 
-func (c *MockComputeClient) FindVolumeAttachment(ctx context.Context, compartmentID, volumeID string) (core.VolumeAttachment, error) {
+func (c *MockComputeClient) FindVolumeAttachment(ctx context.Context, compartmentID, volumeID string, instanceID string) (core.VolumeAttachment, error) {
 	return nil, nil
 }
 
