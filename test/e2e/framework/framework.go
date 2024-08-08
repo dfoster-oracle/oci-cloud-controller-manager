@@ -612,14 +612,6 @@ func (f *Framework) Initialize() {
 	f.PodSubnet = podsubnet
 	Logf("OCI pod subnet OCID: %s", f.PodSubnet)
 
-	if strings.ToUpper(cniType) == "OCI_VCN_IP_NATIVE" && podsubnet != "" {
-		cniTypeEnum = oke.ClusterPodNetworkOptionDetailsCniTypeOciVcnIpNative
-	} else {
-		cniTypeEnum = oke.ClusterPodNetworkOptionDetailsCniTypeFlannelOverlay
-	}
-	f.CniType = cniTypeEnum
-	Logf("CNI Type: %s", f.CniType)
-
 	var err error
 	if isPreUpgradeString != "" {
 		isPreUpgradeBool, err = strconv.ParseBool(isPreUpgradeString)
@@ -739,6 +731,29 @@ func (f *Framework) Initialize() {
 			f.NodePoolK8sVersion3 = ""
 		}
 	}
+
+	if existingClusterOcid != "" {
+		type clusterpodnetworkoptiondetails struct {
+			JsonData []byte
+			CniType  string `json:"cniType"`
+		}
+		cluster := f.GetCluster(existingClusterOcid)
+
+		switch cluster.ClusterPodNetworkOptions[0].(type) {
+		case oke.FlannelOverlayClusterPodNetworkOptionDetails:
+			cniType = "FLANNEL_OVERLAY"
+		case oke.OciVcnIpNativeClusterPodNetworkOptionDetails:
+			cniType = "OCI_VCN_IP_NATIVE"
+		}
+	}
+
+	if strings.ToUpper(cniType) == "OCI_VCN_IP_NATIVE" && podsubnet != "" {
+		cniTypeEnum = oke.ClusterPodNetworkOptionDetailsCniTypeOciVcnIpNative
+	} else {
+		cniTypeEnum = oke.ClusterPodNetworkOptionDetailsCniTypeFlannelOverlay
+	}
+	f.CniType = cniTypeEnum
+	Logf("CNI Type: %s", f.CniType)
 }
 
 // getK8sVersionValue returns the version value according to version index
