@@ -52,8 +52,8 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/kubernetes-csi/csi-lib-utils v0.17.0
 	github.com/kubernetes-csi/external-attacher v0.0.0-20240320230547-30de43376ec7 //v4.5.1
-	github.com/kubernetes-csi/external-provisioner v0.0.0-20240105150033-b377ea40edb7 // v4.0.0
-	github.com/kubernetes-csi/external-resizer v0.0.0-20240320230758-be82396ea8ec // v1.10.0
+	github.com/kubernetes-csi/external-provisioner v0.0.0-20240320224321-0fbba6b49b6f // v4.0.1
+	github.com/kubernetes-csi/external-resizer v1.10.1
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.3.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.32.0
@@ -91,7 +91,7 @@ require (
 
 require (
 	bitbucket.oci.oraclecorp.com/cryptography/go_ensurefips v0.0.0-20220825162208-b1975cae9a19
-	github.com/kubernetes-csi/external-snapshotter/v6 v6.3.0
+	github.com/kubernetes-csi/external-snapshotter/v6 v6.3.4
 	golang.org/x/sync v0.7.0
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v3 v3.0.1
