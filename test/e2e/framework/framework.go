@@ -88,8 +88,9 @@ var (
 	architecture                  string
 	volumeHandle                  string // The FSS mount volume handle
 	staticSnapshotCompartmentOCID string // Compartment ID for cross compartment snapshot test
+	createUhpNodepool             bool   // Creates UHP nodepool instead of normal nodepool
 	runUhpE2E                     bool   // Whether to run UHP E2Es, requires Volume Management Plugin enabled on the node and 16+ cores (check blockvolumeperformance public doc for the exact requirements)
-	enableParallelRun			  bool
+	enableParallelRun             bool
 	addOkeSystemTags              bool
 )
 
@@ -120,6 +121,8 @@ func init() {
 	flag.StringVar(&architecture, "architecture", "", "CPU architecture to be used for testing.")
 
 	flag.StringVar(&staticSnapshotCompartmentOCID, "static-snapshot-compartment-id", "", "Compartment ID for cross compartment snapshot test")
+	flag.BoolVar(&createUhpNodepool, "create-uhp-nodepool", false, "Creates UHP nodepool instead of normal nodepool")
+
 	flag.BoolVar(&runUhpE2E, "run-uhp-e2e", false, "Run UHP E2Es as well")
 	flag.BoolVar(&enableParallelRun, "enable-parallel-run", true, "Enables parallel running of test suite")
 	flag.BoolVar(&addOkeSystemTags, "add-oke-system-tags", false, "Adds oke system tags to new and existing loadbalancers and storage resources")
@@ -155,8 +158,10 @@ type Framework struct {
 
 	// Compartment ID for cross compartment snapshot test
 	StaticSnapshotCompartmentOcid string
-	RunUhpE2E                     bool
-	AddOkeSystemTags        bool
+	CreateUhpNodepool             bool
+
+	RunUhpE2E        bool
+	AddOkeSystemTags bool
 }
 
 // New creates a new a framework that holds the context of the test
@@ -180,6 +185,7 @@ func NewWithConfig() *Framework {
 		ReservedIP:                    reservedIP,
 		VolumeHandle:                  volumeHandle,
 		StaticSnapshotCompartmentOcid: staticSnapshotCompartmentOCID,
+		CreateUhpNodepool:             createUhpNodepool,
 		RunUhpE2E:                     runUhpE2E,
 		AddOkeSystemTags:              addOkeSystemTags,
 	}
@@ -216,6 +222,8 @@ func (f *Framework) Initialize() {
 	Logf("FSS Volume Handle is : %s", f.VolumeHandle)
 	f.StaticSnapshotCompartmentOcid = staticSnapshotCompartmentOCID
 	Logf("Static Snapshot Compartment OCID: %s", f.StaticSnapshotCompartmentOcid)
+	f.CreateUhpNodepool = createUhpNodepool
+	Logf("Create Uhp Nodepool: %v", f.CreateUhpNodepool)
 	f.RunUhpE2E = runUhpE2E
 	Logf("Run Uhp E2Es as well: %v", f.RunUhpE2E)
 	f.CMEKKMSKey = cmekKMSKey

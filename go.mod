@@ -45,7 +45,7 @@ require (
 	github.com/kubernetes-csi/external-snapshotter/client/v6 v6.3.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.30.0
-	github.com/oracle/oci-go-sdk/v65 v65.56.0
+	github.com/oracle/oci-go-sdk/v65 v65.75.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/spf13/cobra v1.8.0 // indirect

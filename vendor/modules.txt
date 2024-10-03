@@ -285,12 +285,11 @@ github.com/opencontainers/go-digest
 ## explicit; go 1.19
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/pkg/pwalkdir
-# github.com/oracle/oci-go-sdk/v65 v65.56.0
+# github.com/oracle/oci-go-sdk/v65 v65.75.1
 ## explicit; go 1.13
 github.com/oracle/oci-go-sdk/v65/common
 github.com/oracle/oci-go-sdk/v65/common/auth
 github.com/oracle/oci-go-sdk/v65/common/utils
-github.com/oracle/oci-go-sdk/v65/containerengine
 github.com/oracle/oci-go-sdk/v65/core
 github.com/oracle/oci-go-sdk/v65/filestorage
 github.com/oracle/oci-go-sdk/v65/identity

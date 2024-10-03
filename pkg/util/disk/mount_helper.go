@@ -233,18 +233,6 @@ func deviceOpened(pathname string, logger *zap.SugaredLogger) (bool, error) {
 	return hostUtil.DeviceOpened(pathname)
 }
 
-func UnmountWithForce(targetPath string) error {
-	command := exec.Command(UnmountCommand, "-f", targetPath)
-	output, err := command.CombinedOutput()
-	if err != nil {
-		if strings.Contains(string(output), errNotMounted) {
-			return nil
-		}
-		return status.Errorf(codes.Internal, err.Error())
-	}
-	return nil
-}
-
 func FindMount(target string) ([]string, error) {
 	mountArgs := []string{"-n", "-o", "SOURCE", "-T", target}
 	command := exec.Command(FINDMNT_COMMAND, mountArgs...)
