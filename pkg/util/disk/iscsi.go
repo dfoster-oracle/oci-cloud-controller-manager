@@ -250,15 +250,17 @@ func GetDiskPathFromMountPath(logger *zap.SugaredLogger, mountPath string) ([]st
 	return diskByPaths, nil
 }
 
-// GetDiskPathFromBindDeviceFilePath retrieves the disk paths for the specified mount path.
-func GetDiskPathFromBindDeviceFilePath(logger *zap.SugaredLogger, mountPath string) ([]string, error) {
-	logger.With(mountPath).Info("Roger, Inside GetDiskPathFromBindDeviceFilePath")
+// Looping through sanitizedDevice - "sanitizedDevice": "/sdc"
+// Finding device name - "deviceName": "/sdc"
+// Finding disk by path - "diskByPaths": ["/dev/disk/by-path/ip-<ip>-iscsi-iqn.2015-12.com.oracleiaas:uniqfier-lun-2"]
 
+// Gets the diskPath for a bind-mounted device file
+func GetDiskPathFromBindDeviceFilePath(logger *zap.SugaredLogger, mountPath string) ([]string, error) {
 	// Get the block device for the given mount path
 	devices, err := FindMount(mountPath)
 
 	if err != nil {
-		logger.With(zap.Error(err)).Warn("Unable to get block device for mount path")
+		logger.With(zap.Error(err)).Warnf("Unable to get block device for mount path: %s", mountPath)
 		return nil, err
 	}
 
@@ -266,8 +268,6 @@ func GetDiskPathFromBindDeviceFilePath(logger *zap.SugaredLogger, mountPath stri
 	for _, dev := range devices {
 		sanitizedDevice := strings.TrimPrefix(dev, "devtmpfs[")
 		sanitizedDevice = strings.TrimSuffix(sanitizedDevice, "]")
-		// Remove extra slashes
-		sanitizedDevice = strings.TrimPrefix(sanitizedDevice, "/dev/")
 		sanitizedDevice = filepath.Clean(sanitizedDevice) // Fix extra slashes
 		sanitizedDevices = append(sanitizedDevices, sanitizedDevice)
 	}
@@ -278,7 +278,6 @@ func GetDiskPathFromBindDeviceFilePath(logger *zap.SugaredLogger, mountPath stri
 	}
 
 	deviceName := sanitizedDevices[0]
-	logger.With("Roger DeviceName", deviceName).Info("Found block device for mount path")
 
 	// Convert the device name to the correct path format
 	devicePath := filepath.Join("/dev", deviceName)
@@ -288,8 +287,6 @@ func GetDiskPathFromBindDeviceFilePath(logger *zap.SugaredLogger, mountPath stri
 		Path:   mountPath,
 		Device: devicePath,
 	}
-
-	logger.With("Roger MountPoint", mountPoint).Info("Roger, Inside GetDiskPathFromBindDeviceFilePath")
 
 	// Use the device path to get diskByPaths
 	diskByPaths, err := diskByPathsForMountPoint(mountPoint)

@@ -248,9 +248,9 @@ func GetKubeClient(logger *zap.SugaredLogger, master, kubeconfig string) *kubern
 }
 
 // Get the staging target filepath inside the given stagingTargetPath, to be used for raw block volume support
-func GetStagingTargetPathForBlock(stagingTargetPath string) string {
-	stagingTargetPathFile := filepath.Join(stagingTargetPath, RawBlockStagingFile)
-	return stagingTargetPathFile
+func GetPathForBlock(volumePath string) string {
+	pathForBlock := filepath.Join(volumePath, RawBlockStagingFile)
+	return pathForBlock
 }
 
 // Creates a file on the specified path after creating the containing directory

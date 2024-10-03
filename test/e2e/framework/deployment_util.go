@@ -32,7 +32,7 @@ func (j *PVCTestJig) createDeploymentOnNodeAndWait(command string, pvcName strin
 	if isRawBlockVolume {
 		container = v1.Container{
 			Name:    name,
-			Image:   "busybox",
+			Image:   centos,
 			Command: []string{"/bin/sh"},
 			Args:    []string{"-c", command},
 			VolumeDevices: []v1.VolumeDevice{

@@ -249,7 +249,6 @@ func (d *BlockVolumeControllerDriver) CreateVolume(ctx context.Context, req *csi
 
 	availableDomainShortName := ""
 	volumeName := req.Name
-
 	dimensionsMap := make(map[string]string)
 
 	volumeParams, err := extractVolumeParameters(log, req.GetParameters())
@@ -259,6 +258,14 @@ func (d *BlockVolumeControllerDriver) CreateVolume(ctx context.Context, req *csi
 		dimensionsMap[metrics.ComponentDimension] = metricDimension
 		metrics.SendMetricData(d.metricPusher, metrics.PVProvision, time.Since(startTime).Seconds(), dimensionsMap)
 		return nil, status.Errorf(codes.InvalidArgument, "failed to parse storageclass parameters %v", err)
+	}
+
+	// Return error for the case of Raw Block Volume with Ultra High Performance Volumes
+	for _, cap := range req.VolumeCapabilities {
+		if blk := cap.GetBlock(); blk != nil && volumeParams.vpusPerGB >= 30 {
+			log.Error("volumeMode is set to Block for an Ultra High Performance Volume, which is not supported")
+			return nil, status.Errorf(codes.InvalidArgument, "failed to support Block volumeMode for Ultra High Performance Volumes (vpusPerGB > 30)")
+		}
 	}
 
 	dimensionsMap[metrics.ResourceOCIDDimension] = volumeName
@@ -1000,6 +1007,9 @@ func (d *BlockVolumeControllerDriver) validateCapabilities(caps []*csi.VolumeCap
 	}
 
 	for _, cap := range caps {
+		if blk := cap.GetBlock(); blk != nil {
+			d.logger.Info("The requested volume mode is set to Block")
+		}
 		if hasSupport(cap.AccessMode.Mode) {
 			continue
 		} else {
