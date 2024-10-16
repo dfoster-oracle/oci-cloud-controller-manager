@@ -15,13 +15,13 @@
 PKG := github.com/oracle/oci-cloud-controller-manager
 
 ifeq "$(CI_IMAGE_REGISTRY)" ""
-    CI_IMAGE_REGISTRY   ?= iad.ocir.io/oracle
+    CI_IMAGE_REGISTRY   ?= ghcr.io/dfoster-oracle
 else
     CI_IMAGE_REGISTRY   ?= ${CI_IMAGE_REGISTRY}
 endif
 
 ifeq "$(OSS_REGISTRY)" ""
-    OSS_REGISTRY   ?= iad.ocir.io/oracle
+    OSS_REGISTRY   ?= ghcr.io/dfoster-oracle
 else
     OSS_REGISTRY   ?= ${OSS_REGISTRY}
 endif
