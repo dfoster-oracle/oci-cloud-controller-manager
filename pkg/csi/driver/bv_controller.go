@@ -1007,16 +1007,27 @@ func (d *BlockVolumeControllerDriver) validateCapabilities(caps []*csi.VolumeCap
 	}
 
 	for _, cap := range caps {
-		if blk := cap.GetBlock(); blk != nil {
+		var isBlock = cap.GetBlock()
+		if isBlock != nil {
 			d.logger.Info("The requested volume mode is set to Block")
 		}
+
+		// Allow RWX only when accessMode=Block
+		if ok := cap.GetAccessMode().GetMode() == csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER; ok {
+			d.logger.Info("The requested access mode is set to ReadWriteMany")
+			if isBlock == nil {
+				d.logger.Errorf("ReadWriteMany accessMode is only supported with Block volumeMode")
+				return fmt.Errorf("invalid volume capabilities requested. Only Block volumeMode supports MULTI_NODE_MULTI_WRITER accessMode")
+			}
+		}
+
 		if hasSupport(cap.AccessMode.Mode) {
 			continue
 		} else {
 			// we need to make sure all capabilities are supported. Revert back
 			// in case we have a cap that is supported, but is invalidated now
 			d.logger.Errorf("The VolumeCapability isn't supported: %s", cap.AccessMode)
-			return fmt.Errorf("invalid volume capabilities requested. Only SINGLE_NODE_WRITER is supported ('accessModes.ReadWriteOnce' on Kubernetes)")
+			return fmt.Errorf("invalid volume capabilities requested")
 		}
 	}
 
