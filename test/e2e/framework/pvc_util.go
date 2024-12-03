@@ -1285,10 +1285,11 @@ func (j *PVCTestJig) CheckAttachmentTypeAndEncryptionType(compute client.Compute
 		Failf("Failed to get persistent volume %q: %v", pvc.Spec.VolumeName, err)
 	}
 
-	attachment, err := compute.FindActiveVolumeAttachment(context.Background(), compartmentID, pv.Spec.CSI.VolumeHandle)
+	attachment, err := compute.FindVolumeAttachment(context.Background(), compartmentID, pv.Spec.CSI.VolumeHandle, instanceID)
 	if err != nil {
 		Failf("VolumeAttachment %q get API error: %v", instanceID, err)
 	}
+
 	attachmentType := ""
 	switch v := attachment.(type) {
 	case ocicore.ParavirtualizedVolumeAttachment:

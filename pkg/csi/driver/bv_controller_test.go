@@ -586,11 +586,9 @@ func (c *MockComputeClient) FindVolumeAttachment(ctx context.Context, compartmen
 		for _, attachment := range resp.Items {
 			state := attachment.GetLifecycleState()
 			if state == core.VolumeAttachmentLifecycleStateAttaching ||
-				state == core.VolumeAttachmentLifecycleStateAttached {
+				state == core.VolumeAttachmentLifecycleStateAttached ||
+				state == core.VolumeAttachmentLifecycleStateDetaching {
 				return attachment, nil
-			}
-			if state == core.VolumeAttachmentLifecycleStateDetaching {
-				return attachment, errors.WithStack(errNotFound)
 			}
 		}
 
@@ -601,13 +599,17 @@ func (c *MockComputeClient) FindVolumeAttachment(ctx context.Context, compartmen
 	if volume_attachments[volumeID] != nil {
 		return volume_attachments[volumeID], nil
 	}
-	return nil, nil
+	return nil, errors.WithStack(errNotFound)
 }
 
-func (c *MockComputeClient) FindActiveVolumeAttachment(ctx context.Context, compartmentID, volumeID string) (core.VolumeAttachment, error) {
+func (c *MockComputeClient) ListVolumeAttachments(ctx context.Context, compartmentID, volumeID string) ([]core.VolumeAttachment, error) {
+	var (
+		page            *string
+		attachments     []core.VolumeAttachment
+		requestMetadata common.RequestMetadata
+	)
 	if volumeID == "find-active-volume-attachment-timeout-volume" {
-		var page *string
-		var requestMetadata common.RequestMetadata
+
 		for {
 			resp, err := c.compute.ListVolumeAttachments(ctx, core.ListVolumeAttachmentsRequest{
 				CompartmentId:   &compartmentID,
@@ -625,7 +627,7 @@ func (c *MockComputeClient) FindActiveVolumeAttachment(ctx context.Context, comp
 				if state == core.VolumeAttachmentLifecycleStateAttaching ||
 					state == core.VolumeAttachmentLifecycleStateAttached ||
 					state == core.VolumeAttachmentLifecycleStateDetaching {
-					return attachment, nil
+					attachments = append(attachments, attachment)
 				}
 			}
 
@@ -635,9 +637,49 @@ func (c *MockComputeClient) FindActiveVolumeAttachment(ctx context.Context, comp
 		}
 	}
 	if volume_attachments[volumeID] != nil {
-		return volume_attachments[volumeID], nil
+		attachments = append(attachments, volume_attachments[volumeID])
 	}
-	return nil, nil
+	return attachments, nil
+}
+
+func (c *MockComputeClient) ListNodeVolumeAttachments(ctx context.Context, compartmentID, nodeID string) ([]core.VolumeAttachment, error) {
+	var (
+		page            *string
+		attachments     []core.VolumeAttachment
+		requestMetadata common.RequestMetadata
+	)
+	if nodeID == "find-active-volume-attachment-timeout-volume" {
+
+		for {
+			resp, err := c.compute.ListVolumeAttachments(ctx, core.ListVolumeAttachmentsRequest{
+				CompartmentId:   &compartmentID,
+				InstanceId:      &nodeID,
+				Page:            page,
+				RequestMetadata: requestMetadata,
+			})
+
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			for _, attachment := range resp.Items {
+				state := attachment.GetLifecycleState()
+				if state == core.VolumeAttachmentLifecycleStateAttaching ||
+					state == core.VolumeAttachmentLifecycleStateAttached ||
+					state == core.VolumeAttachmentLifecycleStateDetaching {
+					attachments = append(attachments, attachment)
+				}
+			}
+
+			if page = resp.OpcNextPage; page == nil {
+				break
+			}
+		}
+	}
+	if volume_attachments[nodeID] != nil {
+		attachments = append(attachments, volume_attachments[nodeID])
+	}
+	return attachments, nil
 }
 
 func (c *MockComputeClient) AttachParavirtualizedVolume(ctx context.Context, instanceID, volumeID string, isPvEncryptionInTransitEnabled bool, isShareable bool) (core.VolumeAttachment, error) {

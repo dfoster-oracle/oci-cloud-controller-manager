@@ -252,7 +252,7 @@ func (d OCIFlexvolumeDriver) Attach(logger *zap.SugaredLogger, opts flexvolume.O
 
 	compartmentID := *instance.CompartmentId
 
-	//Checking if the volume is already attached
+	// checking if the volume is already attached
 	attachment, err := c.Compute().FindVolumeAttachment(ctx, compartmentID, volumeOCID, *instance.Id)
 	if err != nil && !client.IsNotFound(err) {
 		errorType = util.GetError(err)
@@ -261,14 +261,9 @@ func (d OCIFlexvolumeDriver) Attach(logger *zap.SugaredLogger, opts flexvolume.O
 		metrics.SendMetricData(d.metricPusher, metrics.PVAttach, time.Since(startTime).Seconds(), dimensionsMap)
 		return flexvolume.Fail(logger, "Got error in finding volume attachment", err)
 	}
-	// volume already attached to an instance
-	if err == nil {
-		if *attachment.GetInstanceId() != *instance.Id {
-			fvdMetricDimension = util.GetMetricDimensionForComponent(util.ErrValidation, util.FVDStorageType)
-			dimensionsMap[metrics.ComponentDimension] = fvdMetricDimension
-			metrics.SendMetricData(d.metricPusher, metrics.PVAttach, time.Since(startTime).Seconds(), dimensionsMap)
-			return flexvolume.Fail(logger, "Already attached to another instance: ", *attachment.GetInstanceId())
-		}
+
+	// volume already attached to instance
+	if attachment != nil {
 		logger.With("volumeID", volumeOCID, "instanceID", *instance.Id).Info("Volume is already attached to instance")
 		iscsiAttachment, err := getISCSIAttachment(attachment)
 		if err != nil {
@@ -286,6 +281,26 @@ func (d OCIFlexvolumeDriver) Attach(logger *zap.SugaredLogger, opts flexvolume.O
 			Device: fmt.Sprintf(diskIDByPathTemplate, *iscsiAttachment.Ipv4, *iscsiAttachment.Port, *iscsiAttachment.Iqn),
 		}
 	}
+
+	volumeAttachments, err := c.Compute().ListVolumeAttachments(ctx, compartmentID, volumeOCID)
+	if err != nil {
+		errorType = util.GetError(err)
+		fvdMetricDimension = util.GetMetricDimensionForComponent(errorType, util.FVDStorageType)
+		dimensionsMap[metrics.ComponentDimension] = fvdMetricDimension
+		metrics.SendMetricData(d.metricPusher, metrics.PVAttach, time.Since(startTime).Seconds(), dimensionsMap)
+		return flexvolume.Fail(logger, "Got error in finding volume attachments", err)
+	}
+
+	for _, vAttachment := range volumeAttachments {
+		if vAttachment.GetLifecycleState() == core.VolumeAttachmentLifecycleStateAttaching ||
+			vAttachment.GetLifecycleState() == core.VolumeAttachmentLifecycleStateAttached {
+			fvdMetricDimension = util.GetMetricDimensionForComponent(util.ErrValidation, util.FVDStorageType)
+			dimensionsMap[metrics.ComponentDimension] = fvdMetricDimension
+			metrics.SendMetricData(d.metricPusher, metrics.PVAttach, time.Since(startTime).Seconds(), dimensionsMap)
+			return flexvolume.Fail(logger, "Already attached to another instance: ", *vAttachment.GetInstanceId())
+		}
+	}
+
 	// volume not attached to any instance, proceed with volume attachment
 	logger.With("volumeID", volumeOCID, "instanceID", *instance.Id).Info("Attaching volume to instance")
 	attachment, err = c.Compute().AttachVolume(ctx, *instance.Id, volumeOCID, false)

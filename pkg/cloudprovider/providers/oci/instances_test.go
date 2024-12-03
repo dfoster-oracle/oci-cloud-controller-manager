@@ -368,7 +368,11 @@ func (MockComputeClient) WaitForVolumeDetached(ctx context.Context, attachmentID
 	return nil
 }
 
-func (c *MockComputeClient) FindActiveVolumeAttachment(ctx context.Context, compartmentID, volumeID string) (core.VolumeAttachment, error) {
+func (c *MockComputeClient) ListVolumeAttachments(ctx context.Context, compartmentID, volumeID string) ([]core.VolumeAttachment, error) {
+	return nil, nil
+}
+
+func (c *MockComputeClient) ListNodeVolumeAttachments(ctx context.Context, compartmentID, nodeID string) ([]core.VolumeAttachment, error) {
 	return nil, nil
 }
 
