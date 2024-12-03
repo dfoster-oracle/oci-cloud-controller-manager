@@ -116,6 +116,7 @@ var _ = Describe("CSI Raw Block Volume Creation", func() {
 			// volume name duplicate should not exist
 			for _, volume := range volumes {
 				framework.Logf("volume details %v :", volume)
+				//framework.Logf("cluster ocid from setup is %s", setupF.ClusterOcid)
 				if setupF.AddOkeSystemTags && !framework.HasOkeSystemTags(volume.SystemTags) {
 					framework.Failf("the resource %s is expected to have oke system tags", *volume.Id)
 				}
@@ -631,10 +632,8 @@ var _ = Describe("CSI Raw Block Volume Performance Level", func() {
 var _ = Describe("CSI Ultra High Performance Volumes", func() {
 	f := framework.NewBackupFramework("csi-uhp")
 	Context("[cloudprovider][storage][csi][uhp]", func() {
-		It("CSI UHP Tests", func() {
-			if !setupF.CreateUhpNodepool {
-				Skip("Skipping test as UHP nodepool has not been enabled (Env var: CREATE_UHP_NODEPOOL)")
-			}
+		It("Create ISCSI CSI block volume with UHP Performance Level", func() {
+			checkUhpPrerequisites(f)
 			compartmentId := f.GetCompartmentId(*setupF)
 			if compartmentId == "" {
 				framework.Failf("Compartment Id undefined.")
@@ -649,6 +648,7 @@ var _ = Describe("CSI Ultra High Performance Volumes", func() {
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeFilesystem, v1.ReadWriteOnce, v1.ClaimPending)
 			podName := pvcJig.NewPodForCSI("uhp-pvc-app", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeFilesystem)
 			pvcJig.VerifyMultipathEnabled(ctx, f.ComputeClient, pvc.Name, f.Namespace.Name, compartmentId)
+
 			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			err := pvcJig.DeleteAndAwaitPod(f.Namespace.Name, podName)
 			if err != nil {
@@ -664,6 +664,7 @@ var _ = Describe("CSI Ultra High Performance Volumes", func() {
 			pvc = pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeFilesystem, v1.ReadWriteOnce, v1.ClaimPending)
 			podName = pvcJig.NewPodForCSI("uhp-pvc-app", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeFilesystem)
 			pvcJig.VerifyMultipathEnabled(ctx, f.ComputeClient, pvc.Name, f.Namespace.Name, compartmentId)
+
 			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			err = pvcJig.DeleteAndAwaitPod(f.Namespace.Name, podName)
 			if err != nil {
@@ -679,6 +680,7 @@ var _ = Describe("CSI Ultra High Performance Volumes", func() {
 			pvc = pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeFilesystem, v1.ReadWriteOnce, v1.ClaimPending)
 			podName = pvcJig.NewPodForCSI("uhp-pvc-app", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeFilesystem)
 			pvcJig.VerifyMultipathEnabled(ctx, f.ComputeClient, pvc.Name, f.Namespace.Name, compartmentId)
+
 			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			err = pvcJig.DeleteAndAwaitPod(f.Namespace.Name, podName)
 			if err != nil {
@@ -691,10 +693,12 @@ var _ = Describe("CSI Ultra High Performance Volumes", func() {
 			scName = f.CreateStorageClassOrFail(framework.ClassOCIUHP+"-4", "blockvolume.csi.oraclecloud.com",
 				map[string]string{framework.AttachmentType: framework.AttachmentTypeParavirtualized, csi_util.VpusPerGB: "30"},
 				pvcJig.Labels, "WaitForFirstConsumer", true, "Delete", nil)
+
 			pvc, volumeId := pvcJig.CreateAndAwaitStaticPVCOrFailCSI(f.BlockStorageClient, f.Namespace.Name, framework.MinVolumeBlock, 30, scName, setupF.AdLocation, compartmentId, nil, v1.PersistentVolumeFilesystem, v1.ReadWriteOnce, v1.ClaimPending)
 			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			podName = pvcJig.NewPodForCSI("app4", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeFilesystem)
 			pvcJig.VerifyMultipathEnabled(ctx, f.ComputeClient, pvc.Name, f.Namespace.Name, compartmentId)
+
 			pvcJig.CheckVolumeCapacity("50Gi", pvc.Name, f.Namespace.Name)
 			err = pvcJig.DeleteAndAwaitPod(f.Namespace.Name, podName)
 			if err != nil {
@@ -711,9 +715,11 @@ var _ = Describe("CSI Ultra High Performance Volumes", func() {
 			pvc = pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeFilesystem, v1.ReadWriteOnce, v1.ClaimPending)
 			podName = pvcJig.NewPodForCSI("uhp-pvc-app", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeFilesystem)
 			pvcJig.VerifyMultipathEnabled(ctx, f.ComputeClient, pvc.Name, f.Namespace.Name, compartmentId)
+
 			volumeName := pvcJig.GetVolumeNameFromPVC(pvc.Name, f.Namespace.Name)
 			framework.Logf("Pod name : %s", podName)
 			framework.Logf("Persistent volume name : %s", volumeName)
+
 			pvcJig.DeleteAndAwaitPodOrFail(f.Namespace.Name, podName)
 			err = pvcJig.DeletePersistentVolumeClaim(f.Namespace.Name, pvc.Name)
 			if err != nil {
@@ -783,6 +789,7 @@ var _ = Describe("CSI Ultra High Performance Volumes", func() {
 			time.Sleep(60 * time.Second) //waiting for pod to up and running
 			expandedPvc = pvcJig.UpdateAndAwaitPVCOrFailCSI(pvc, pvc.Namespace, size, nil)
 			time.Sleep(120 * time.Second) //waiting for expanded pvc to be functional
+
 			pvcJig.CheckVolumeCapacity("100Gi", expandedPvc.Name, f.Namespace.Name)
 			pvcJig.CheckFileExists(f.Namespace.Name, podName, "/data", "testdata.txt")
 			pvcJig.CheckFileCorruption(f.Namespace.Name, podName, "/data", "testdata.txt")
@@ -799,9 +806,7 @@ var _ = Describe("CSI UHP Volumes additional e2es", func() {
 	f := framework.NewBackupFramework("csi-uhp-additional")
 	Context("[uhp]", func() {
 		It("Create UHP paravirtual volume and lower performance ISCSI block volumes on same node", func() {
-			if !setupF.CreateUhpNodepool {
-				Skip("Skipping test as UHP nodepool has not been enabled (Env var: CREATE_UHP_NODEPOOL)")
-			}
+			checkUhpPrerequisites(f)
 			sc1params := map[string]string{
 				framework.AttachmentType: framework.AttachmentTypeParavirtualized,
 				csi_util.VpusPerGB:       "30",
@@ -812,9 +817,7 @@ var _ = Describe("CSI UHP Volumes additional e2es", func() {
 			testTwoPVCSetup(f, sc1params, sc2params)
 		})
 		It("Create UHP ISCSI volume and lower performance paravirtualized block volumes on same node", func() {
-			if !setupF.CreateUhpNodepool {
-				Skip("Skipping test as UHP nodepool has not been enabled (Env var: CREATE_UHP_NODEPOOL)")
-			}
+			checkUhpPrerequisites(f)
 			sc1params := map[string]string{
 				framework.AttachmentType: framework.AttachmentTypeISCSI,
 				csi_util.VpusPerGB:       "30",
@@ -825,9 +828,7 @@ var _ = Describe("CSI UHP Volumes additional e2es", func() {
 			testTwoPVCSetup(f, sc1params, sc2params)
 		})
 		It("Create two UHP ISCSI block volumes on same node", func() {
-			if !setupF.CreateUhpNodepool {
-				Skip("Skipping test as UHP nodepool has not been enabled (Env var: CREATE_UHP_NODEPOOL)")
-			}
+			checkUhpPrerequisites(f)
 			sc1params := map[string]string{
 				framework.AttachmentType: framework.AttachmentTypeISCSI,
 				csi_util.VpusPerGB:       "30",
@@ -1121,4 +1122,10 @@ func testTwoPVCSetup(f *framework.CloudProviderFramework, storageclass1params ma
 	f.VolumeIds = append(f.VolumeIds, pvcTwo.Spec.VolumeName)
 	_ = f.DeleteStorageClass("storage-class-one")
 	_ = f.DeleteStorageClass("storage-class-two")
+}
+
+func checkUhpPrerequisites(f *framework.CloudProviderFramework) {
+	if !f.RunUhpE2E {
+		Skip("Skipping test since RUN_UHP_E2E environment variable is set to \"false\"")
+	}
 }
