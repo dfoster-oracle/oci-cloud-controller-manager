@@ -60,17 +60,10 @@ type VolumeAttachmentInterface interface {
 
 	ListVolumeAttachments(ctx context.Context, compartmentID, volumeID string) ([]core.VolumeAttachment, error)
 
-	ListNodeVolumeAttachments(ctx context.Context, compartmentID, nodeID string) ([]core.VolumeAttachment, error) // TODO: change to instanceID
+	ListNodeVolumeAttachments(ctx context.Context, compartmentID, instanceID string) ([]core.VolumeAttachment, error)
 }
 
 var _ VolumeAttachmentInterface = &client{}
-
-// TODO
-// GetVolumeAttachment volumeID+nodeID
-// ListVolumeAttachments volumeID
-// ListNodeVolumeAttachments nodeID
-
-// be careful with the attachmentstates determining the errors and where those are referenced. bv_controller ControllerPublishVolume will have to change a bit
 
 func (c *client) FindVolumeAttachment(ctx context.Context, compartmentID, volumeID string, instanceID string) (core.VolumeAttachment, error) {
 
@@ -321,9 +314,6 @@ func (c *client) WaitForVolumeDetached(ctx context.Context, id string) error {
 	return nil
 }
 
-// ListVolumeAttachments volumeID
-// ListNodeVolumeAttachments nodeID
-
 func (c *client) ListVolumeAttachments(ctx context.Context, compartmentID, volumeID string) ([]core.VolumeAttachment, error) {
 	var (
 		page        *string
@@ -370,7 +360,7 @@ func (c *client) ListVolumeAttachments(ctx context.Context, compartmentID, volum
 	return attachments, nil
 }
 
-func (c *client) ListNodeVolumeAttachments(ctx context.Context, compartmentID, nodeID string) ([]core.VolumeAttachment, error) {
+func (c *client) ListNodeVolumeAttachments(ctx context.Context, compartmentID, instanceID string) ([]core.VolumeAttachment, error) {
 	var (
 		page        *string
 		attachments []core.VolumeAttachment
@@ -382,14 +372,14 @@ func (c *client) ListNodeVolumeAttachments(ctx context.Context, compartmentID, n
 
 		resp, err := c.compute.ListVolumeAttachments(ctx, core.ListVolumeAttachmentsRequest{
 			CompartmentId:   &compartmentID,
-			InstanceId:      &nodeID,
+			InstanceId:      &instanceID,
 			Page:            page,
 			RequestMetadata: c.requestMetadata,
 		})
 
 		if resp.OpcRequestId != nil {
 			c.logger.With("service", "compute", "verb", listVerb, "resource", volumeAttachmentResource).
-				With("nodeID", nodeID, "OpcRequestId", *(resp.OpcRequestId)).With("statusCode", util.GetHttpStatusCode(err)).
+				With("instanceID", instanceID, "OpcRequestId", *(resp.OpcRequestId)).With("statusCode", util.GetHttpStatusCode(err)).
 				Info("OPC Request ID recorded for ListVolumeAttachments call.")
 		}
 

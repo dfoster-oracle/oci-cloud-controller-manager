@@ -706,18 +706,18 @@ func (c *MockComputeClient) ListVolumeAttachments(ctx context.Context, compartme
 	return attachments, nil
 }
 
-func (c *MockComputeClient) ListNodeVolumeAttachments(ctx context.Context, compartmentID, nodeID string) ([]core.VolumeAttachment, error) {
+func (c *MockComputeClient) ListNodeVolumeAttachments(ctx context.Context, compartmentID, instanceID string) ([]core.VolumeAttachment, error) {
 	var (
 		page            *string
 		attachments     []core.VolumeAttachment
 		requestMetadata common.RequestMetadata
 	)
-	if nodeID == "find-active-volume-attachment-timeout-volume" {
+	if instanceID == "find-active-volume-attachment-timeout-volume" {
 
 		for {
 			resp, err := c.compute.ListVolumeAttachments(ctx, core.ListVolumeAttachmentsRequest{
 				CompartmentId:   &compartmentID,
-				InstanceId:      &nodeID,
+				InstanceId:      &instanceID,
 				Page:            page,
 				RequestMetadata: requestMetadata,
 			})
@@ -740,8 +740,8 @@ func (c *MockComputeClient) ListNodeVolumeAttachments(ctx context.Context, compa
 			}
 		}
 	}
-	if volume_attachments[nodeID] != nil {
-		attachments = append(attachments, volume_attachments[nodeID])
+	if volume_attachments[instanceID] != nil {
+		attachments = append(attachments, volume_attachments[instanceID])
 	}
 	return attachments, nil
 }

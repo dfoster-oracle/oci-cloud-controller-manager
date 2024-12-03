@@ -630,8 +630,6 @@ func (d *BlockVolumeControllerDriver) ControllerPublishVolume(ctx context.Contex
 		attachType = attachmentTypeISCSI
 	}
 
-	// allowedNodeVolumeAttachments := 32
-
 	// if the access mode is MULTI_NODE, set isShareable to true
 	isSharable := false
 	allowedVolumeAttachments := 1
@@ -657,6 +655,7 @@ func (d *BlockVolumeControllerDriver) ControllerPublishVolume(ctx context.Contex
 		metrics.SendMetricData(d.metricPusher, metrics.PVAttach, time.Since(startTime).Seconds(), dimensionsMap)
 		return nil, status.Errorf(codes.Unknown, "failed to get the attachment options. error : %s", err)
 	}
+
 	//in transit encryption is not supported for other attachment type than paravirtualized
 	if volumeAttachmentOptions.enableInTransitEncryption && !volumeAttachmentOptions.useParavirtualizedAttachment {
 		log.Errorf("node %s has in transit encryption enabled, but attachment type is not paravirtualized. invalid input", id)
@@ -686,7 +685,7 @@ func (d *BlockVolumeControllerDriver) ControllerPublishVolume(ctx context.Contex
 	if err != nil {
 		if !client.IsNotFound(err) {
 			log.With("service", "compute", "verb", "get", "resource", "volumeAttachment", "statusCode", util.GetHttpStatusCode(err)).
-				With(zap.Error(err)).Error("Error while fetching the Volume details. Unable to attach Volume to node.") // TODO
+				With(zap.Error(err)).Error("Error while fetching the Volume details. Unable to attach Volume to node.")
 			errorType = util.GetError(err)
 			csiMetricDimension = util.GetMetricDimensionForComponent(errorType, util.CSIStorageType)
 			dimensionsMap[metrics.ComponentDimension] = csiMetricDimension
@@ -735,7 +734,7 @@ func (d *BlockVolumeControllerDriver) ControllerPublishVolume(ctx context.Contex
 	volumeAttachments, err := d.client.Compute().ListVolumeAttachments(ctx, compartmentID, req.VolumeId)
 	if err != nil {
 		log.With("service", "compute", "verb", "get", "resource", "volumeAttachment", "statusCode", util.GetHttpStatusCode(err)).
-			With(zap.Error(err)).Error("Got error in finding volume attachment.")
+			With(zap.Error(err)).Error("Error while fetching the Volume details. Unable to attach Volume to node.")
 		errorType = util.GetError(err)
 		csiMetricDimension = util.GetMetricDimensionForComponent(errorType, util.CSIStorageType)
 		dimensionsMap[metrics.ComponentDimension] = csiMetricDimension
@@ -761,7 +760,7 @@ func (d *BlockVolumeControllerDriver) ControllerPublishVolume(ctx context.Contex
 				dimensionsMap[metrics.ComponentDimension] = csiMetricDimension
 				metrics.SendMetricData(d.metricPusher, metrics.PVAttach, time.Since(startTime).Seconds(), dimensionsMap)
 				return nil, status.Errorf(codes.Internal, "Failed to attach volume to node. "+
-					"The volume is already attached to another node.") // TODO
+					"The volume is already attached to too many nodes.")
 			}
 
 			// wait for volumeAttachment(s) in the process of DETACHING to finish before attempting to attach
@@ -797,7 +796,7 @@ func (d *BlockVolumeControllerDriver) ControllerPublishVolume(ctx context.Contex
 
 	}
 
-	// TODO (maybe): check activeNodeAttachments as well if we want to enforce the maximum of 32 volumes attached to a single node
+	// TODO: check nodeVolumeAttachments as well if we want to enforce the maximum of 32 volumes attached to a single node
 	// nodeVolumeAttachments, err := d.client.Compute().ListNodeVolumeAttachments(ctx, compartmentID, id)
 	// if err != nil {
 	// 	log.With("service", "compute", "verb", "get", "resource", "volumeAttachment", "statusCode", util.GetHttpStatusCode(err)).
@@ -809,7 +808,7 @@ func (d *BlockVolumeControllerDriver) ControllerPublishVolume(ctx context.Contex
 	// 	return nil, err
 	// }
 
-	// if len(nodeVolumeAttachments) >= allowedNodeVolumeAttachments {
+	// if len(nodeVolumeAttachments) >= maxVolumesPerNode {
 	// 	// wait for detachments like we do for volumeAttachments if possible
 	//  // fail due to maximum number of attachments present on node
 	// }
