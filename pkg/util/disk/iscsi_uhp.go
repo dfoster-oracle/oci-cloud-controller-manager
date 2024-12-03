@@ -89,10 +89,6 @@ func (c *iSCSIUHPMounter) UnmountPath(path string) error {
 	return UnmountPath(c.logger, path, c.mounter)
 }
 
-func (c *iSCSIUHPMounter) UnmountDeviceBindAndDelete(path string) error {
-	return UnmountFileAndDelete(c.logger, path, c.mounter)
-}
-
 func (c *iSCSIUHPMounter) Rescan(devicePath string) error {
 	deviceMapperPath, err := ReadLink(devicePath, c.logger)
 	if err != nil {
