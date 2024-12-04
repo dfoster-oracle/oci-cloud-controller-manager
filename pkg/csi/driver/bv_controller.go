@@ -1105,20 +1105,29 @@ func (d *BlockVolumeControllerDriver) ControllerGetCapabilities(ctx context.Cont
 func (d *BlockVolumeControllerDriver) validateCapabilities(caps []*csi.VolumeCapability) error {
 	hasSupport := func(capability *csi.VolumeCapability) bool {
 		for _, m := range supportedVolumeCapabilities {
-			if capability.GetAccessMode() == m.GetAccessMode() && capability.GetAccessType() == m.GetAccessType() {
-				return true
+			if capability.GetAccessMode().GetMode() == m.GetAccessMode().GetMode() {
+				if (capability.GetBlock() != nil && m.GetBlock() != nil) || (capability.GetMount() != nil && m.GetMount() != nil) {
+					return true
+				}
 			}
 		}
 		return false
 	}
 
 	for _, cap := range caps {
+		accessType := ""
+		if cap.GetBlock() != nil {
+			accessType = "Block"
+		} else if cap.GetMount() != nil {
+			accessType = "Mount"
+		}
+
 		if hasSupport(cap) {
 			continue
 		} else {
 			// we need to make sure all capabilities are supported. Revert back
 			// in case we have a cap that is supported, but is invalidated now
-			d.logger.Errorf("The VolumeCapability isn't supported: AccessMode=%s AccessType=%s", cap.GetAccessMode(), cap.GetAccessType())
+			d.logger.Errorf("The VolumeCapability isn't supported: AccessMode=%s AccessType=%s", cap.GetAccessMode(), accessType)
 			return fmt.Errorf("invalid volume capabilities requested")
 		}
 	}

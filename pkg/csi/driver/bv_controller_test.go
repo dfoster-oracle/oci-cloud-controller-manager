@@ -888,7 +888,7 @@ func TestControllerDriver_CreateVolume(t *testing.T) {
 			wantErr: errors.New("CreateVolume Name must be provided"),
 		},
 		{
-			name:   "Error for unsupported VolumeCapabilities: MULTI_NODE_MULTI_WRITER provided in CreateVolumeRequest",
+			name:   "Error for unsupported VolumeCapabilities: MULTI_NODE_MULTI_WRITER with Mount provided in CreateVolumeRequest",
 			fields: fields{},
 			args: args{
 				ctx: nil,
@@ -898,11 +898,14 @@ func TestControllerDriver_CreateVolume(t *testing.T) {
 						AccessMode: &csi.VolumeCapability_AccessMode{
 							Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
 						},
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
 					}},
 				},
 			},
 			want:    nil,
-			wantErr: errors.New("invalid volume capabilities requested. Only SINGLE_NODE_WRITER is supported ('accessModes.ReadWriteOnce' on Kubernetes)"),
+			wantErr: errors.New("invalid volume capabilities requested"),
 		},
 		{
 			name:   "Error for no VolumeCapabilities provided in CreateVolumeRequest",
@@ -918,7 +921,7 @@ func TestControllerDriver_CreateVolume(t *testing.T) {
 			wantErr: errors.New("VolumeCapabilities must be provided in CreateVolumeRequest"),
 		},
 		{
-			name:   "Error for unsupported VolumeCapabilities: MULTI_NODE_READER_ONLY provided in CreateVolumeRequest",
+			name:   "Error for unsupported VolumeCapabilities: MULTI_NODE_READER_ONLY with Mount provided in CreateVolumeRequest",
 			fields: fields{},
 			args: args{
 				ctx: nil,
@@ -928,14 +931,17 @@ func TestControllerDriver_CreateVolume(t *testing.T) {
 						AccessMode: &csi.VolumeCapability_AccessMode{
 							Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
 						},
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
 					}},
 				},
 			},
 			want:    nil,
-			wantErr: errors.New("invalid volume capabilities requested. Only SINGLE_NODE_WRITER is supported ('accessModes.ReadWriteOnce' on Kubernetes)"),
+			wantErr: errors.New("invalid volume capabilities requested"),
 		},
 		{
-			name:   "Error for unsupported VolumeCapabilities: MULTI_NODE_SINGLE_WRITER provided in CreateVolumeRequest",
+			name:   "Error for unsupported VolumeCapabilities: MULTI_NODE_SINGLE_WRITER with Mount provided in CreateVolumeRequest",
 			fields: fields{},
 			args: args{
 				ctx: nil,
@@ -945,11 +951,14 @@ func TestControllerDriver_CreateVolume(t *testing.T) {
 						AccessMode: &csi.VolumeCapability_AccessMode{
 							Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_SINGLE_WRITER,
 						},
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
+						},
 					}},
 				},
 			},
 			want:    nil,
-			wantErr: errors.New("invalid volume capabilities requested. Only SINGLE_NODE_WRITER is supported ('accessModes.ReadWriteOnce' on Kubernetes)"),
+			wantErr: errors.New("invalid volume capabilities requested"),
 		},
 		{
 			name:   "Error for exceeding capacity range",
@@ -961,6 +970,9 @@ func TestControllerDriver_CreateVolume(t *testing.T) {
 					VolumeCapabilities: []*csi.VolumeCapability{{
 						AccessMode: &csi.VolumeCapability_AccessMode{
 							Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+						},
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{},
 						},
 					}},
 					CapacityRange: &csi.CapacityRange{
@@ -983,6 +995,9 @@ func TestControllerDriver_CreateVolume(t *testing.T) {
 						{
 							AccessMode: &csi.VolumeCapability_AccessMode{
 								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
+							AccessType: &csi.VolumeCapability_Mount{
+								Mount: &csi.VolumeCapability_MountVolume{},
 							},
 						}},
 					CapacityRange: &csi.CapacityRange{
@@ -1009,6 +1024,69 @@ func TestControllerDriver_CreateVolume(t *testing.T) {
 						{
 							AccessMode: &csi.VolumeCapability_AccessMode{
 								Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+							},
+							AccessType: &csi.VolumeCapability_Block{
+								Block: &csi.VolumeCapability_BlockVolume{},
+							},
+						},
+					},
+					Parameters: map[string]string{
+						"vpusPerGB": "10",
+					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: int64(50000),
+					},
+					AccessibilityRequirements: &csi.TopologyRequirement{
+						Requisite: []*csi.Topology{
+							{
+								Segments: map[string]string{
+									kubeAPI.LabelZoneFailureDomain: "PHX-AD-2",
+								},
+							}, {
+								Segments: map[string]string{
+									kubeAPI.LabelZoneFailureDomain: "PHX-AD-2",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: &csi.CreateVolumeResponse{
+				Volume: &csi.Volume{
+					VolumeId:      "volume-in-available-state",
+					CapacityBytes: int64(52428800000),
+					AccessibleTopology: []*csi.Topology{
+						{
+							Segments: map[string]string{
+								kubeAPI.LabelTopologyZone: "PHX-AD-2",
+							},
+						},
+						{
+							Segments: map[string]string{
+								kubeAPI.LabelZoneFailureDomain: "PHX-AD-2",
+							},
+						},
+					},
+					VolumeContext: map[string]string{
+						"needResize":      "false",
+						"newSize":         "",
+						"vpusPerGB":       "10",
+						"attachment-type": "",
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "No error when a volume is created in block mode with MULTI_NODE_MULTI_WRITER",
+			args: args{
+				ctx: context.TODO(),
+				req: &csi.CreateVolumeRequest{
+					Name: "volume-in-available-state",
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
 							},
 							AccessType: &csi.VolumeCapability_Block{
 								Block: &csi.VolumeCapability_BlockVolume{},
