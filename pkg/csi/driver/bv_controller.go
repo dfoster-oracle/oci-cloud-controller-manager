@@ -1115,18 +1115,17 @@ func (d *BlockVolumeControllerDriver) validateCapabilities(caps []*csi.VolumeCap
 	}
 
 	for _, cap := range caps {
-		accessType := ""
-		if cap.GetBlock() != nil {
-			accessType = "Block"
-		} else if cap.GetMount() != nil {
-			accessType = "Mount"
-		}
-
 		if hasSupport(cap) {
 			continue
 		} else {
 			// we need to make sure all capabilities are supported. Revert back
 			// in case we have a cap that is supported, but is invalidated now
+			accessType := ""
+			if cap.GetBlock() != nil {
+				accessType = "Block"
+			} else if cap.GetMount() != nil {
+				accessType = "Mount"
+			}
 			d.logger.Errorf("The VolumeCapability isn't supported: AccessMode=%s AccessType=%s", cap.GetAccessMode(), accessType)
 			return fmt.Errorf("invalid volume capabilities requested")
 		}
