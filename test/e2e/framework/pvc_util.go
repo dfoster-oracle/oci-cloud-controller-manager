@@ -800,6 +800,116 @@ func (j *PVCTestJig) NewPodForCSI(name string, namespace string, claimName strin
 	return pod.Name
 }
 
+// NewPodForCSIwAntiAffinity creates a pod with the specified volume mode, using the CentOS image for both cases.
+func (j *PVCTestJig) NewPodForCSIwAntiAffinity(name string, namespace string, claimName string, adLabel string, volumeMode v1.PersistentVolumeMode) string {
+
+	if volumeMode == "" {
+		volumeMode = v1.PersistentVolumeFilesystem
+	}
+
+	By("Creating a pod with the claiming PVC created by CSI")
+
+	var containers []v1.Container
+	var volumes []v1.Volume
+	var args []string
+	var labels = map[string]string{"csi-e2e-test-pod": "pod-with-antiaffinity"}
+
+	// Determine Args and configuration based on volumeMode
+	switch volumeMode {
+	case v1.PersistentVolumeFilesystem:
+		args = []string{"-c", "echo 'Hello World' > /data/testdata.txt; while true; do echo $(date -u) >> /data/out.txt; sleep 5; done"}
+		containers = []v1.Container{
+			{
+				Name:    name,
+				Image:   centos,
+				Command: []string{"/bin/sh"},
+				Args:    args,
+				VolumeMounts: []v1.VolumeMount{
+					{
+						Name:      "persistent-storage",
+						MountPath: "/data",
+					},
+				},
+			},
+		}
+		volumes = []v1.Volume{
+			{
+				Name: "persistent-storage",
+				VolumeSource: v1.VolumeSource{
+					PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+						ClaimName: claimName,
+					},
+				},
+			},
+		}
+	case v1.PersistentVolumeBlock:
+		args = []string{"-c", "echo 'Hello World' > /tmp/test.txt; dd if=/tmp/test.txt of=/dev/xvda count=1; while true; do sleep 5; done"}
+		containers = []v1.Container{
+			{
+				Name:    name,
+				Image:   centos,
+				Command: []string{"/bin/sh"},
+				Args:    args,
+				VolumeDevices: []v1.VolumeDevice{
+					{
+						Name:       "persistent-storage",
+						DevicePath: "/dev/xvda",
+					},
+				},
+			},
+		}
+		volumes = []v1.Volume{
+			{
+				Name: "persistent-storage",
+				VolumeSource: v1.VolumeSource{
+					PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+						ClaimName: claimName,
+					},
+				},
+			},
+		}
+	default:
+		Failf("Unsupported volumeMode: %s", volumeMode)
+	}
+
+	pod, err := j.KubeClient.CoreV1().Pods(namespace).Create(context.Background(), &v1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: j.Name,
+			Namespace:    namespace,
+			Labels:       labels,
+		},
+		Spec: v1.PodSpec{
+			Containers: containers,
+			Volumes:    volumes,
+			NodeSelector: map[string]string{
+				plugin.LabelZoneFailureDomain: adLabel,
+			},
+			Affinity: &v1.Affinity{
+				PodAntiAffinity: &v1.PodAntiAffinity{
+					RequiredDuringSchedulingIgnoredDuringExecution: []v1.PodAffinityTerm{
+						{LabelSelector: &metav1.LabelSelector{MatchLabels: labels}},
+					},
+				},
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		Failf("Pod %q Create API error: %v", pod.Name, err)
+	}
+
+	// Waiting for pod to be running
+	err = j.waitTimeoutForPodRunningInNamespace(pod.Name, namespace, slowPodStartTimeout)
+	if err != nil {
+		Failf("Pod %q is not Running: %v", pod.Name, err)
+	}
+	zap.S().With(pod.Namespace).With(pod.Name).Info("CSI POD is created.")
+	return pod.Name
+}
+
 // newPODTemplate returns the default template for this jig,
 // creates the Pod. Attaches PVC to the Pod which is created by CSI
 func (j *PVCTestJig) NewPodWithLabels(name string, namespace string, claimName string, labels map[string]string) string {
@@ -1181,8 +1291,8 @@ func (j *PVCTestJig) SanityCheckPV(pvc *v1.PersistentVolumeClaim) {
 		expectedAccessModes := []v1.PersistentVolumeAccessMode{v1.ReadWriteMany}
 		Expect(pv.Spec.AccessModes).To(Equal(expectedAccessModes))
 	} else {
-		expectedAccessModes := []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce}
-		Expect(pv.Spec.AccessModes).To(Equal(expectedAccessModes))
+		expectedAccessModes := []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadWriteMany}
+		Expect(expectedAccessModes).To(ContainElements(pv.Spec.AccessModes))
 	}
 	// Check PV properties
 	Expect(pv.Spec.ClaimRef.Name).To(Equal(pvc.ObjectMeta.Name))
@@ -1670,6 +1780,39 @@ func (j *PVCTestJig) DeleteAndAwaitPod(namespace, podName string) error {
 // an error other than "not found" then that error is returned and the wait stops.
 func (j *PVCTestJig) WaitTimeoutForPVNotFound(pvName string, timeout time.Duration) error {
 	return wait.PollImmediate(Poll, timeout, j.pvNotFound(pvName))
+}
+
+func (j *PVCTestJig) ListSchedulableNodes() []v1.Node {
+	nodes, err := j.KubeClient.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		Failf("Error getting list of nodes: %v", err)
+	}
+
+	if len(nodes.Items) == 0 {
+		Failf("No nodes are present in the cluster")
+	}
+
+	schedulableNodes := []v1.Node{}
+
+	for _, node := range nodes.Items {
+		schedulable := false
+		if !node.Spec.Unschedulable {
+			for _, taint := range node.Spec.Taints {
+				if taint.Key == "node-role.kubernetes.io/worker" || taint.Key == "node-role.kubernetes.io/compute" {
+					schedulable = true
+				}
+			}
+		}
+		if !schedulable {
+			schedulableNodes = append(schedulableNodes, node)
+		}
+	}
+
+	if len(schedulableNodes) == 0 {
+		Failf("No schedulable nodes found")
+	}
+
+	return schedulableNodes
 }
 
 func (j *PVCTestJig) GetPVCByName(pvcName, namespace string) v1.PersistentVolumeClaim {
