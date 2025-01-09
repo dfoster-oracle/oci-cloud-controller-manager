@@ -38,9 +38,9 @@ type VolumeAttachmentInterface interface {
 
 	// AttachVolume attaches a block storage volume to the specified instance.
 	// See https://docs.us-phoenix-1.oraclecloud.com/api/#/en/iaas/20160918/VolumeAttachment/AttachVolume
-	AttachVolume(ctx context.Context, instanceID, volumeID string, isSharable bool) (core.VolumeAttachment, error)
+	AttachVolume(ctx context.Context, instanceID, volumeID string, isShareable bool) (core.VolumeAttachment, error)
 
-	AttachParavirtualizedVolume(ctx context.Context, instanceID, volumeID string, isPvEncryptionInTransitEnabled bool, isSharable bool) (core.VolumeAttachment, error)
+	AttachParavirtualizedVolume(ctx context.Context, instanceID, volumeID string, isPvEncryptionInTransitEnabled bool, isShareable bool) (core.VolumeAttachment, error)
 
 	// WaitForVolumeAttached polls waiting for a OCI block volume to be in the
 	// ATTACHED state.
@@ -141,7 +141,7 @@ func (c *client) GetVolumeAttachment(ctx context.Context, id string) (core.Volum
 	return resp.VolumeAttachment, nil
 }
 
-func (c *client) AttachVolume(ctx context.Context, instanceID, volumeID string, isSharable bool) (core.VolumeAttachment, error) {
+func (c *client) AttachVolume(ctx context.Context, instanceID, volumeID string, isShareable bool) (core.VolumeAttachment, error) {
 	if !c.rateLimiter.Writer.TryAccept() {
 		return nil, RateLimitError(false, "")
 	}
@@ -156,7 +156,7 @@ func (c *client) AttachVolume(ctx context.Context, instanceID, volumeID string, 
 			InstanceId:  &instanceID,
 			VolumeId:    &volumeID,
 			Device:      device,
-			IsShareable: &isSharable,
+			IsShareable: &isShareable,
 		},
 		RequestMetadata: c.requestMetadata,
 	})

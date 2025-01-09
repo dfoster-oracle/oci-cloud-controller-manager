@@ -2094,15 +2094,20 @@ func TestGetAttachmentOptions(t *testing.T) {
 	tests := map[string]struct {
 		attachmentType         string
 		instanceID             string
+		isShareable            bool
 		volumeAttachmentOption VolumeAttachmentOption
 		wantErr                bool
 	}{
 		"PV attachment with instance in-transit encryption enabled": {
 			attachmentType: attachmentTypeParavirtualized,
 			instanceID:     "inTransitEnabled",
+			isShareable:    false,
 			volumeAttachmentOption: VolumeAttachmentOption{
 				enableInTransitEncryption:    true,
 				useParavirtualizedAttachment: true,
+				isShareable:                  false,
+				enforceLimit:                 true,
+				maxVolumeAttachments:         1,
 			},
 			wantErr: false,
 		},
@@ -2110,36 +2115,53 @@ func TestGetAttachmentOptions(t *testing.T) {
 		"PV attachment with instance in-transit encryption disabled": {
 			attachmentType: attachmentTypeParavirtualized,
 			instanceID:     "inTransitDisabled",
+			isShareable:    false,
 			volumeAttachmentOption: VolumeAttachmentOption{
 				enableInTransitEncryption:    false,
 				useParavirtualizedAttachment: true,
+				isShareable:                  false,
+				enforceLimit:                 true,
+				maxVolumeAttachments:         1,
 			},
 			wantErr: false,
 		},
 		"ISCSI attachment with instance in-transit encryption enabled": {
 			attachmentType: attachmentTypeISCSI,
 			instanceID:     "inTransitEnabled",
+			isShareable:    false,
 			volumeAttachmentOption: VolumeAttachmentOption{
 				enableInTransitEncryption:    true,
 				useParavirtualizedAttachment: false,
+				isShareable:                  false,
+				enforceLimit:                 true,
+				maxVolumeAttachments:         1,
 			},
 			wantErr: false,
 		},
 		"ISCSI attachment with instance in-transit encryption disabled": {
 			attachmentType: attachmentTypeISCSI,
 			instanceID:     "inTransitDisabled",
+			isShareable:    false,
 			volumeAttachmentOption: VolumeAttachmentOption{
 				enableInTransitEncryption:    false,
 				useParavirtualizedAttachment: false,
+				isShareable:                  false,
+				enforceLimit:                 true,
+				maxVolumeAttachments:         1,
 			},
 			wantErr: false,
 		},
 		"API error": {
-			attachmentType:         attachmentTypeISCSI,
-			instanceID:             "foo",
-			volumeAttachmentOption: VolumeAttachmentOption{},
-			wantErr:                true,
+			attachmentType: attachmentTypeISCSI,
+			instanceID:     "foo",
+			isShareable:    false,
+			volumeAttachmentOption: VolumeAttachmentOption{
+				enforceLimit:         true,
+				maxVolumeAttachments: 1,
+			},
+			wantErr: true,
 		},
+		// TODO: add some test cases for RWX
 	}
 
 	computeClient := MockOCIClient{}.Compute()
@@ -2147,7 +2169,7 @@ func TestGetAttachmentOptions(t *testing.T) {
 	for name, tt := range tests {
 
 		t.Run(name, func(t *testing.T) {
-			volumeAttachmentOption, err := getAttachmentOptions(context.Background(), computeClient, tt.attachmentType, tt.instanceID)
+			volumeAttachmentOption, err := getAttachmentOptions(context.Background(), computeClient, tt.attachmentType, tt.instanceID, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getAttachmentOptions() error = %v, wantErr %v", err, tt.wantErr)
 				return
