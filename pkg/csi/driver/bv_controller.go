@@ -902,6 +902,9 @@ func (d *BlockVolumeControllerDriver) ControllerUnpublishVolume(ctx context.Cont
 		log.With(zap.Error(err)).Errorf("failed to get instanceID from node : %s", req.NodeId)
 	}
 
+	// Handle possible oci:// prefix.
+	instanceID = client.MapProviderIDToResourceID(instanceID)
+
 	attachedVolume, err := d.client.Compute().FindVolumeAttachment(ctx, compartmentID, req.VolumeId, instanceID)
 
 	if attachedVolume != nil && attachedVolume.GetId() != nil {

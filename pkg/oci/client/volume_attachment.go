@@ -67,7 +67,7 @@ var _ VolumeAttachmentInterface = &client{}
 
 func (c *client) FindVolumeAttachment(ctx context.Context, compartmentID, volumeID string, instanceID string) (core.VolumeAttachment, error) {
 
-	c.logger.With("instanceID", instanceID).
+	c.logger.With("instanceID", instanceID, "volumeID", volumeID).
 		Info("Roger, beginning FindVolumeAttachment")
 
 	var page *string
