@@ -40,6 +40,9 @@ var _ = Describe("CSI RWX Raw Block Volume Creation", func() {
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeBlock, v1.ReadWriteMany, v1.ClaimPending)
 			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			pvcJig.NewPodForCSI("app1", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
+			
+			time.Sleep(60 * time.Second) //waiting for pod to up and running
+			
 			volumeName := pvcJig.GetVolumeNameFromPVC(pvc.GetName(), f.Namespace.Name)
 			compartmentId := f.GetCompartmentId(*setupF)
 			// read created BV
