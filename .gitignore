@@ -31,6 +31,7 @@ cloud-provider.yaml
 manifests/bmcs-config.yaml
 manifests/bmcs-secret.yaml
 vendors.txt
+provider-config-example.yaml
 
 env-old.sh
 config.yaml

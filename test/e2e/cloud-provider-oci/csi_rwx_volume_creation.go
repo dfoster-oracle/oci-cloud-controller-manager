@@ -348,7 +348,7 @@ var _ = Describe("CSI Raw Block Volume Performance Level", func() {
 			_ = f.DeleteStorageClass(f.Namespace.Name)
 		})
 	})
-	Context("[cloudprovider][storage][csi][perf][static][raw-block]", func() {
+	Context("[cloudprovider][storage][csi][perf][static][raw-block][rwx]", func() {
 		It("High Performance CSI raw block volume Static Provisioning", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-perf-static-high")
 
@@ -410,4 +410,20 @@ var _ = Describe("CSI Static Raw Block Volume Creation", func() {
 			f.VolumeIds = append(f.VolumeIds, volumeId)
 		})
 	})
+})
+
+var _ = Describe("CSI CMEK,PV attachment and in-transit encryption test", func() {
+	f := framework.NewDefaultFramework("csi-basic")
+	Context("[cloudprovider][storage][csi][cmek][paravirtualized][raw-block][rwx]", func() {
+		It("Create raw block PVC and POD for CSI with CMEK,PV attachment and in-transit encryption", func() {
+			TestCMEKAttachmentTypeAndEncryptionType(f, framework.AttachmentTypeParavirtualized, true, v1.ReadWriteMany)
+		})
+	})
+
+	Context("[cloudprovider][storage][csi][cmek][iscsi][raw-block][rwx]", func() {
+		It("Create raw block PVC and POD for CSI with CMEK,ISCSI attachment and in-transit encryption", func() {
+			TestCMEKAttachmentTypeAndEncryptionType(f, framework.AttachmentTypeISCSI, true, v1.ReadWriteMany)
+		})
+	})
+
 })
