@@ -383,6 +383,16 @@ func (d OCIFlexvolumeDriver) Detach(logger *zap.SugaredLogger, pvOrVolumeName, n
 		return flexvolume.Fail(logger, "Failed to look up node id: ", err)
 	}
 
+	// Handle possible oci:// prefix.
+	instanceID, err = ociprovider.MapProviderIDToResourceID(instanceID)
+	if err != nil {
+		errorType = util.GetError(err)
+		fvdMetricDimension = util.GetMetricDimensionForComponent(errorType, util.FVDStorageType)
+		dimensionsMap[metrics.ComponentDimension] = fvdMetricDimension
+		metrics.SendMetricData(d.metricPusher, metrics.PVAttach, time.Since(startTime).Seconds(), dimensionsMap)
+		return flexvolume.Fail(logger, "Failed to map nodes provider id to instance id: ", err)
+	}
+
 	attachment, err := c.Compute().FindVolumeAttachment(ctx, compartmentID, volumeOCID, instanceID)
 	if err != nil {
 		logger.Error("Error in finding volume attachment")
@@ -453,6 +463,12 @@ func (d OCIFlexvolumeDriver) IsAttached(logger *zap.SugaredLogger, opts flexvolu
 	instanceID, err := lookupNodeID(d.K, nodeName)
 	if err != nil {
 		return flexvolume.Fail(logger, "Failed to look up node id: ", err)
+	}
+
+	// Handle possible oci:// prefix.
+	instanceID, err = ociprovider.MapProviderIDToResourceID(instanceID)
+	if err != nil {
+		return flexvolume.Fail(logger, "Failed to map nodes provider id to instance id: ", err)
 	}
 
 	attachment, err := c.Compute().FindVolumeAttachment(ctx, compartmentID, volumeOCID, instanceID)
