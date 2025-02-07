@@ -891,7 +891,9 @@ func (j *PVCTestJig) NewPodForCSIwAntiAffinity(name string, namespace string, cl
 			Affinity: &v1.Affinity{
 				PodAntiAffinity: &v1.PodAntiAffinity{
 					RequiredDuringSchedulingIgnoredDuringExecution: []v1.PodAffinityTerm{
-						{LabelSelector: &metav1.LabelSelector{MatchLabels: labels}},
+						{LabelSelector: &metav1.LabelSelector{MatchLabels: labels},
+							TopologyKey: "kubernetes.io/hostname",
+						},
 					},
 				},
 			},
@@ -1797,13 +1799,16 @@ func (j *PVCTestJig) ListSchedulableNodes() []v1.Node {
 	for _, node := range nodes.Items {
 		schedulable := false
 		if !node.Spec.Unschedulable {
+			if len(node.Spec.Taints) == 0 { // worker nodes have no taints so set them to schedulable
+				schedulable = true
+			}
 			for _, taint := range node.Spec.Taints {
 				if taint.Key == "node-role.kubernetes.io/worker" || taint.Key == "node-role.kubernetes.io/compute" {
 					schedulable = true
 				}
 			}
 		}
-		if !schedulable {
+		if schedulable {
 			schedulableNodes = append(schedulableNodes, node)
 		}
 	}
