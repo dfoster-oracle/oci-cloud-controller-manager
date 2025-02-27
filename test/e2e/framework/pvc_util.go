@@ -242,9 +242,9 @@ func (j *PVCTestJig) NewPVCTemplateDynamicFSS(namespace, volumeSize, scName stri
 // newPVCTemplateSnapshotRestore returns the default template for this jig, but
 // does not actually create the PVC.  The default PVC has the same name
 // as the jig
-func (j *PVCTestJig) newPVCTemplateSnapshotSource(namespace, volumeSize, scName string, vsName string, isRawBlockVolume bool) *v1.PersistentVolumeClaim {
+func (j *PVCTestJig) newPVCTemplateSnapshotSource(namespace, volumeSize, scName string, vsName string, accessMode v1.PersistentVolumeAccessMode, isRawBlockVolume bool) *v1.PersistentVolumeClaim {
 	pvc := j.CreatePVCTemplate(namespace, volumeSize)
-	pvc = j.pvcAddAccessMode(pvc, v1.ReadWriteOnce)
+	pvc = j.pvcAddAccessMode(pvc, accessMode)
 	pvc = j.pvcAddStorageClassName(pvc, scName)
 	pvc = j.pvcAddDataSource(pvc, vsName)
 
@@ -350,9 +350,9 @@ func (j *PVCTestJig) CreatePVCorFailDynamicFSS(namespace, volumeSize string, scN
 // CreatePVCorFailSnapshotSource creates a new claim based on the jig's
 // defaults. Callers can provide a function to tweak the claim object
 // before it is created.
-func (j *PVCTestJig) CreatePVCorFailSnapshotSource(namespace, volumeSize string, scName string, vsName string, isRawBlockVolume bool,
+func (j *PVCTestJig) CreatePVCorFailSnapshotSource(namespace, volumeSize string, scName string, vsName string, accessMode v1.PersistentVolumeAccessMode, isRawBlockVolume bool,
 	tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
-	pvc := j.newPVCTemplateSnapshotSource(namespace, volumeSize, scName, vsName, isRawBlockVolume)
+	pvc := j.newPVCTemplateSnapshotSource(namespace, volumeSize, scName, vsName, accessMode, isRawBlockVolume)
 	return j.CheckPVCorFail(pvc, tweak, namespace, volumeSize)
 }
 
@@ -443,8 +443,8 @@ func (j *PVCTestJig) CreateAndAwaitPVCOrFailDynamicFSS(namespace, volumeSize, sc
 // its dependant resources. Callers can provide a function to tweak the
 // PVC object before it is created.
 func (j *PVCTestJig) CreateAndAwaitPVCOrFailSnapshotSource(namespace, volumeSize, scName string,
-	vsName string, phase v1.PersistentVolumeClaimPhase, isRawBlockVolume bool, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
-	pvc := j.CreatePVCorFailSnapshotSource(namespace, volumeSize, scName, vsName, isRawBlockVolume, tweak)
+	vsName string, accessMode v1.PersistentVolumeAccessMode, phase v1.PersistentVolumeClaimPhase, isRawBlockVolume bool, tweak func(pvc *v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
+	pvc := j.CreatePVCorFailSnapshotSource(namespace, volumeSize, scName, vsName, accessMode, isRawBlockVolume, tweak)
 	return j.CheckAndAwaitPVCOrFail(pvc, namespace, phase)
 }
 
@@ -1784,7 +1784,7 @@ func (j *PVCTestJig) WaitTimeoutForPVNotFound(pvName string, timeout time.Durati
 	return wait.PollImmediate(Poll, timeout, j.pvNotFound(pvName))
 }
 
-func (j *PVCTestJig) ListSchedulableNodes() []v1.Node {
+func (j *PVCTestJig) ListSchedulableNodesInAD(adLocation string) []v1.Node {
 	nodes, err := j.KubeClient.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		Failf("Error getting list of nodes: %v", err)
@@ -1797,6 +1797,12 @@ func (j *PVCTestJig) ListSchedulableNodes() []v1.Node {
 	schedulableNodes := []v1.Node{}
 
 	for _, node := range nodes.Items {
+		// Get node's AD Label
+		nodeAD, exists := node.Labels["topology.kubernetes.io/zone"]
+		// Skip if the AD doesn't match
+		if !exists || nodeAD != adLocation {
+			continue
+		}
 		schedulable := false
 		if !node.Spec.Unschedulable {
 			if len(node.Spec.Taints) == 0 { // worker nodes have no taints so set them to schedulable

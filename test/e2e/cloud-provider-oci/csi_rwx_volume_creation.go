@@ -38,11 +38,10 @@ var _ = Describe("CSI RWX Raw Block Volume Creation", func() {
 			ctx := context.TODO()
 			scName := f.CreateStorageClassOrFail(f.Namespace.Name, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer", false, "Delete", nil)
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeBlock, v1.ReadWriteMany, v1.ClaimPending)
-			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			pvcJig.NewPodForCSI("app1", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
-			
+
 			time.Sleep(60 * time.Second) //waiting for pod to up and running
-			
+
 			volumeName := pvcJig.GetVolumeNameFromPVC(pvc.GetName(), f.Namespace.Name)
 			compartmentId := f.GetCompartmentId(*setupF)
 			// read created BV
@@ -56,6 +55,7 @@ var _ = Describe("CSI RWX Raw Block Volume Creation", func() {
 					framework.Failf("the resource %s is expected to have oke system tags", *volume.Id)
 				}
 			}
+			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 		})
 
 		It("Create RWX raw block PVC with VolumeSize 1Gi but should use default 50Gi", func() {
@@ -63,11 +63,10 @@ var _ = Describe("CSI RWX Raw Block Volume Creation", func() {
 
 			scName := f.CreateStorageClassOrFail(f.Namespace.Name, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer", false, "Delete", nil)
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.VolumeFss, scName, nil, v1.PersistentVolumeBlock, v1.ReadWriteMany, v1.ClaimPending)
-			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			pvcJig.NewPodForCSI("app2", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
 
 			time.Sleep(60 * time.Second) // waiting for pod to up and running
-
+			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			pvcJig.CheckVolumeCapacity("50Gi", pvc.Name, f.Namespace.Name)
 		})
 
@@ -76,11 +75,10 @@ var _ = Describe("CSI RWX Raw Block Volume Creation", func() {
 
 			scName := f.CreateStorageClassOrFail(f.Namespace.Name, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer", false, "Delete", nil)
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MaxVolumeBlock, scName, nil, v1.PersistentVolumeBlock, v1.ReadWriteMany, v1.ClaimPending)
-			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			pvcJig.NewPodForCSI("app3", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
 
 			time.Sleep(60 * time.Second) // waiting for pod to up and running
-
+			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			pvcJig.CheckVolumeCapacity("100Gi", pvc.Name, f.Namespace.Name)
 		})
 
@@ -102,37 +100,37 @@ var _ = Describe("CSI RWX Raw Block Volume MULTI_NODE", func() {
 		It("Create RWX raw block PVC, schedule a pod on each worker node", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-provisioner-e2e-tests")
 
-			nodes := pvcJig.ListSchedulableNodes()
+			nodes := pvcJig.ListSchedulableNodesInAD(setupF.AdLabel)
 			if len(nodes) < 2 {
-				Skip(fmt.Sprintf("at least 2 schedulable nodes required to test MULTI_NODE %s", f.Namespace.Name))
+				Skip(fmt.Sprintf("at least 2 schedulable nodes in a AD is required to test MULTI_NODE %s", f.Namespace.Name))
 			}
 
 			scName := f.CreateStorageClassOrFail(f.Namespace.Name, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer", false, "Delete", nil)
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeBlock, v1.ReadWriteMany, v1.ClaimPending)
-			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 
 			// schedule a pod on each available node
 			for i := range nodes {
 				pvcJig.NewPodForCSIwAntiAffinity(fmt.Sprintf("pod-%d", i), f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
 			}
+			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 		})
 
 		It("Create RWX raw block PVC, schedule a pod on each worker node, then attempt to schedule another", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-provisioner-e2e-tests")
 
-			nodes := pvcJig.ListSchedulableNodes()
+			nodes := pvcJig.ListSchedulableNodesInAD(setupF.AdLabel)
 			if len(nodes) < 2 {
-				Skip(fmt.Sprintf("at least 2 schedulable nodes required to test MULTI_NODE %s", f.Namespace.Name))
+				Skip(fmt.Sprintf("at least 2 schedulable nodes in a AD is required to test MULTI_NODE %s", f.Namespace.Name))
 			}
 
 			scName := f.CreateStorageClassOrFail(f.Namespace.Name, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer", false, "Delete", nil)
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeBlock, v1.ReadWriteMany, v1.ClaimPending)
-			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 
 			// schedule a pod on each available node
 			for i := range nodes {
 				pvcJig.NewPodForCSIwAntiAffinity(fmt.Sprintf("pod-%d", i), f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
 			}
+			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 
 			// TODO: try to schedule another pod (expect failure)
 		})
@@ -140,14 +138,13 @@ var _ = Describe("CSI RWX Raw Block Volume MULTI_NODE", func() {
 		It("Create RWX raw block PVC, schedule a pod on each worker node, delete one of the pods", func() {
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-provisioner-e2e-tests")
 
-			nodes := pvcJig.ListSchedulableNodes()
+			nodes := pvcJig.ListSchedulableNodesInAD(setupF.AdLabel)
 			if len(nodes) < 2 {
-				Skip(fmt.Sprintf("at least 2 schedulable nodes required to test MULTI_NODE %s", f.Namespace.Name))
+				Skip(fmt.Sprintf("at least 2 schedulable nodes in a AD is required to test MULTI_NODE %s", f.Namespace.Name))
 			}
 
 			scName := f.CreateStorageClassOrFail(f.Namespace.Name, "blockvolume.csi.oraclecloud.com", nil, pvcJig.Labels, "WaitForFirstConsumer", false, "Delete", nil)
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeBlock, v1.ReadWriteMany, v1.ClaimPending)
-			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 
 			pods := []string{}
 
@@ -167,6 +164,7 @@ var _ = Describe("CSI RWX Raw Block Volume MULTI_NODE", func() {
 			pvcJig.CheckExpandedRawBlockVolumeReadWrite(f.Namespace.Name, pods[1])
 			pvcJig.ExtractDataFromBlockDevice(f.Namespace.Name, pods[1], "/dev/xvda", "/tmp/testdata.txt")
 			// pvcJig.CheckFileCorruption(f.Namespace.Name, pods[1], "/tmp", "testdata.txt")
+			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 		})
 	})
 })
@@ -178,16 +176,15 @@ var _ = Describe("CSI Raw Block Volume Expansion iSCSI", func() {
 			var size = "100Gi"
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-resizer-pvc-expand-to-100gi-iscsi")
 
-			nodes := pvcJig.ListSchedulableNodes()
+			nodes := pvcJig.ListSchedulableNodesInAD(setupF.AdLabel)
 			if len(nodes) < 2 {
-				Skip(fmt.Sprintf("at least 2 schedulable nodes required to test MULTI_NODE %s", f.Namespace.Name))
+				Skip(fmt.Sprintf("at least 2 schedulable nodes in a AD is required to test MULTI_NODE %s", f.Namespace.Name))
 			}
 
 			scName := f.CreateStorageClassOrFail(f.Namespace.Name, "blockvolume.csi.oraclecloud.com",
 				map[string]string{framework.AttachmentType: framework.AttachmentTypeISCSI},
 				pvcJig.Labels, "WaitForFirstConsumer", true, "Delete", nil)
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeBlock, v1.ReadWriteMany, v1.ClaimPending)
-			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 
 			podNameA := pvcJig.NewPodForCSIwAntiAffinity("expanded-pvc-pod-1", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
 			podNameB := pvcJig.NewPodForCSIwAntiAffinity("expanded-pvc-pod-2", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
@@ -209,6 +206,7 @@ var _ = Describe("CSI Raw Block Volume Expansion iSCSI", func() {
 			pvcJig.CheckExpandedRawBlockVolumeReadWrite(f.Namespace.Name, podNameB)
 			pvcJig.ExtractDataFromBlockDevice(f.Namespace.Name, podNameB, "/dev/xvda", "/tmp/testdata.txt")
 			// pvcJig.CheckFileCorruption(f.Namespace.Name, podNameA, "/tmp", "testdata.txt")
+			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 		})
 	})
 })
@@ -220,9 +218,9 @@ var _ = Describe("CSI Raw Block Volume Expansion Paravirtualized", func() {
 			var size = "100Gi"
 			pvcJig := framework.NewPVCTestJig(f.ClientSet, "csi-resizer-pvc-expand-to-100gi-paravirtualized")
 
-			nodes := pvcJig.ListSchedulableNodes()
+			nodes := pvcJig.ListSchedulableNodesInAD(setupF.AdLabel)
 			if len(nodes) < 2 {
-				Skip(fmt.Sprintf("at least 2 schedulable nodes required to test MULTI_NODE %s", f.Namespace.Name))
+				Skip(fmt.Sprintf("at least 2 schedulable nodes in a AD is required to test MULTI_NODE %s", f.Namespace.Name))
 			}
 
 			scParameter := map[string]string{
@@ -233,7 +231,6 @@ var _ = Describe("CSI Raw Block Volume Expansion Paravirtualized", func() {
 				"blockvolume.csi.oraclecloud.com", scParameter, pvcJig.Labels,
 				"WaitForFirstConsumer", true, "Delete", nil)
 			pvc := pvcJig.CreateAndAwaitPVCOrFailCSI(f.Namespace.Name, framework.MinVolumeBlock, scName, nil, v1.PersistentVolumeBlock, v1.ReadWriteMany, v1.ClaimPending)
-			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 
 			podNameA := pvcJig.NewPodForCSIwAntiAffinity("expanded-pvc-pod-1", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
 			podNameB := pvcJig.NewPodForCSIwAntiAffinity("expanded-pvc-pod-2", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
@@ -255,6 +252,7 @@ var _ = Describe("CSI Raw Block Volume Expansion Paravirtualized", func() {
 			pvcJig.CheckExpandedRawBlockVolumeReadWrite(f.Namespace.Name, podNameB)
 			pvcJig.ExtractDataFromBlockDevice(f.Namespace.Name, podNameB, "/dev/xvda", "/tmp/testdata.txt")
 			// pvcJig.CheckFileCorruption(f.Namespace.Name, podNameA, "/tmp", "testdata.txt")
+			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 		})
 	})
 })
@@ -370,14 +368,13 @@ var _ = Describe("CSI Raw Block Volume Performance Level", func() {
 				framework.Failf("Compartment Id undefined.")
 			}
 			pvc, volumeId := pvcJig.CreateAndAwaitStaticPVCOrFailCSI(f.BlockStorageClient, f.Namespace.Name, framework.MinVolumeBlock, csi_util.HigherPerformanceOption, scName, setupF.AdLocation, compartmentId, nil, v1.PersistentVolumeBlock, v1.ReadWriteMany, v1.ClaimPending)
-			f.VolumeIds = append(f.VolumeIds, pvc.Spec.VolumeName)
 			podName := pvcJig.NewPodForCSI("app4", f.Namespace.Name, pvc.Name, setupF.AdLabel, v1.PersistentVolumeBlock)
 
 			time.Sleep(60 * time.Second) //waiting for pod to up and running
 
 			pvcJig.CheckVolumeCapacity("50Gi", pvc.Name, f.Namespace.Name)
 			pvcJig.CheckISCSIQueueDepthOnNode(pvc.Namespace, podName)
-			f.VolumeIds = append(f.VolumeIds, volumeId)
+			f.VolumeIds = append(f.VolumeIds, volumeId, pvc.Spec.VolumeName)
 			_ = f.DeleteStorageClass(f.Namespace.Name)
 		})
 	})
