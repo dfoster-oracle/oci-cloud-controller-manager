@@ -1141,6 +1141,132 @@ func TestControllerDriver_CreateVolume(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "No error when a volume is created in block mode with MULTI_NODE_READER_ONLY",
+			args: args{
+				ctx: context.TODO(),
+				req: &csi.CreateVolumeRequest{
+					Name: "volume-in-available-state",
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
+							},
+							AccessType: &csi.VolumeCapability_Block{
+								Block: &csi.VolumeCapability_BlockVolume{},
+							},
+						},
+					},
+					Parameters: map[string]string{
+						"vpusPerGB": "10",
+					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: int64(50000),
+					},
+					AccessibilityRequirements: &csi.TopologyRequirement{
+						Requisite: []*csi.Topology{
+							{
+								Segments: map[string]string{
+									kubeAPI.LabelZoneFailureDomain: "PHX-AD-2",
+								},
+							}, {
+								Segments: map[string]string{
+									kubeAPI.LabelZoneFailureDomain: "PHX-AD-2",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: &csi.CreateVolumeResponse{
+				Volume: &csi.Volume{
+					VolumeId:      "volume-in-available-state",
+					CapacityBytes: int64(52428800000),
+					AccessibleTopology: []*csi.Topology{
+						{
+							Segments: map[string]string{
+								kubeAPI.LabelTopologyZone: "PHX-AD-2",
+							},
+						},
+						{
+							Segments: map[string]string{
+								kubeAPI.LabelZoneFailureDomain: "PHX-AD-2",
+							},
+						},
+					},
+					VolumeContext: map[string]string{
+						"needResize":      "false",
+						"newSize":         "",
+						"vpusPerGB":       "10",
+						"attachment-type": "",
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "No error when a volume is created in block mode with MULTI_NODE_SINGLE_WRITER",
+			args: args{
+				ctx: context.TODO(),
+				req: &csi.CreateVolumeRequest{
+					Name: "volume-in-available-state",
+					VolumeCapabilities: []*csi.VolumeCapability{
+						{
+							AccessMode: &csi.VolumeCapability_AccessMode{
+								Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_SINGLE_WRITER,
+							},
+							AccessType: &csi.VolumeCapability_Block{
+								Block: &csi.VolumeCapability_BlockVolume{},
+							},
+						},
+					},
+					Parameters: map[string]string{
+						"vpusPerGB": "10",
+					},
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: int64(50000),
+					},
+					AccessibilityRequirements: &csi.TopologyRequirement{
+						Requisite: []*csi.Topology{
+							{
+								Segments: map[string]string{
+									kubeAPI.LabelZoneFailureDomain: "PHX-AD-2",
+								},
+							}, {
+								Segments: map[string]string{
+									kubeAPI.LabelZoneFailureDomain: "PHX-AD-2",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: &csi.CreateVolumeResponse{
+				Volume: &csi.Volume{
+					VolumeId:      "volume-in-available-state",
+					CapacityBytes: int64(52428800000),
+					AccessibleTopology: []*csi.Topology{
+						{
+							Segments: map[string]string{
+								kubeAPI.LabelTopologyZone: "PHX-AD-2",
+							},
+						},
+						{
+							Segments: map[string]string{
+								kubeAPI.LabelZoneFailureDomain: "PHX-AD-2",
+							},
+						},
+					},
+					VolumeContext: map[string]string{
+						"needResize":      "false",
+						"newSize":         "",
+						"vpusPerGB":       "10",
+						"attachment-type": "",
+					},
+				},
+			},
+			wantErr: nil,
+		},
+		{
 			name:   "Error for support of Block volumeMode in Ultra High Performance Volumes (vpusPerGB >= 30)",
 			fields: fields{},
 			args: args{

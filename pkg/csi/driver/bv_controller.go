@@ -86,6 +86,14 @@ var (
 		},
 		{
 			AccessType: &csi.VolumeCapability_Block{Block: &csi.VolumeCapability_BlockVolume{}},
+			AccessMode: &csi.VolumeCapability_AccessMode{Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY},
+		},
+		{
+			AccessType: &csi.VolumeCapability_Block{Block: &csi.VolumeCapability_BlockVolume{}},
+			AccessMode: &csi.VolumeCapability_AccessMode{Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_SINGLE_WRITER},
+		},
+		{
+			AccessType: &csi.VolumeCapability_Block{Block: &csi.VolumeCapability_BlockVolume{}},
 			AccessMode: &csi.VolumeCapability_AccessMode{Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER},
 		},
 	}
@@ -464,7 +472,6 @@ func (d *BlockVolumeControllerDriver) CreateVolume(ctx context.Context, req *csi
 			fullAvailabilityDomainName = *ad.Name
 		}
 
-
 		bvTags := getBVTags(log, d.config.Tags, volumeParams)
 
 		provisionedVolume, err = provision(ctx, log, d.client, volumeName, size, fullAvailabilityDomainName, d.config.CompartmentID, srcSnapshotId, srcVolumeId,
@@ -794,10 +801,16 @@ func (d *BlockVolumeControllerDriver) ControllerPublishVolume(ctx context.Contex
 			log.With("service", "compute", "verb", "create", "resource", "volumeAttachment", "statusCode", util.GetHttpStatusCode(err)).
 				With("instanceID", id).With(zap.Error(err)).Info("failed paravirtualized attachment instance to volume.")
 			errorType = util.GetError(err)
+			var code codes.Code
+			if errorType == util.ErrLimitExceeded {
+				code = codes.ResourceExhausted
+			} else {
+				code = codes.Internal
+			}
 			csiMetricDimension = util.GetMetricDimensionForComponent(errorType, util.CSIStorageType)
 			dimensionsMap[metrics.ComponentDimension] = csiMetricDimension
 			metrics.SendMetricData(d.metricPusher, metrics.PVAttach, time.Since(startTime).Seconds(), dimensionsMap)
-			return nil, status.Errorf(codes.Internal, "failed paravirtualized attachment instance to volume. error : %s", err)
+			return nil, status.Errorf(code, "failed paravirtualized attachment instance to volume. error : %s", err)
 		}
 	} else {
 		nodeVolumeAttachment, err = d.client.Compute().AttachVolume(ctx, id, req.VolumeId, volumeAttachmentOptions.isShareable)
@@ -805,10 +818,16 @@ func (d *BlockVolumeControllerDriver) ControllerPublishVolume(ctx context.Contex
 			log.With("service", "compute", "verb", "create", "resource", "volumeAttachment", "statusCode", util.GetHttpStatusCode(err)).
 				With("instanceID", id).With(zap.Error(err)).Info("failed iscsi attachment instance to volume.")
 			errorType = util.GetError(err)
+			var code codes.Code
+			if errorType == util.ErrLimitExceeded {
+				code = codes.ResourceExhausted
+			} else {
+				code = codes.Internal
+			}
 			csiMetricDimension = util.GetMetricDimensionForComponent(errorType, util.CSIStorageType)
 			dimensionsMap[metrics.ComponentDimension] = csiMetricDimension
 			metrics.SendMetricData(d.metricPusher, metrics.PVAttach, time.Since(startTime).Seconds(), dimensionsMap)
-			return nil, status.Errorf(codes.Internal, "failed iscsi attachment instance to volume : %s", err)
+			return nil, status.Errorf(code, "failed iscsi attachment instance to volume : %s", err)
 		}
 	}
 
